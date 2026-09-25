@@ -7,26 +7,34 @@ local function message(text)
     print("|cffffd100Quest Targets:|r " .. text)
 end
 
-local QUESTIEDB_CLASSIC_URL = "https://github.com/Questie/QuestieDB/releases/"
+local QUESTIEDB_URL = "https://github.com/Questie/QuestieDB/releases/"
+local function selectDatabaseLink(self)
+    local box = self.GetEditBox and self:GetEditBox() or self.editBox or self.EditBox
+    if box then
+        box:SetText(QUESTIEDB_URL)
+        box:HighlightText()
+        box:SetFocus()
+    end
+    return true -- Keep the popup open for the native copy shortcut.
+end
 local function showMissingDatabase()
     if LibQuestieDB or not StaticPopupDialogs or not StaticPopup_Show then return end
     local key = "QUESTTARGETS_MISSING_QUESTIEDB"
+    local interface = GetBuildInfo and select(4, GetBuildInfo())
+    local forever = type(interface) == "number" and interface >= 160000 and interface < 170000
     StaticPopupDialogs[key] = {
-        text = NS.L("dbInstallTitle") .. "\n\n" .. NS.L("dbInstallText"),
-        button1 = OKAY or "OK",
+        text = NS.L(forever and "dbInstallForeverTitle" or "dbInstallTitle") .. "\n\n"
+            .. NS.L(forever and "dbInstallForeverText" or "dbInstallText"),
+        button1 = NS.L("selectLink"),
+        button2 = OKAY or "OK",
         hasEditBox = true,
         editBoxWidth = 320,
         timeout = 0,
         whileDead = true,
         hideOnEscape = true,
         preferredIndex = 3,
-        OnShow = function(self)
-            local box = self.GetEditBox and self:GetEditBox() or self.editBox or self.EditBox
-            if not box then return end
-            box:SetText(QUESTIEDB_CLASSIC_URL)
-            box:HighlightText()
-            box:SetFocus()
-        end,
+        OnShow = selectDatabaseLink,
+        OnAccept = selectDatabaseLink,
     }
     StaticPopup_Show(key)
 end

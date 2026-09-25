@@ -1,4 +1,4 @@
-# Quest Targets — 1.0.12
+# Quest Targets — 1.0.13
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)** und **WoW Forever Beta (Interface 160001)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -15,10 +15,10 @@ Der veröffentlichte Build enthält ausschließlich Lua-Dateien, die TOC-Datei
 und die beiden Kompassgrafiken. QuestieDB, Tests und Dokumentation sind nicht
 enthalten.
 
-[QuestieDB Classic/Vanilla](https://github.com/Questie/QuestieDB/releases/) kann
+[QuestieDB](https://github.com/Questie/QuestieDB/releases/) kann
 separat als optionaler Datenanbieter installiert werden. Die Datenbank muss
-zum Client passen. Fehlt der Anbieter, zeigt das Addon beim Login einen Hinweis
-mit kopierbarem Download-Link. Die Erkennung über Questtexte und lesbare
+zum Client passen: für Forever `QuestieDB-Forever.zip`, für Classic Era `QuestieDB-Vanilla.zip`. Fehlt der Anbieter, zeigt das Addon beim Login einen Hinweis
+mit auswählbarem Download-Link. Die Erkennung über Questtexte und lesbare
 Questinformationen sichtbarer Namensplaketten bleibt verfügbar.
 
 ## Bedienung

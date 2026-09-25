@@ -72,3 +72,25 @@ class CommandsPopupTests(unittest.TestCase):
             boot()
             assert(popupCalls==0)
         ''')
+
+    def test_forever_popup_and_select_button_keep_url_available(self):
+        self.lua.execute('''
+            function GetBuildInfo() return '1.60.1','69913','',160001 end
+            function CopyToClipboard() error('restricted API must not be called') end
+            StaticPopupDialogs={}
+            StaticPopup_Show=function(key) popup=StaticPopupDialogs[key] end
+            boot()
+            assert(popup.text:find('QuestieDB Forever',1,true))
+            assert(popup.text:find('QuestieDB-Forever.zip',1,true))
+            assert(popup.button1=='Select URL' and popup.button2=='OK')
+            local box={SetText=function(self,v) self.text=v end,
+                HighlightText=function(self) self.highlighted=true end,
+                SetFocus=function(self) self.focused=true end}
+            assert(popup.OnAccept({EditBox=box})==true)
+            assert(box.text=='https://github.com/Questie/QuestieDB/releases/')
+            assert(box.highlighted and box.focused)
+            for _,language in ipairs({'deDE','esES','frFR','trTR','zhCN'}) do
+                NS.app.db.language=language
+                assert(NS.L('dbInstallForeverText'):find('QuestieDB-Forever.zip',1,true))
+            end
+        ''')
