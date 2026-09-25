@@ -9,9 +9,8 @@ Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)** and **WoW
 Download `QuestTargets-1.0.13.zip` from the release page and extract the
 `QuestTargets` folder into `Interface/AddOns`. Restart the game after updating.
 
-[QuestieDB](https://github.com/Questie/QuestieDB/releases/) is an optional,
-separate data provider and is not included in the download. Select a Classic
-database release compatible with your client: QuestieDB-Forever.zip for Forever or QuestieDB-Vanilla.zip for Classic Era.
+[QuestieDB](https://github.com/Questie/QuestieDB/releases/) is required,
+separate data provider and is not included in the download. Select a database release compatible with your client: QuestieDB-Forever.zip for Forever or QuestieDB-Vanilla.zip for Classic Era.
 
 ## Features
 
