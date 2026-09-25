@@ -1,9 +1,9 @@
-## Interface: 160001
+## Interface: 11509, 160001
 ## Title: Quest Targets
 ## IconTexture: Interface\AddOns\QuestTargets\Textures\QuestCompassUp
 ## Notes: Anklickbare Ziele für offene Quests.
 ## Author: Simon
-## Version: 1.0.11
+## Version: 1.0.12
 ## OptionalDeps: QuestieDB
 ## SavedVariablesPerCharacter: QuestTargetsDB
 

@@ -388,29 +388,42 @@ end
 
 function Core.ReadQuests(watchedOnly)
     local api = C_QuestLog
-    if not api or type(api.GetNumQuestLogEntries) ~= "function"
-        or type(api.GetInfo) ~= "function" or type(api.GetQuestObjectives) ~= "function" then
+    local modern = api and type(api.GetNumQuestLogEntries) == "function" and type(api.GetInfo) == "function"
+    local classic = type(GetNumQuestLogEntries) == "function" and type(GetQuestLogTitle) == "function"
+    if not api or type(api.GetQuestObjectives) ~= "function" or not (modern or classic) then
         return {}, NS.L("apiMissing")
     end
-    if watchedOnly and type(api.GetQuestWatchType) ~= "function" then
+    if watchedOnly and not (modern and type(api.GetQuestWatchType) == "function")
+        and not (classic and type(IsQuestWatched) == "function") then
         return {}, NS.L("filterMissing")
     end
     local result, seen, pending = {}, {}, false
-    local count = api.GetNumQuestLogEntries()
+    local count = modern and api.GetNumQuestLogEntries() or GetNumQuestLogEntries()
     if not readable(count) or type(count) ~= "number" then return {}, NS.L("logPending") end
     for index = 1, count do
-        local info = api.GetInfo(index)
+        local info
+        if modern then
+            info = api.GetInfo(index)
+        else
+            local title, _, _, isHeader, _, complete, _, questID = GetQuestLogTitle(index)
+            info = {title = title, isHeader = isHeader, questID = questID, complete = complete}
+        end
         if info and readable(info.questID) and readable(info.isHeader) and not info.isHeader
             and type(info.questID) == "number" and info.questID > 0 and not seen[info.questID] then
             seen[info.questID] = true
             local included = true
             if watchedOnly then
-                local watch = api.GetQuestWatchType(info.questID)
-                included = readable(watch) and watch ~= nil
+                if modern and type(api.GetQuestWatchType) == "function" then
+                    local watch = api.GetQuestWatchType(info.questID)
+                    included = readable(watch) and watch ~= nil
+                else
+                    local watch = IsQuestWatched(index)
+                    included = readable(watch) and (watch == true or watch == 1)
+                end
             end
             if included then
                 local objectives = api.GetQuestObjectives(info.questID)
-                local ready = false
+                local ready = not modern and readable(info.complete) and info.complete == 1
                 if type(api.ReadyForTurnIn) == "function" then
                     local ok, value = pcall(api.ReadyForTurnIn, info.questID)
                     ready = ok and readable(value) and value == true

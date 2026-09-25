@@ -1,12 +1,12 @@
 # Quest Targets
 
-Quest-targeting addon for **WoW Forever Beta (Interface 160001)**.
+Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)** and **WoW Forever Beta (Interface 160001)**.
 
 **[Download the latest release](https://github.com/simonrath/questtargets/releases/latest)**
 
 ## Installation
 
-Download `QuestTargets-1.0.11.zip` from the release page and extract the
+Download `QuestTargets-1.0.12.zip` from the release page and extract the
 `QuestTargets` folder into `Interface/AddOns`. Restart the game after updating.
 
 [QuestieDB Classic](https://github.com/Questie/QuestieDB/releases/) is an optional,

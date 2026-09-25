@@ -1,6 +1,6 @@
-# Quest Targets — 1.0.11
+# Quest Targets — 1.0.12
 
-Addon für **WoW Forever Beta, Interface 160001**. Quest Targets bietet einen
+Addon für **WoW Classic Era 1.15.9 (Interface 11509)** und **WoW Forever Beta (Interface 160001)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
 und Abgabe-NPCs.
 

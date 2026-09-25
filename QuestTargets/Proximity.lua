@@ -105,6 +105,8 @@ local function npcPoints(npcID)
     if P.points[npcID] then return P.points[npcID] end
     local result = {}
     local mapping = maps()
+    local interface = GetBuildInfo and select(4, GetBuildInfo())
+    local classicEra = type(interface) == "number" and interface >= 11500 and interface < 11600
     for areaID, coords in pairs(P.Spawns(P.provider, npcID) or {}) do
         local mapID = mapping[areaID]
         if number(mapID) and mapID > 0 and type(coords) == "table" and CreateVector2D then
@@ -112,7 +114,7 @@ local function npcPoints(npcID)
                 local x, y = type(coord) == "table" and coord[1], type(coord) == "table" and coord[2]
                 if number(x) and number(y) and x >= 0 and y >= 0 and x <= 100 and y <= 100 then
                     local ok, point = pcall(function()
-                        if P.flavor == "Vanilla" then
+                        if P.flavor == "Vanilla" and not classicEra then
                             if type(P.converter) == "function" then x, y = P.converter(areaID, x, y)
                             elseif changedFrames[areaID] then return end
                         end

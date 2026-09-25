@@ -31,6 +31,17 @@ class ProximityTests(unittest.TestCase):
             end
         ''')
 
+    def test_classic_era_keeps_native_spawn_coordinates(self):
+        self.spatial()
+        self.lua.execute('''
+            function GetBuildInfo() return '1.15.9','69722','',11509 end
+            LibQuestieDB.flavor.name='Vanilla'
+            LibQuestieDB.EraToForever=function() error('Classic must not convert coordinates to Forever') end
+            NS.Proximity.Register(LibQuestieDB,10,'Local mob')
+            NS.Proximity.Sample()
+            assert(NS.Proximity.Distance('Local mob')==100)
+        ''')
+
     def test_nearest_spawn_roles_unknown_and_cache(self):
         self.spatial()
         self.lua.execute('''

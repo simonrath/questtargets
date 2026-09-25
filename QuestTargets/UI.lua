@@ -505,6 +505,15 @@ function UI.OpenQuest(entry)
     elseif OpenQuestLog and C_QuestLog and C_QuestLog.SetSelectedQuest then
         OpenQuestLog()
         C_QuestLog.SetSelectedQuest(questID)
+    elseif GetNumQuestLogEntries and GetQuestLogTitle and QuestLog_SetSelection and ShowUIPanel and QuestLogFrame then
+        for index = 1, GetNumQuestLogEntries() do
+            if select(8, GetQuestLogTitle(index)) == questID then
+                ShowUIPanel(QuestLogFrame)
+                QuestLog_SetSelection(index)
+                if QuestLog_Update then QuestLog_Update() end
+                return
+            end
+        end
     end
 end
 
