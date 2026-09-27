@@ -13,10 +13,13 @@ import zipfile
 import zlib
 from lupa.lua51 import LuaRuntime
 
-TEST_DEPS = Path(tempfile.gettempdir()) / 'quest-targets-testdeps'
-if TEST_DEPS.is_dir():
-    sys.path.insert(0, str(TEST_DEPS))
-import cbor2
+try:
+    import cbor2
+except ModuleNotFoundError:
+    TEST_DEPS = Path(tempfile.gettempdir()) / 'quest-targets-testdeps'
+    if TEST_DEPS.is_dir():
+        sys.path.insert(0, str(TEST_DEPS))
+    import cbor2
 
 PIN_SHA256 = '0aa71066dad715aac0af03d79f74acdb669a63df8d2368aed222b63dd20f68b8'
 DEFAULT_ZIP = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.1/QuestieDB-Vanilla.zip'

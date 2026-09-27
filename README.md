@@ -6,7 +6,7 @@ Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)** and **WoW
 
 ## Installation
 
-Download `QuestTargets-1.0.13.zip` from the release page and extract the
+Download `QuestTargets-1.0.15.zip` from the release page and extract the
 `QuestTargets` folder into `Interface/AddOns`. Restart the game after updating.
 
 [QuestieDB](https://github.com/Questie/QuestieDB/releases/) is required,

@@ -1,4 +1,4 @@
-# Quest Targets — 1.0.13
+# Quest Targets — 1.0.15
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)** und **WoW Forever Beta (Interface 160001)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -30,6 +30,7 @@ Questinformationen sichtbarer Namensplaketten bleibt verfügbar.
   haben Vorrang vor Abgabe-NPCs bereiter Quests.
 - „Alle Quests“ / „Verfolgte Quests“: die Liste filtern. Der Masterbutton
   arbeitet unabhängig von diesem Filter.
+- Mausrad oder Scrollbalken: weitere Quests in der Liste anzeigen.
 - „Aktualisieren“: Questdaten erneut einlesen. Änderungen an Quests,
   Fortschritt und Verfolgung aktualisieren das Addon auch automatisch.
 - Titelleiste ziehen: Questfenster verschieben. Den Masterbutton mit gedrückter
@@ -39,14 +40,15 @@ Questinformationen sichtbarer Namensplaketten bleibt verfügbar.
 
 Jede Quest erscheint einmal mit ihrem Fortschritt. Alle bekannten Mobarten
 aller offenen Unterziele sind gültige Ziele dieses Questbuttons. Erledigte
-Unterziele liefern keine zusätzlichen Mobziele. Tooltips können die Unterziele
-und die Herkunft der Zielzuordnung anzeigen.
+Unterziele liefern keine zusätzlichen Mobziele. Tooltips zeigen die Unterziele
+und die gültigen Mobarten an.
 
 ## Einstellungen
 
 „Einstellungen“ oder `/qt settings` öffnet die native WoW-Addon-Optionsseite.
 Dort lassen sich Questfenster, Masterbutton, Minikarten-Button und Tooltips
-anzeigen oder ausblenden sowie Menügröße und automatische Markierung ändern.
+anzeigen oder ausblenden sowie Fenstergröße per Schieberegler und automatische
+Markierung ändern.
 
 Der Masterbutton unterstützt eine Tastenzuweisung einschließlich Kombinationen
 wie STRG+F. Unter „Masterbutton bearbeiten“ stehen zwei Darstellungen bereit:

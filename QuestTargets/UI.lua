@@ -65,12 +65,13 @@ function UI.Create(app)
     UI.database = label(frame, 132, -35, 113)
     local help = button(frame, "?", 24, function() app:Help() end)
     help:SetPoint("TOPRIGHT", -10, -30)
-    UI.summary = label(frame, 10, -56, 260)
     UI.rows = {}
     for index = 1, UI.PAGE_SIZE do
         local row = CreateFrame("Button", "QuestTargetsTarget" .. index, frame, "SecureActionButtonTemplate")
-        row:SetPoint("TOPLEFT", 10, -76 - (index - 1) * 39)
-        row:SetSize(262, 36)
+        row:SetPoint("TOPLEFT", 10, -62 - (index - 1) * 39)
+        row:SetSize(238, 36)
+        row:EnableMouseWheel(true)
+        row:SetScript("OnMouseWheel", function(_, delta) UI.ScrollQuests(app, -delta) end)
         row:RegisterForClicks("AnyUp")
         row:SetAttribute("useOnKeyDown", false)
         row:SetAttribute("type1", "macro")
@@ -102,30 +103,40 @@ function UI.Create(app)
         highlight:ClearAllPoints()
         highlight:SetPoint("CENTER", row.icon, "CENTER", 0, 0)
         highlight:SetSize(28, 28)
-        row.nameText = label(row, 29, -1, 228, "GameFontNormal")
+        row.nameText = label(row, 29, -1, 205, "GameFontNormal")
         row.nameText:SetHeight(16)
-        row.detail = label(row, 29, -19, 228)
+        row.detail = label(row, 29, -19, 205)
         row.detail:SetHeight(13)
         row:SetScript("OnEnter", function(self) UI.Tooltip(self) end)
         row:SetScript("OnLeave", function() GameTooltip:Hide() end)
         row:Hide()
         UI.rows[index] = row
     end
-    UI.empty = label(frame, 14, -112, 254, "GameFontHighlight")
+    UI.empty = label(frame, 14, -112, 234, "GameFontHighlight")
     UI.empty:SetJustifyH("CENTER")
     UI.empty:SetHeight(100)
-    UI.previous = button(frame, "<", 28, function() app:Page(-1) end)
-    UI.previous:SetPoint("BOTTOMLEFT", 10, 61)
-    UI.next = button(frame, ">", 28, function() app:Page(1) end)
-    UI.next:SetPoint("BOTTOMRIGHT", -10, 61)
-    UI.page = label(frame, 110, -331, 62)
-    UI.page:SetJustifyH("CENTER")
+    UI.scrollbar = CreateFrame("Slider", "QuestTargetsQuestScrollBar", frame, "UIPanelScrollBarTemplate")
+    -- The template's inherited handler expects a ScrollFrame parent.
+    -- Replace it before SetValue can invoke that handler on our panel.
+    UI.scrollbar:SetScript("OnValueChanged", function(_, value)
+        if InCombatLockdown() then return end
+        local offset = math.floor(value + 0.5)
+        if offset ~= (app.scrollOffset or 0) then
+            app.scrollOffset = offset
+            UI.RenderRows(app)
+        end
+    end)
+    UI.scrollbar:SetPoint("TOPRIGHT", -10, -64)
+    UI.scrollbar:SetHeight(UI.PAGE_SIZE * 39 - 10)
+    UI.scrollbar:SetMinMaxValues(0, 0)
+    UI.scrollbar:SetValueStep(1)
+    UI.scrollbar:SetValue(0)
+    frame:EnableMouseWheel(true)
+    frame:SetScript("OnMouseWheel", function(_, delta) UI.ScrollQuests(app, -delta) end)
     UI.settingsButton = button(frame, L("settings"), 94, function() UI.Settings(app) end)
-    UI.settingsButton:SetPoint("BOTTOMLEFT", 42, 61)
+    UI.settingsButton:SetPoint("BOTTOMLEFT", 10, 40)
     UI.refreshButton = button(frame, L("refresh"), 94, function() app:Refresh() end)
-    UI.refreshButton:SetPoint("BOTTOMRIGHT", -42, 61)
-    UI.status = label(frame, 10, -350, 262)
-    UI.status:SetHeight(28)
+    UI.refreshButton:SetPoint("BOTTOMRIGHT", -10, 40)
     frame:SetShown(not app.db.hidden)
 end
 
@@ -134,7 +145,7 @@ function UI.Settings(app)
     if not UI.settings then
         local panel = CreateFrame("Frame", "QuestTargetsSettings")
         UI.settings = panel
-        panel:SetSize(600, 640)
+        panel:SetSize(600, 690)
         panel.titleText = label(panel, 20, -18, 540, "GameFontNormalLarge")
         panel.titleText:SetText(L("title"))
         panel.toggle = checkbox(panel, L("autoMark"), function()
@@ -166,43 +177,43 @@ function UI.Settings(app)
             panel.icons[index] = choice
         end
         panel.names = names
-        panel.markerNote = label(panel, 20, -221, 500)
-        panel.markerNote:SetHeight(48)
-        panel.markerNote:SetText(L("markerNote"))
-        panel.displayText = label(panel, 20, -262, 330, "GameFontNormal")
+        panel.displayText = label(panel, 20, -225, 330, "GameFontNormal")
         panel.displayText:SetText(L("display"))
         panel.masterToggle = checkbox(panel, L("showMaster"), function()
             app.db.masterHidden = not app.db.masterHidden
             app:Schedule(); UI.UpdateSettings(app)
         end)
-        panel.masterToggle:SetPoint("TOPLEFT", 20, -282)
+        panel.masterToggle:SetPoint("TOPLEFT", 20, -248)
         panel.menuToggle = checkbox(panel, L("showMenu"), function()
             app:Toggle(); UI.UpdateSettings(app)
         end)
-        panel.menuToggle:SetPoint("TOPLEFT", 20, -312)
-        panel.scaleLabel = label(panel, 65, -430, 240)
-        panel.scaleLabel:SetJustifyH("CENTER")
-        panel.smaller = button(panel, "–", 35, function()
-            app.db.menuScale = math.max(0.5, app.db.menuScale - 0.1)
-            app:Schedule(); UI.UpdateSettings(app)
+        panel.menuToggle:SetPoint("TOPLEFT", 20, -278)
+        panel.scaleLabel = label(panel, 20, -390, 330, "GameFontNormal")
+        panel.scaleSlider = CreateFrame("Slider", "QuestTargetsWindowScaleSlider", panel, "OptionsSliderTemplate")
+        panel.scaleSlider:SetPoint("TOPLEFT", 20, -425)
+        panel.scaleSlider:SetSize(330, 18)
+        panel.scaleSlider:SetMinMaxValues(0.5, 1.5)
+        panel.scaleSlider:SetValueStep(0.05)
+        panel.scaleSlider:SetScript("OnValueChanged", function(_, value)
+            local rounded = math.floor(value * 20 + 0.5) / 20
+            if rounded == app.db.menuScale then return end
+            app.db.menuScale = rounded
+            panel.scaleLabel:SetText(string.format(L("menuScale"), rounded * 100))
+            app:Schedule()
         end)
-        panel.smaller:SetPoint("TOPLEFT", 20, -424)
-        panel.larger = button(panel, "+", 35, function()
-            app.db.menuScale = math.min(1.5, app.db.menuScale + 0.1)
-            app:Schedule(); UI.UpdateSettings(app)
-        end)
-        panel.larger:SetPoint("TOPLEFT", 320, -424)
         panel.tooltipToggle = checkbox(panel, L("showTooltips"), function()
             app.db.showTooltips = not app.db.showTooltips
             UI.UpdateSettings(app)
         end)
-        panel.tooltipToggle:SetPoint("TOPLEFT", 20, -342)
+        panel.tooltipToggle:SetPoint("TOPLEFT", 20, -308)
         panel.minimapToggle = checkbox(panel, L("showMinimap"), function()
             app.db.minimapHidden = not app.db.minimapHidden
             if UI.minimap then UI.minimap:SetShown(not app.db.minimapHidden) end
             UI.UpdateSettings(app)
         end)
-        panel.minimapToggle:SetPoint("TOPLEFT", 20, -372)
+        panel.minimapToggle:SetPoint("TOPLEFT", 20, -338)
+        panel.hotkeysText = label(panel, 20, -472, 330, "GameFontNormal")
+        panel.hotkeysText:SetText(L("hotkeys"))
         panel.hotkey = button(panel, "", 200, function(self)
             if InCombatLockdown() then return end
             self.listening = true
@@ -210,7 +221,7 @@ function UI.Settings(app)
             self:EnableKeyboard(true)
             self:SetPropagateKeyboardInput(false)
         end)
-        panel.hotkey:SetPoint("TOPLEFT", 20, -467)
+        panel.hotkey:SetPoint("TOPLEFT", 20, -498)
         panel.hotkey:SetScript("OnKeyDown", function(self, key)
             if not self.listening then return end
             -- Modifier keys arrive as separate key-down events. Keep listening
@@ -236,21 +247,17 @@ function UI.Settings(app)
             if old then SetBinding(old); SaveBindings(GetCurrentBindingSet()) end
             UI.UpdateSettings(app)
         end)
-        panel.hotkeyClear:SetPoint("TOPLEFT", 225, -467)
-        panel.masterConfigButton = button(panel, L("editMaster"), 200, function()
-            if UI.masterSettingsCategoryID then Settings.OpenToCategory(UI.masterSettingsCategoryID) end
-        end)
-        panel.masterConfigButton:SetPoint("TOPLEFT", 20, -531)
+        panel.hotkeyClear:SetPoint("TOPLEFT", 225, -498)
         panel:SetScript("OnHide", function()
             panel.hotkey.listening = false
             panel.hotkey:EnableKeyboard(false)
         end)
-        panel.hotkeyNote = label(panel, 20, -500, 520)
+        panel.hotkeyNote = label(panel, 20, -532, 520)
         panel.hotkeyNote:SetText(L("hotkeyNote"))
-        panel.languageText = label(panel, 20, -560, 330, "GameFontNormal")
+        panel.languageText = label(panel, 20, -578, 330, "GameFontNormal")
         panel.languageText:SetText(L("language"))
         panel.languageDropdown = CreateFrame("Frame", "QuestTargetsLanguageDropdown", panel, "UIDropDownMenuTemplate")
-        panel.languageDropdown:SetPoint("TOPLEFT", 0, -580)
+        panel.languageDropdown:SetPoint("TOPLEFT", 0, -598)
         UIDropDownMenu_SetWidth(panel.languageDropdown, 230)
         UIDropDownMenu_Initialize(panel.languageDropdown, function()
             for index, code in ipairs(NS.LANGUAGES) do
@@ -397,6 +404,9 @@ function UI.UpdateSettings(app)
     if menuShown == nil then menuShown = not app.db.hidden end
     UI.settings.menuToggle:SetChecked(menuShown)
     UI.settings.scaleLabel:SetText(string.format(L("menuScale"), app.db.menuScale * 100))
+    if UI.settings.scaleSlider:GetValue() ~= app.db.menuScale then
+        UI.settings.scaleSlider:SetValue(app.db.menuScale)
+    end
     UI.settings.tooltipToggle:SetChecked(app.db.showTooltips)
     UI.settings.minimapToggle:SetChecked(not app.db.minimapHidden)
     local key = GetBindingKey and GetBindingKey("CLICK QuestTargetsMaster:LeftButton")
@@ -419,7 +429,6 @@ function UI.ApplyLanguage(app)
     if panel then
         panel.titleText:SetText(L("title"))
         panel.toggle.caption:SetText(L("autoMark"))
-        panel.markerNote:SetText(L("markerNote"))
         panel.displayText:SetText(L("display"))
         panel.masterToggle.caption:SetText(L("showMaster"))
         panel.menuToggle.caption:SetText(L("showMenu"))
@@ -427,7 +436,7 @@ function UI.ApplyLanguage(app)
         panel.minimapToggle.caption:SetText(L("showMinimap"))
         panel.hotkeyNote:SetText(L("hotkeyNote"))
         panel.hotkeyClear:SetText(L("clear"))
-        panel.masterConfigButton:SetText(L("editMaster"))
+        panel.hotkeysText:SetText(L("hotkeys"))
         panel.languageText:SetText(L("language"))
         panel.names = {strsplit(",", L("markers"))}
         for index, choice in ipairs(panel.icons) do
@@ -473,24 +482,15 @@ function UI.Tooltip(row)
     if not row.entry or not NS.app.db.showTooltips then return end
     local entry = row.entry
     GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+    GameTooltip:ClearLines()
     GameTooltip:SetText(entry.title or entry.name or L("tooltipUnknown"))
     for _, ref in ipairs(entry.refs) do
-        GameTooltip:AddLine(ref.title, 1, 0.82, 0, true)
         GameTooltip:AddLine(ref.text, 1, 1, 1, true)
-        if ref.database then GameTooltip:AddLine(L("tooltipDb"), 0.6, 0.8, 1, true) end
-        if ref.detected then GameTooltip:AddLine(L("tooltipDetected"), 0.6, 0.8, 1, true) end
     end
-    GameTooltip:AddLine(" ")
-    GameTooltip:AddLine(L("tooltipRight"), 1, 0.82, 0, true)
-    if entry.nameList then
+    if entry.nameList and #entry.nameList > 0 then
+        GameTooltip:AddLine(" ")
         GameTooltip:AddLine(L("tooltipNames"), 1, 0.82, 0, true)
         for _, name in ipairs(entry.nameList) do GameTooltip:AddLine(name, 1, 1, 1, true) end
-    end
-    if entry.name then
-        GameTooltip:AddLine(L("tooltipClick"), 1, 1, 1, true)
-        GameTooltip:AddLine(L("tooltipCycle"), 0.75, 0.75, 0.75, true)
-    else
-        GameTooltip:AddLine(L("tooltipUnresolved"), 1, 1, 1, true)
     end
     GameTooltip:Show()
 end
@@ -521,19 +521,32 @@ function UI.Render(app)
     assert(not InCombatLockdown(), "Quest Targets: protected update during combat")
     local scale = math.min(1, UIParent:GetHeight() / 410) * app.db.menuScale
     if UI.frame:GetScale() ~= scale then UI.frame:SetScale(scale) end
-    local entries, metadata = NS.Core.QuestEntries(app.entries), app.metadata
+    local entries = NS.Core.QuestEntries(app.entries)
     app.questEntries = entries
-    local pages = math.max(1, math.ceil(#entries / UI.PAGE_SIZE))
-    app.page = math.max(1, math.min(pages, app.page))
+    local maxOffset = math.max(0, #entries - UI.PAGE_SIZE)
+    app.scrollOffset = math.max(0, math.min(maxOffset, app.scrollOffset or 0))
     UI.filter:SetText(app.db.watchedOnly and L("tracked") or L("all"))
-    UI.summary:SetText(string.format(L("summary"), #entries, metadata.objectives))
-    UI.page:SetText(string.format("%d / %d", app.page, pages))
-    UI.previous:SetEnabled(app.page > 1)
-    UI.next:SetEnabled(app.page < pages)
+    UI.scrollbar:SetMinMaxValues(0, maxOffset)
+    UI.scrollbar:SetValue(app.scrollOffset)
+    UI.scrollbar:SetShown(maxOffset > 0)
     UI.empty:SetText(app.error or (app.db.watchedOnly and L("emptyTracked") or L("emptyAll")))
     UI.empty:SetShown(#entries == 0)
+    UI.RenderRows(app)
+    UI.UpdateStatus(app)
+end
+
+function UI.ScrollQuests(app, delta)
+    if InCombatLockdown() or not UI.scrollbar then return end
+    local maxOffset = math.max(0, #(app.questEntries or {}) - UI.PAGE_SIZE)
+    local nextOffset = math.max(0, math.min(maxOffset, (app.scrollOffset or 0) + delta))
+    UI.scrollbar:SetValue(nextOffset)
+end
+
+function UI.RenderRows(app)
+    assert(not InCombatLockdown(), "Quest Targets: protected scroll during combat")
+    local entries = app.questEntries or {}
     for index, row in ipairs(UI.rows) do
-        local entry = entries[(app.page - 1) * UI.PAGE_SIZE + index]
+        local entry = entries[(app.scrollOffset or 0) + index]
         row:SetAttribute("macrotext1", nil)
         row.entry = entry
         if row.fallbackQuestID ~= (entry and entry.questID) then row.fallbackIndex = nil end
@@ -543,7 +556,7 @@ function UI.Render(app)
             row.nameText:SetText(entry.title)
             row.nameText:SetTextColor(entry.name and 1 or 0.7, entry.name and 0.82 or 0.7, entry.name and 0 or 0.7)
             row.icon:SetAtlas(entry.name and "UI-QuestPoi-QuestNumber-SuperTracked" or "UI-QuestPoi-QuestNumber")
-            row.number:SetText((app.page - 1) * UI.PAGE_SIZE + index)
+            row.number:SetText((app.scrollOffset or 0) + index)
             local progress = entry.total > 0 and (entry.done .. "/" .. entry.total) or L("open")
             row.detail:SetText(string.format(L("detail"), progress, #entry.refs, #entry.nameList))
             row:Show()
@@ -551,13 +564,8 @@ function UI.Render(app)
             row:Hide()
         end
     end
-    UI.UpdateStatus(app)
 end
 
 function UI.UpdateStatus(app)
-    if not UI.status then return end
-    UI.database:SetText(NS.Database.status)
-    UI.status:SetText(InCombatLockdown() and L("combat")
-        or app.error or (app.metadata.unresolved > 0 and (NS.Scanner.status or L("search"))
-        or L("click")))
+    if UI.database then UI.database:SetText(NS.Database.status) end
 end

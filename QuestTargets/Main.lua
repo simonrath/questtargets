@@ -1,6 +1,6 @@
 local addonName, NS = ...
 local Core, UI, Scanner = NS.Core, NS.UI, NS.Scanner
-local app = {page = 1, entries = {}, metadata = {unresolved = 0, objectives = 0}, dirty = true}
+local app = {scrollOffset = 0, entries = {}, metadata = {unresolved = 0, objectives = 0}, dirty = true}
 NS.app = app
 
 local function message(text)
@@ -94,13 +94,7 @@ end
 function app:ToggleFilter()
     if InCombatLockdown() then message(NS.L("filterCombat")); return end
     self.db.watchedOnly = not self.db.watchedOnly
-    self.page = 1
-    self:Refresh()
-end
-
-function app:Page(delta)
-    if InCombatLockdown() then message(NS.L("pageCombat")); return end
-    self.page = self.page + delta
+    self.scrollOffset = 0
     self:Refresh()
 end
 

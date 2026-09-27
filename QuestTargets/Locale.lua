@@ -18,6 +18,7 @@ local phrases = {
     marker = {"Marker: %s", "Symbol: %s", "Marca: %s", "Marqueur : %s", "İşaret: %s", "标记：%s"},
     markerNote = {"Marks targets when clicked. Group permissions still apply. Combat changes take effect afterward.", "Markierung beim Zielklick. Gruppenrechte gelten weiterhin. Änderungen im Kampf werden nach Kampfende übernommen.", "Marca al seleccionar. Se respetan los permisos de grupo. Los cambios en combate se aplican después.", "Marque au clic. Les droits du groupe restent applicables. Les changements en combat prennent effet ensuite.", "Tıklanınca işaretler. Grup izinleri geçerlidir. Savaştaki değişiklikler sonra uygulanır.", "点击目标时标记。仍受队伍权限限制。战斗中的更改将在战斗后生效。"},
     display = {"Display", "Anzeige", "Pantalla", "Affichage", "Görünüm", "显示"},
+    hotkeys = {"Hotkeys", "Tastenkürzel", "Teclas rápidas", "Raccourcis clavier", "Kısayol tuşları", "快捷键"},
     showMaster = {"Show master button", "Masterbutton anzeigen", "Mostrar botón principal", "Afficher le bouton principal", "Ana düğmeyi göster", "显示主按钮"},
     showMenu = {"Show quest window", "Questmenü anzeigen", "Mostrar ventana de misiones", "Afficher la fenêtre des quêtes", "Görev penceresini göster", "显示任务窗口"},
     showTooltips = {"Show button tooltips", "Button-Tooltips anzeigen", "Mostrar descripciones de botones", "Afficher les infobulles des boutons", "Düğme ipuçlarını göster", "显示按钮提示"},

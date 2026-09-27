@@ -14,7 +14,7 @@ class QuestTargetsTests(unittest.TestCase):
             self.lua.execute('assert(loadstring(...))("QuestTargets", NS)',
                              (ROOT / 'QuestTargets' / name).read_text(encoding='utf-8'))
 
-    def test_compact_window_keeps_position_on_refresh_filter_and_page(self):
+    def test_compact_window_keeps_position_on_refresh_filter_and_scroll(self):
         self.lua.execute('''boot()
             local frame = NS.UI.frame
             assert(frame.width == 282 and frame.height == 386)
@@ -24,7 +24,7 @@ class QuestTargetsTests(unittest.TestCase):
             for i=3,9 do quests[i]={questID=i,title='Quest '..i,objectives={{type='monster',text='Wolf getötet: 0/1',numRequired=1,numFulfilled=0,finished=false}}} end
             NS.app:Refresh()
             assert(frame.point[4] == 137 and frame.point[5] == -42)
-            NS.app:Page(1)
+            NS.UI.ScrollQuests(NS.app, 1)
             assert(frame.point[4] == 137 and frame.point[5] == -42)
             NS.app:ToggleFilter()
             assert(frame.point[4] == 137 and frame.point[5] == -42)
@@ -65,8 +65,22 @@ class QuestTargetsTests(unittest.TestCase):
             assert(NS.UI.settings.minimapToggle:GetChecked())
             NS.UI.settings.tooltipToggle.scripts.OnClick()
             assert(NS.UI.settings.tooltipToggle:GetChecked())
+            assert(NS.UI.settings.scaleSlider.template == 'OptionsSliderTemplate')
+            assert(NS.UI.settings.scaleSmaller == nil and NS.UI.settings.scaleLarger == nil)
+            NS.UI.settings.scaleSlider:SetValue(1.25)
+            flush()
+            assert(NS.app.db.menuScale == 1.25 and NS.UI.frame.scale == 1.25)
             NS.UI.Tooltip(QuestTargetsTarget1)
             assert(GameTooltip.text == 'Wölfe im Wald')
+            assert(GameTooltip.lines[1] == 'Waldwolf getötet: 2/8')
+            local names = NS.L('tooltipNames')
+            assert(GameTooltip.lines[3] == names)
+            assert(GameTooltip.lines[4] == 'Waldwolf')
+            for _, line in ipairs(GameTooltip.lines) do
+                assert(line ~= 'Wölfe im Wald')
+                assert(not line:find('QuestieDB', 1, true))
+                assert(not line:find('Right click', 1, true))
+            end
             NS.UI.settings.minimapToggle.scripts.OnClick()
             assert(not NS.UI.minimap.shown)
             assert(not NS.UI.settings.minimapToggle:GetChecked())
@@ -151,8 +165,7 @@ class QuestTargetsTests(unittest.TestCase):
     def test_master_settings_change_independent_size_and_label(self):
         self.lua.execute('''boot(); NS.UI.Settings(NS.app)
             assert(NS.UI.masterSettingsCategoryID == 43)
-            NS.UI.settings.masterConfigButton.scripts.OnClick()
-            assert(openCategory == 43)
+            assert(NS.UI.settings.masterConfigButton == nil)
             local controls, master = NS.UI.masterSettings, NS.UI.master
             controls.widthControl.larger.scripts.OnClick(); flush()
             controls.heightControl.smaller.scripts.OnClick(); flush()
@@ -192,7 +205,7 @@ class QuestTargetsTests(unittest.TestCase):
             assert(NS.UI.settings.refreshButton == nil)
             assert(NS.UI.refreshButton.text==NS.L('refresh'))
             assert(NS.UI.settings.toggle.caption.text==NS.L('autoMark'))
-            assert(NS.UI.settings.masterConfigButton.text==NS.L('editMaster'))
+            assert(NS.UI.settings.hotkeysText.text==NS.L('hotkeys'))
             assert(NS.UI.master.text==NS.L('masterDefault'))
             NS.app:Refresh()
             assert(NS.UI.filter.text==NS.L('all'))
@@ -330,13 +343,13 @@ class QuestTargetsTests(unittest.TestCase):
             assert(master.moving)
             master.scripts.OnDragStop(master)
             assert(not master.moving and NS.app.db.masterPosition)
-            settings.larger.scripts.OnClick(); flush()
+            settings.scaleSlider:SetValue(1.1); flush()
             assert(NS.UI.frame.scale > 1 and master.scale == nil)
             combat = true; event('PLAYER_REGEN_DISABLED')
             local scale = NS.UI.frame.scale
             settings.masterToggle.scripts.OnClick()
             settings.menuToggle.scripts.OnClick()
-            settings.smaller.scripts.OnClick(); flush()
+            settings.scaleSlider:SetValue(0.9); flush()
             assert(master.shown and NS.UI.frame.shown and NS.UI.frame.scale == scale)
             combat = false; event('PLAYER_REGEN_ENABLED')
             assert(not master.shown and not NS.UI.frame.shown)
@@ -690,12 +703,12 @@ class QuestTargetsTests(unittest.TestCase):
             combat = true; event('PLAYER_REGEN_DISABLED')
             quests[1].objectives[1].finished = true
             event('QUEST_LOG_UPDATE'); flush()
-            NS.app:Page(1); NS.app:ToggleFilter()
+            NS.UI.ScrollQuests(NS.app, 1); NS.app:ToggleFilter()
             SlashCmdList.QUESTTARGETS('reset'); SlashCmdList.QUESTTARGETS('clear')
             NS.app:Toggle()
             assert(QuestTargetsFrame.shown and NS.app.pendingVisibility == false)
             assert(QuestTargetsTarget1.attributes.macrotext1 == old)
-            assert(NS.app.dirty and NS.app.page == 1)
+            assert(NS.app.dirty and NS.app.scrollOffset == 0)
             combat = false; event('PLAYER_REGEN_ENABLED')
             assert(not QuestTargetsFrame.shown)
             assert(QuestTargetsTarget1.attributes.macrotext1 == nil)
@@ -710,18 +723,24 @@ class QuestTargetsTests(unittest.TestCase):
             assert(NS.UI.frame and QuestTargetsFrame.shown)
         ''')
 
-    def test_paging_clears_stale_macros_and_clamps_after_completion(self):
+    def test_scrolling_clears_stale_macros_and_clamps_after_completion(self):
         self.lua.execute('''
             quests = {}
             for i=1,15 do quests[i]={questID=i,title='Quest '..i,objectives={
                 {type='monster',text='Mob '..i..' getötet: 0/1',numFulfilled=0,numRequired=1,finished=false}}} end
-            boot(); NS.app:Page(1); NS.app:Page(1)
-            assert(NS.app.page == 3 and QuestTargetsTarget1.entry.name == 'Mob 13')
-            assert(not QuestTargetsTarget4.shown and QuestTargetsTarget4.attributes.macrotext1 == nil)
+            boot()
+            assert(NS.UI.scrollbar.shown and NS.UI.previous == nil and NS.UI.next == nil)
+            NS.UI.frame.scripts.OnMouseWheel(NS.UI.frame, -1)
+            assert(NS.app.scrollOffset == 1 and QuestTargetsTarget1.entry.name == 'Mob 2')
+            NS.UI.scrollbar:SetValue(9)
+            assert(NS.app.scrollOffset == 9 and QuestTargetsTarget1.entry.name == 'Mob 10')
+            assert(QuestTargetsTarget6.entry.name == 'Mob 15')
             for i=15,2,-1 do quests[i]=nil end
             event('QUEST_LOG_UPDATE'); flush()
-            assert(NS.app.page == 1 and QuestTargetsTarget1.entry.name == 'Mob 1')
+            assert(NS.app.scrollOffset == 0 and QuestTargetsTarget1.entry.name == 'Mob 1')
             assert(not QuestTargetsTarget2.shown)
+            assert(QuestTargetsTarget2.attributes.macrotext1 == nil)
+            assert(not NS.UI.scrollbar.shown)
         ''')
 
     def test_api_missing_empty_loading_and_corrupt_saved_data(self):
@@ -853,7 +872,7 @@ class QuestTargetsTests(unittest.TestCase):
     def test_missing_nameplate_api_is_explicit_not_manual_fallback(self):
         self.lua.execute('''QuestTargetsDB={language='deDE'}; C_TooltipInfo=nil; boot()
             assert(NS.Scanner.status:find('nicht verfügbar',1,true))
-            assert(NS.UI.status.text:find('nicht verfügbar',1,true))
+            assert(NS.UI.status == nil)
             assert(NS.app.Assign == nil)
             assert(NS.app.entries[1].name == 'Waldwolf')
         ''')

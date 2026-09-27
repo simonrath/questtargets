@@ -22,6 +22,14 @@ function methods:SetSize(w, h) guard(self); self.width = w; self.height = h end
 function methods:SetHeight(h) guard(self); self.height = h end
 function methods:SetWidth(w) guard(self); self.width = w end
 function methods:SetScale(scale) guard(self); self.scale = scale end
+function methods:EnableMouseWheel(value) self.mouseWheel = value end
+function methods:SetMinMaxValues(minimum, maximum) self.minValue, self.maxValue = minimum, maximum end
+function methods:SetValueStep(step) self.valueStep = step end
+function methods:SetValue(value)
+    self.value = math.max(self.minValue or value, math.min(self.maxValue or value, value))
+    if self.scripts.OnValueChanged then self.scripts.OnValueChanged(self, self.value) end
+end
+function methods:GetValue() return self.value or 0 end
 function methods:SetEnabled(value) guard(self); assert(type(value) == "boolean"); self.enabled = value end
 function methods:SetShown(value) guard(self); assert(type(value) == "boolean"); self.shown = value end
 function methods:Show() self:SetShown(true) end
@@ -101,7 +109,11 @@ function methods:RegisterForDrag() guard(self) end
 function methods:SetJustifyH() end
 function methods:SetTextColor() end
 function methods:SetOwner() end
-function methods:AddLine() end
+function methods:ClearLines() self.lines = {}; self.text = nil end
+function methods:AddLine(value)
+    self.lines = self.lines or {}
+    self.lines[#self.lines + 1] = value
+end
 UIParent = create()
 Minimap = create(UIParent)
 Minimap:SetSize(140, 140)
@@ -142,8 +154,14 @@ function CreateFrame(kind, name, parent, template)
         while p and p ~= UIParent do p.protected = true; p = p.parent end
     elseif template == "DefaultPanelFlatTemplate" then
         f.TitleContainer = {TitleText = create()}; f.NineSlice = create()
+    elseif template == "UIPanelScrollBarTemplate" then
+        -- Blizzard's inherited handler expects a ScrollFrame parent. This addon
+        -- owns the slider value itself and must replace that handler first.
+        f.scripts.OnValueChanged = function(self, value)
+            self.parent:SetVerticalScroll(value)
+        end
     else
-        assert(template == nil or template == "UIPanelButtonTemplate" or template == "UIPanelCloseButtonNoScripts" or template == "UICheckButtonTemplate" or template == "InputBoxTemplate" or template == "UIDropDownMenuTemplate", template)
+        assert(template == nil or template == "UIPanelButtonTemplate" or template == "UIPanelCloseButtonNoScripts" or template == "UICheckButtonTemplate" or template == "InputBoxTemplate" or template == "UIDropDownMenuTemplate" or template == "UIPanelScrollBarTemplate" or template == "OptionsSliderTemplate", template)
     end
     if name then _G[name] = f end
     frames[#frames + 1] = f
