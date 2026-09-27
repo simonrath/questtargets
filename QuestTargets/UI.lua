@@ -2,6 +2,7 @@ local _, NS = ...
 local UI = {}
 NS.UI = UI
 local L = NS.L
+local FEEDBACK_URL = "https://feedback.jacknine.org"
 UI.PAGE_SIZE = 6
 
 local function label(parent, x, y, width, font)
@@ -137,7 +138,33 @@ function UI.Create(app)
     UI.settingsButton:SetPoint("BOTTOMLEFT", 10, 40)
     UI.refreshButton = button(frame, L("refresh"), 94, function() app:Refresh() end)
     UI.refreshButton:SetPoint("BOTTOMRIGHT", -10, 40)
+    UI.feedbackButton = button(frame, L("feedback"), 260, function() UI.FeedbackLink() end)
+    UI.feedbackButton:SetPoint("BOTTOM", 0, 8)
     frame:SetShown(not app.db.hidden)
+end
+
+function UI.FeedbackLink()
+    if not StaticPopupDialogs or not StaticPopup_Show then return end
+    local key = "QUESTTARGETS_FEEDBACK_LINK"
+    local function selectLink(self)
+        local box = self.GetEditBox and self:GetEditBox() or self.editBox or self.EditBox
+        if box then box:SetText(FEEDBACK_URL); box:HighlightText(); box:SetFocus() end
+        return true
+    end
+    StaticPopupDialogs[key] = {
+        text = L("feedbackLink"),
+        button1 = L("selectLink"),
+        button2 = OKAY or "OK",
+        hasEditBox = true,
+        editBoxWidth = 320,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+        preferredIndex = 3,
+        OnShow = selectLink,
+        OnAccept = selectLink,
+    }
+    StaticPopup_Show(key)
 end
 
 function UI.Settings(app)
@@ -424,6 +451,7 @@ function UI.ApplyLanguage(app)
         UI.frame.TitleContainer.TitleText:SetText(L("title"))
         UI.settingsButton:SetText(L("settings"))
         UI.refreshButton:SetText(L("refresh"))
+        UI.feedbackButton:SetText(L("feedback"))
     end
     local panel = UI.settings
     if panel then

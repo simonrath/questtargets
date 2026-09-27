@@ -6,6 +6,24 @@ import test_quest_targets as addon
 class CommandsPopupTests(unittest.TestCase):
     setUp = addon.QuestTargetsTests.setUp
 
+    def test_feedback_button_opens_copyable_site_url(self):
+        self.lua.execute('''
+            StaticPopupDialogs={}
+            StaticPopup_Show=function(key) popup=StaticPopupDialogs[key] end
+            boot()
+            assert(NS.UI.feedbackButton.text==NS.L('feedback'))
+            NS.UI.feedbackButton.scripts.OnClick()
+            assert(popup and popup.hasEditBox)
+            local box={SetText=function(self,v) self.text=v end,
+                HighlightText=function(self) self.highlighted=true end,
+                SetFocus=function(self) self.focused=true end}
+            popup.OnShow({EditBox=box})
+            assert(box.text=='https://feedback.jacknine.org')
+            assert(box.highlighted and box.focused)
+            NS.app.db.language='deDE'; NS.UI.ApplyLanguage(NS.app)
+            assert(NS.UI.feedbackButton.text==NS.L('feedback'))
+        ''')
+
     def test_new_install_defaults_to_english_but_saved_language_wins(self):
         self.lua.execute('''
             assert(NS.Language()==1)

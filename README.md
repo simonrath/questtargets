@@ -6,11 +6,10 @@ Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)** and **WoW
 
 ## Installation
 
-Download `QuestTargets-1.0.15.zip` from the release page and extract the
+Download `QuestTargets-1.0.16.zip` from the release page and extract the
 `QuestTargets` folder into `Interface/AddOns`. Restart the game after updating.
 
-[QuestieDB](https://github.com/Questie/QuestieDB/releases/) is required,
-separate data provider and is not included in the download. Select a database release compatible with your client: QuestieDB-Forever.zip for Forever or QuestieDB-Vanilla.zip for Classic Era.
+[QuestieDB](https://github.com/Questie/QuestieDB/releases/) is a separate, optional data provider and is not included in the download. Install the release compatible with your client: QuestieDB-Forever.zip for Forever or QuestieDB-Vanilla.zip for Classic Era.
 
 ## Features
 
@@ -20,6 +19,7 @@ separate data provider and is not included in the download. Select a database re
 - Configurable target markers, hotkeys, and tooltips.
 - Native addon settings, a minimap button, and classic or modern master-button appearance.
 - English, German, Spanish, French, Turkish, and Simplified Chinese.
+- In-game feedback button linking to [the public feedback form](https://feedback.jacknine.org); no GitHub account needed.
 
 Use `/qt` to open the quest window and `/qt settings` to open settings.
 Targeting is subject to the client's protected-action and combat restrictions.

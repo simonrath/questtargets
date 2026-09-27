@@ -1,4 +1,4 @@
-# Quest Targets — 1.0.15
+# Quest Targets — 1.0.16
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)** und **WoW Forever Beta (Interface 160001)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -33,6 +33,8 @@ Questinformationen sichtbarer Namensplaketten bleibt verfügbar.
 - Mausrad oder Scrollbalken: weitere Quests in der Liste anzeigen.
 - „Aktualisieren“: Questdaten erneut einlesen. Änderungen an Quests,
   Fortschritt und Verfolgung aktualisieren das Addon auch automatisch.
+- „Bug melden / Verbesserung vorschlagen“: kopierbaren Link zum englischen
+  Feedbackformular anzeigen. Eine GitHub-Anmeldung ist nicht erforderlich.
 - Titelleiste ziehen: Questfenster verschieben. Den Masterbutton mit gedrückter
   rechter Maustaste verschieben.
 - Minikarten-Button: Linksklick öffnet das Questfenster, Rechtsklick die
