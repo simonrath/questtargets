@@ -1,4 +1,4 @@
-# Quest Targets — 1.0.16
+# Quest Targets — 1.0.17
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)** und **WoW Forever Beta (Interface 160001)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -8,14 +8,12 @@ und Abgabe-NPCs.
 
 Die aktuelle ZIP-Datei steht unter
 [GitHub Releases](https://github.com/simonrath/questtargets/releases/latest)
-zur Verfügung. Den enthaltenen Ordner `QuestTargets` nach `Interface/AddOns`
+zur Verfügung. Die enthaltenen Ordner `QuestTargets` und `QuestieDB` nach `Interface/AddOns`
 kopieren und das Spiel nach dem Update neu starten.
 
-Der veröffentlichte Build enthält ausschließlich Lua-Dateien, die TOC-Datei
-und die beiden Kompassgrafiken. QuestieDB, Tests und Dokumentation sind nicht
-enthalten.
+Der kombinierte GitHub-Build enthält QuestieDB v1.0.4 als eigenen Addon-Ordner.
 
-[QuestieDB](https://github.com/Questie/QuestieDB/releases/) kann
+[QuestieDB](https://github.com/Questie/QuestieDB/releases/) kann alternativ
 separat als optionaler Datenanbieter installiert werden. Die Datenbank muss
 zum Client passen: für Forever `QuestieDB-Forever.zip`, für Classic Era `QuestieDB-Vanilla.zip`. Fehlt der Anbieter, zeigt das Addon beim Login einen Hinweis
 mit auswählbarem Download-Link. Die Erkennung über Questtexte und lesbare
@@ -123,6 +121,6 @@ Die Test- und Build-Anleitung steht in der
 ./tools/package_quest_targets.ps1 -CurseForge
 ```
 
-Dieser Aufruf erzeugt den minimalen Release-Build ohne QuestieDB. Angaben zum
+Dieser Aufruf erzeugt einen minimalen Build ohne QuestieDB. Für kombinierte GitHub-Releases `-Flavor Vanilla` oder `-Flavor Forever` verwenden. Angaben zum
 separaten Datenanbieter und zum optionalen kombinierten Entwicklungsbuild
 stehen im [QuestieDB-Hinweis](QUESTIEDB-NOTICE.md).
