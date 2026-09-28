@@ -26,6 +26,7 @@ and in-client compatibility have been confirmed.
 - Name targeting and nearby nameplate detection.
 - Configurable target markers, hotkeys, and tooltips.
 - Native addon settings, a minimap button, and classic or modern master-button appearance.
+- Optional transparency mode immediately leaves only the quest list visible; its toggle icon hides after two seconds and reappears on hover.
 - English, German, Spanish, French, Turkish, and Simplified Chinese.
 - In-game feedback button linking to [the public feedback form](https://feedback.jacknine.org); no GitHub account needed.
 

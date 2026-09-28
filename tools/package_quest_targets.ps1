@@ -9,7 +9,7 @@ $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskAddon = Join-Path $taskRoot 'QuestTargets'
 $taskDist = Join-Path $taskRoot 'dist'
 $taskVersion = (Select-String -LiteralPath (Join-Path $taskAddon 'QuestTargets.toc') -Pattern '^## Version: (.+)$').Matches[0].Groups[1].Value
-$taskRuntimeFiles = @('QuestTargets.toc','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','Master.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga')
+$taskRuntimeFiles = @('QuestTargets.toc','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','Master.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga','Textures/TransparencyEye.tga')
 $taskFiles = if ($CurseForge) { $taskRuntimeFiles } else { $taskRuntimeFiles + @('README.md','QUESTIEDB-NOTICE.md') }
 if ($AddonOnly -or $CurseForge) { $Flavor = 'Minimal' }
 foreach ($taskFile in $taskFiles) {

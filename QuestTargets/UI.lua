@@ -5,6 +5,34 @@ local L = NS.L
 local FEEDBACK_URL = "https://feedback.jacknine.org"
 UI.PAGE_SIZE = 6
 
+local function setChromeAlpha(alpha)
+    for _, region in ipairs(UI.chrome or {}) do region:SetAlpha(alpha) end
+    UI.chromeAlpha = alpha
+end
+
+local function scheduleTransparencyIconHide(app)
+    UI.transparencyTimer = (UI.transparencyTimer or 0) + 1
+    local timer = UI.transparencyTimer
+    if not app.db.transparencyMode then return end
+    C_Timer.After(2, function()
+        if timer == UI.transparencyTimer and app.db.transparencyMode
+            and UI.transparencyButton and not UI.transparencyButton:IsMouseOver() then
+            UI.transparencyButton:SetAlpha(0)
+        end
+    end)
+end
+
+function UI.UpdateTransparency(app)
+    if not UI.frame then return end
+    local alpha = app.db.transparencyMode and 0 or 1
+    if UI.chromeAlpha ~= alpha then setChromeAlpha(alpha) end
+    if UI.transparencyButton then
+        UI.transparencyButton:GetNormalTexture():SetDesaturated(not app.db.transparencyMode)
+        UI.transparencyButton:SetAlpha(1)
+        scheduleTransparencyIconHide(app)
+    end
+end
+
 local function label(parent, x, y, width, font)
     local text = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
     text:SetPoint("TOPLEFT", x, y)
@@ -46,7 +74,9 @@ function UI.Create(app)
     UI.RestorePosition(app.db)
 
     local close = CreateFrame("Button", nil, frame, "UIPanelCloseButtonNoScripts")
-    close:SetPoint("TOPRIGHT", 0, 0)
+    close:SetSize(20, 20)
+    close:SetPoint("TOPRIGHT", -6, -1)
+    UI.closeButton = close
     close:SetScript("OnClick", function() app:Toggle() end)
     -- A guarded drag region: the panel becomes protected through its secure children.
     local drag = CreateFrame("Frame", nil, frame)
@@ -60,6 +90,30 @@ function UI.Create(app)
         if not InCombatLockdown() then frame:StartMoving(); UI.moving = true end
     end)
     drag:SetScript("OnDragStop", function() UI.StopMoving(app.db) end)
+
+    UI.transparencyButton = CreateFrame("Button", nil, frame)
+    UI.transparencyButton:SetSize(20, 20)
+    UI.transparencyButton:SetPoint("TOPLEFT", 10, -1)
+    UI.transparencyButton:SetFrameLevel(512) -- above the title drag region
+    UI.transparencyButton:SetNormalTexture("Interface\\AddOns\\QuestTargets\\Textures\\TransparencyEye")
+    UI.transparencyButton:SetPushedTexture("Interface\\AddOns\\QuestTargets\\Textures\\TransparencyEye")
+    UI.transparencyButton:SetScript("OnClick", function()
+        app.db.transparencyMode = not app.db.transparencyMode
+        UI.UpdateTransparency(app)
+        UI.UpdateSettings(app)
+    end)
+    UI.transparencyButton:SetScript("OnEnter", function(self)
+        UI.transparencyTimer = (UI.transparencyTimer or 0) + 1
+        self:SetAlpha(1)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(L("transparencyMode"))
+        GameTooltip:AddLine(L("transparencyIconTip"), 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    UI.transparencyButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+        scheduleTransparencyIconHide(app)
+    end)
 
     UI.filter = button(frame, L("all"), 116, function() app:ToggleFilter() end)
     UI.filter:SetPoint("TOPLEFT", 10, -30)
@@ -136,8 +190,8 @@ function UI.Create(app)
             UI.RenderRows(app)
         end
     end)
-    UI.scrollbar:SetPoint("TOPRIGHT", -10, -64)
-    UI.scrollbar:SetHeight(UI.PAGE_SIZE * 39 - 10)
+    UI.scrollbar:SetPoint("TOPRIGHT", -10, -82)
+    UI.scrollbar:SetHeight(UI.PAGE_SIZE * 39 - 28)
     UI.scrollbar:SetMinMaxValues(0, 0)
     UI.scrollbar:SetValueStep(1)
     UI.scrollbar:SetValue(0)
@@ -149,6 +203,28 @@ function UI.Create(app)
     UI.refreshButton:SetPoint("BOTTOMRIGHT", -10, 40)
     UI.feedbackButton = button(frame, L("feedback"), 260, function() UI.FeedbackLink() end)
     UI.feedbackButton:SetPoint("BOTTOM", 0, 8)
+    UI.chrome = {}
+    for _, region in ipairs({frame:GetRegions()}) do UI.chrome[#UI.chrome + 1] = region end
+    local function addChrome(region)
+        if region then UI.chrome[#UI.chrome + 1] = region end
+    end
+    addChrome(frame.Bg)
+    addChrome(frame.NineSlice)
+    addChrome(frame.TitleContainer)
+    addChrome(frame.FrameGlow)
+    addChrome(frame.FocusJumpHint)
+    addChrome(frame.LeftJumpHint)
+    addChrome(frame.RightJumpHint)
+    addChrome(close)
+    addChrome(UI.filter)
+    addChrome(UI.database)
+    addChrome(help)
+    addChrome(UI.scrollbar)
+    addChrome(UI.settingsButton)
+    addChrome(UI.refreshButton)
+    addChrome(UI.feedbackButton)
+    UI.chromeAlpha = 1
+    UI.UpdateTransparency(app)
     frame:SetShown(not app.db.hidden)
 end
 
@@ -282,7 +358,7 @@ function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "master", "hotkeys"}
-    local heights = {516, 310, 538, 216}
+    local heights = {550, 310, 538, 216}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -323,9 +399,9 @@ function UI.LayoutSettings(app)
         panel.pages[index] = {scroll=scroll, content=content}
     end
     local general, markers, hotkeys = panel.pages[1].content, panel.pages[2].content, panel.pages[4].content
-    local display = settingsBox(general, "display", -32, 166)
-    local window = settingsBox(general, "window", -232, 125)
-    local language = settingsBox(general, "language", -391, 102)
+    local display = settingsBox(general, "display", -32, 196)
+    local window = settingsBox(general, "window", -262, 125)
+    local language = settingsBox(general, "language", -421, 102)
     local marking = settingsBox(markers, "targetMarkers", -32, 260)
     local appearance = settingsBox(master, "masterAppearance", -32, 84)
     local dimensions = settingsBox(master, "buttonSize", -150, 220)
@@ -335,7 +411,8 @@ function UI.LayoutSettings(app)
     panel.displayText:Hide()
     panel.languageText:Hide()
     panel.hotkeysText:Hide()
-    for i, control in ipairs({panel.masterToggle, panel.menuToggle, panel.tooltipToggle, panel.minimapToggle}) do
+    for i, control in ipairs({panel.masterToggle, panel.menuToggle, panel.transparencyToggle,
+        panel.tooltipToggle, panel.minimapToggle}) do
         place(control, display, 18, -32 - (i-1)*30)
     end
     place(panel.scaleControl, window, 22, -31)
@@ -449,6 +526,11 @@ function UI.Settings(app)
             app:Toggle(); UI.UpdateSettings(app)
         end)
         panel.menuToggle:SetPoint("TOPLEFT", 20, -278)
+        panel.transparencyToggle = checkbox(panel, L("transparencyMode"), function()
+            app.db.transparencyMode = not app.db.transparencyMode
+            UI.UpdateTransparency(app)
+            UI.UpdateSettings(app)
+        end)
         panel.scaleControl = settingsSlider(panel, "QuestTargetsWindowScaleSlider", "menuScale", 0.5, 1.5, 0.05, app)
         panel.scaleSlider = panel.scaleControl.slider
         panel.scaleLabel = panel.scaleControl.caption
@@ -628,6 +710,7 @@ function UI.UpdateSettings(app)
     local menuShown = app.pendingVisibility
     if menuShown == nil then menuShown = not app.db.hidden end
     UI.settings.menuToggle:SetChecked(menuShown)
+    UI.settings.transparencyToggle:SetChecked(app.db.transparencyMode)
     UI.settings.scaleLabel:SetText(L("windowSize"))
     UI.settings.scaleControl:Refresh()
     UI.settings.tooltipToggle:SetChecked(app.db.showTooltips)
@@ -662,6 +745,7 @@ function UI.ApplyLanguage(app)
         panel.displayText:SetText(L("display"))
         panel.masterToggle.caption:SetText(L("showMaster"))
         panel.menuToggle.caption:SetText(L("showMenu"))
+        panel.transparencyToggle.caption:SetText(L("transparencyMode"))
         panel.tooltipToggle.caption:SetText(L("showTooltips"))
         panel.minimapToggle.caption:SetText(L("showMinimap"))
         panel.hotkeyNote:SetText(L("hotkeyNote"))

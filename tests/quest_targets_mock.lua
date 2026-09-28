@@ -46,6 +46,8 @@ function methods:GetWidth() return self.width or 140 end
 function methods:GetCenter() return 900, 500 end
 function methods:GetScale() return self.scale or 1 end
 function methods:GetEffectiveScale() return self.scale or 1 end
+function methods:IsMouseOver() return self.mouseOver == true end
+function methods:GetRegions() return unpack(self.regions or {}) end
 function methods:StartMoving() guard(self); self.moving = true end
 function methods:StopMovingOrSizing() guard(self); self.moving = false end
 function methods:SetText(value) self.text = value end
@@ -65,6 +67,7 @@ function methods:CreateTexture()
 end
 function methods:SetAllPoints() self.allPoints = true end
 function methods:SetAlpha(value) self.alpha = value end
+function methods:SetDesaturated(value) self.desaturated = value end
 function methods:GetAlpha() return self.alpha or 1 end
 function methods:SetNormalTexture(asset)
     assert(type(asset) == 'string', 'SetNormalTexture requires an asset')
@@ -173,7 +176,8 @@ function CreateFrame(kind, name, parent, template)
         local p = f
         while p and p ~= UIParent do p.protected = true; p = p.parent end
     elseif template == "DefaultPanelFlatTemplate" then
-        f.TitleContainer = {TitleText = create()}; f.NineSlice = create()
+        f.TitleContainer = create(f); f.TitleContainer.TitleText = create(f.TitleContainer)
+        f.NineSlice = create(f); f.Bg = create(f)
     elseif template == "UIPanelScrollBarTemplate" then
         -- Blizzard's inherited handler expects a ScrollFrame parent. This addon
         -- owns the slider value itself and must replace that handler first.

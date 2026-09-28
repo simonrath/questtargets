@@ -33,6 +33,50 @@ class QuestTargetsTests(unittest.TestCase):
             assert(row.attributes.macrotext1)
         ''')
 
+    def test_transparency_icon_toggles_window_chrome_immediately(self):
+        self.lua.execute('''boot(); NS.UI.Settings(NS.app)
+            local ui, app = NS.UI, NS.app
+            assert(not app.db.transparencyMode)
+            assert(not ui.settings.transparencyToggle:GetChecked())
+            assert(ui.transparencyButton.point[1]=='TOPLEFT')
+            assert(ui.transparencyButton.point[2]==10)
+            assert(ui.transparencyButton.point[3]==-1)
+            assert(ui.closeButton.width==20 and ui.closeButton.height==20)
+            assert(ui.closeButton.point[1]=='TOPRIGHT')
+            assert(ui.closeButton.point[2]==-6 and ui.closeButton.point[3]==-1)
+            assert(ui.scrollbar.point[3]==-82 and ui.scrollbar.height==206)
+            assert(ui.transparencyButton.normalTexture.texture:find('TransparencyEye',1,true))
+            assert(ui.transparencyButton.pushedTexture.texture:find('TransparencyEye',1,true))
+            assert(ui.frame.scripts.OnUpdate==nil)
+            ui.transparencyButton.scripts.OnClick()
+            assert(app.db.transparencyMode and ui.settings.transparencyToggle:GetChecked())
+            assert(ui.chromeAlpha == 0)
+            assert(ui.frame.NineSlice:GetAlpha() == 0)
+            assert(ui.settingsButton:GetAlpha() == 0)
+            assert(ui.transparencyButton:GetAlpha() == 1)
+            assert(not ui.transparencyButton:GetNormalTexture().desaturated)
+            assert(QuestTargetsTarget1:GetAlpha() == 1)
+            assert(QuestTargetsTarget1.nameText:GetAlpha() == 1)
+            assert(QuestTargetsTarget1.attributes.macrotext1)
+            ui.transparencyButton.mouseOver = true
+            ui.transparencyButton.scripts.OnEnter(ui.transparencyButton)
+            assert(GameTooltip.lines[1] == NS.L('transparencyIconTip'))
+            flush()
+            assert(ui.transparencyButton:GetAlpha() == 1)
+            ui.transparencyButton.mouseOver = false
+            ui.transparencyButton.scripts.OnLeave(ui.transparencyButton)
+            flush()
+            assert(ui.transparencyButton:GetAlpha() == 0)
+            ui.transparencyButton.mouseOver = true
+            ui.transparencyButton.scripts.OnEnter(ui.transparencyButton)
+            assert(ui.transparencyButton:GetAlpha() == 1)
+            ui.settings.transparencyToggle.scripts.OnClick()
+            flush()
+            assert(ui.chromeAlpha == 1 and not app.db.transparencyMode)
+            assert(ui.frame.NineSlice:GetAlpha() == 1)
+            assert(ui.transparencyButton:GetNormalTexture().desaturated)
+        ''')
+
     def test_settings_tabs_keep_language_inside_scroll_content_and_cancel_capture(self):
         self.lua.execute('''
             Settings.RegisterCanvasLayoutSubcategory=function() error('unexpected subcategory') end

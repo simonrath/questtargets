@@ -151,6 +151,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         app.learned = app.db.autoTargets.entries
         if not app.ticker then app.ticker = C_Timer.NewTicker(1, function() app:Poll() end) end
         app.db.hidden = app.db.hidden == true
+        app.db.transparencyMode = app.db.transparencyMode == true
         app.db.watchedOnly = app.db.watchedOnly == true
         app.db.masterHidden = app.db.masterHidden == true
         app.db.actionBarMode = nil -- obsolete setting from the former docking mode
