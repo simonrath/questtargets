@@ -91,14 +91,23 @@ function UI.Create(app)
             NS.Core.RecordClickResult()
             self:SetAttribute("macrotext1", (NS.Core.EntryMacro(self.entry, app.db)))
         end)
-        -- Native ModernUI quest icon and highlight, no bundled or generated textures.
-        row.icon = row:CreateTexture(nil, "ARTWORK")
+        -- The button owns the quest atlas in both native button states, so
+        -- its pushed state also works for a secure click during combat.
+        row:SetNormalAtlas("UI-QuestPoi-QuestNumber-SuperTracked")
+        row:SetPushedAtlas("UI-QuestPoi-QuestNumber-SuperTracked")
+        row.icon = row:GetNormalTexture()
+        row.icon:ClearAllPoints()
         row.icon:SetSize(22, 22)
         row.icon:SetPoint("LEFT", 1, 0)
-        row.icon:SetAtlas("UI-QuestPoi-QuestNumber-SuperTracked")
+        row.pushedIcon = row:GetPushedTexture()
+        row.pushedIcon:ClearAllPoints()
+        row.pushedIcon:SetSize(20, 20)
+        row.pushedIcon:SetPoint("LEFT", 2, -1)
         row.number = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         row.number:SetPoint("CENTER", row.icon, "CENTER", 0, 0)
         row.number:SetText(index)
+        row:SetFontString(row.number)
+        row:SetPushedTextOffset(1, -1)
         row:SetHighlightAtlas("UI-QuestPoi-InnerGlow")
         local highlight = row:GetHighlightTexture()
         highlight:ClearAllPoints()
@@ -167,6 +176,231 @@ function UI.FeedbackLink()
     StaticPopup_Show(key)
 end
 
+-- Settings controls use ordinary frames; protected targeting stays in Master.lua.
+local function settingsSlider(parent, name, key, minimum, maximum, step, app)
+    local control = CreateFrame("Frame", nil, parent)
+    control:SetSize(330, 82)
+    control.caption = label(control, 0, 0, 330, "GameFontNormal")
+    control.caption:ClearAllPoints()
+    control.caption:SetPoint("BOTTOMLEFT", control, "TOPLEFT", 0, -18)
+    control.caption:SetPoint("BOTTOMRIGHT", control, "TOPRIGHT", 0, -18)
+    control.caption:SetJustifyH("CENTER")
+    local slider = CreateFrame("Slider", name, control, "OptionsSliderTemplate")
+    control.slider = slider
+    slider:SetPoint("TOPLEFT", 4, -26)
+    slider:SetPoint("TOPRIGHT", -4, -26)
+    slider:SetHeight(18)
+    slider:SetMinMaxValues(minimum, maximum)
+    slider:SetValueStep(step)
+    if slider.SetObeyStepOnDrag then slider:SetObeyStepOnDrag(true) end
+    local low, high, title = slider.Low or _G[name .. "Low"], slider.High or _G[name .. "High"], slider.Text or _G[name .. "Text"]
+    if low then low:SetText(tostring(minimum)) end
+    if high then high:SetText(tostring(maximum)) end
+    if title then title:Hide() end
+    local edit = CreateFrame("EditBox", nil, control, "InputBoxTemplate")
+    control.edit = edit
+    edit:SetSize(76, 22)
+    edit:SetPoint("TOP", 0, -53)
+    edit:SetAutoFocus(false)
+    edit:SetMaxLetters(8)
+    edit:SetJustifyH("CENTER")
+    local function display(value)
+        if not edit:HasFocus() then edit:SetText(string.format("%.2f", value):gsub("0+$", ""):gsub("%.$", "")) end
+    end
+    slider:SetScript("OnValueChanged", function(_, value)
+        local rounded = math.max(minimum, math.min(maximum, math.floor(value / step + 0.5) * step))
+        display(rounded)
+        if control.updating or math.abs(rounded - app.db[key]) < 0.0001 then return end
+        app.db[key] = rounded
+        app:Schedule()
+    end)
+    function control:Refresh()
+        self.updating = true
+        self.slider:SetValue(app.db[key])
+        display(app.db[key])
+        self.updating = false
+    end
+    local function save(self)
+        if control.saving then return end
+        control.saving = true
+        local value = tonumber(((self:GetText() or ""):gsub(",", ".")))
+        self:ClearFocus()
+        if value and value == value and value ~= math.huge and value ~= -math.huge then
+            slider:SetValue(math.max(minimum, math.min(maximum, value)))
+        end
+        control:Refresh()
+        control.saving = false
+    end
+    edit:SetScript("OnEnterPressed", save)
+    edit:SetScript("OnEditFocusLost", save)
+    edit:SetScript("OnEscapePressed", function(self)
+        self:SetText(tostring(app.db[key]))
+        self:ClearFocus()
+        control:Refresh()
+    end)
+    return control
+end
+
+local function settingsBox(parent, key, y, height)
+    local box = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    box:SetPoint("TOPLEFT", 8, y)
+    box:SetPoint("TOPRIGHT", -8, y)
+    box:SetHeight(height)
+    box:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile="Interface\\Tooltips\\UI-Tooltip-Border", tile=true, tileSize=16, edgeSize=16,
+        insets={left=4, right=4, top=4, bottom=4}})
+    box:SetBackdropColor(0.08, 0.08, 0.08, 0.65)
+    box.heading = label(box, 16, -12, 400, "GameFontNormal")
+    box.heading:ClearAllPoints()
+    box.heading:SetPoint("BOTTOMLEFT", box, "TOPLEFT", 12, 6)
+    box.heading:SetText(L(key))
+    box.localeKey = key
+    return box
+end
+
+local function place(control, parent, x, y)
+    control:SetParent(parent)
+    control:ClearAllPoints()
+    control:SetPoint("TOPLEFT", x, y)
+end
+
+function UI.SelectSettingsTab(index)
+    local panel = UI.settings
+    if not panel or not panel.pages[index] then return end
+    panel.hotkey.listening = false
+    panel.hotkey:EnableKeyboard(false)
+    UI.UpdateSettings(NS.app)
+    panel.selectedTab = index
+    for i, page in ipairs(panel.pages) do
+        page.scroll:SetShown(i == index)
+        panel.tabs[i]:SetEnabled(i ~= index)
+        panel.tabs[i]:SetBackdropColor(i == index and 0.2 or 0.06, 0.06, 0.02, 0.9)
+    end
+end
+
+function UI.LayoutSettings(app)
+    local panel, master = UI.settings, UI.masterSettings
+    panel.pages, panel.tabs, panel.groups = {}, {}, {}
+    local keys = {"general", "targetMarkers", "master", "hotkeys"}
+    local heights = {516, 310, 538, 216}
+    panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
+    panel.body:SetPoint("TOPLEFT", 8, -78)
+    panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
+    panel.body:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile="Interface\\Tooltips\\UI-Tooltip-Border", tile=true, tileSize=16, edgeSize=16,
+        insets={left=4, right=4, top=4, bottom=4}})
+    panel.body:SetBackdropColor(0.06, 0.06, 0.06, 0.75)
+    for index, key in ipairs(keys) do
+        local tabIndex = index
+        local tab = CreateFrame("Button", nil, panel, "BackdropTemplate")
+        panel.tabs[index] = tab
+        tab.localeKey = key
+        tab:SetHeight(24)
+        tab:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile="Interface\\Tooltips\\UI-Tooltip-Border", tile=true, tileSize=16, edgeSize=12,
+            insets={left=3, right=3, top=3, bottom=3}})
+        tab:SetNormalFontObject("GameFontNormalSmall")
+        tab:SetDisabledFontObject("GameFontHighlightSmall")
+        tab:SetScript("OnEnter", function(self)
+            if panel.selectedTab ~= tabIndex then self:SetBackdropColor(0.04, 0.22, 0.48, 0.95) end
+        end)
+        tab:SetScript("OnLeave", function(self)
+            self:SetBackdropColor(panel.selectedTab == tabIndex and 0.2 or 0.06, 0.06, 0.02, 0.9)
+        end)
+        tab:SetText(L(key))
+        tab:SetScript("OnClick", function() UI.SelectSettingsTab(tabIndex) end)
+        local scroll = CreateFrame("ScrollFrame", "QuestTargetsSettingsScroll" .. index, panel, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", panel.body, "TOPLEFT", 8, -14)
+        scroll:SetPoint("BOTTOMRIGHT", panel.body, "BOTTOMRIGHT", -28, 8)
+        local content = index == 3 and master or CreateFrame("Frame", nil, scroll)
+        content:SetParent(scroll)
+        content:SetSize(540, heights[index])
+        scroll:SetScrollChild(content)
+        scroll:SetScript("OnSizeChanged", function(self, width)
+            content:SetWidth(math.max(1, width))
+        end)
+        content:SetWidth(math.max(1, scroll:GetWidth()))
+        panel.pages[index] = {scroll=scroll, content=content}
+    end
+    local general, markers, hotkeys = panel.pages[1].content, panel.pages[2].content, panel.pages[4].content
+    local display = settingsBox(general, "display", -32, 166)
+    local window = settingsBox(general, "window", -232, 125)
+    local language = settingsBox(general, "language", -391, 102)
+    local marking = settingsBox(markers, "targetMarkers", -32, 260)
+    local appearance = settingsBox(master, "masterAppearance", -32, 84)
+    local dimensions = settingsBox(master, "buttonSize", -150, 220)
+    local caption = settingsBox(master, "caption", -404, 112)
+    local bindings = settingsBox(hotkeys, "hotkeys", -32, 164)
+    panel.groups = {display, window, language, marking, appearance, dimensions, caption, bindings}
+    panel.displayText:Hide()
+    panel.languageText:Hide()
+    panel.hotkeysText:Hide()
+    for i, control in ipairs({panel.masterToggle, panel.menuToggle, panel.tooltipToggle, panel.minimapToggle}) do
+        place(control, display, 18, -32 - (i-1)*30)
+    end
+    place(panel.scaleControl, window, 22, -31)
+    panel.scaleControl:SetPoint("TOPRIGHT", window, "TOPRIGHT", -22, -31)
+    place(panel.languageDropdown, language, 2, -42)
+    place(panel.toggle, marking, 18, -35)
+    place(panel.selection, marking, 18, -72)
+    for index, choice in ipairs(panel.icons) do
+        place(choice, marking, 20 + ((index - 1) % 4)*85, -103 - math.floor((index-1)/4)* 60)
+    end
+    master.titleText:Hide()
+    master.appearanceText:Hide()
+    master.sizeNote:Hide()
+    master.captionText:Hide()
+    place(master.classicButton, appearance, 20, -42)
+    place(master.modernButton, appearance, 155, -42)
+    for i, field in ipairs({master.widthControl, master.heightControl, master.modernScaleControl}) do
+        local y = i == 2 and -125 or -34
+        place(field, dimensions, 22, y)
+        field:SetPoint("TOPRIGHT", dimensions, "TOPRIGHT", -22, y)
+    end
+    master.captionGroup = caption
+    master.dimensionsGroup = dimensions
+    place(master.textEdit, caption, 22, -41)
+    master.textEdit:SetPoint("TOPRIGHT", caption, "TOPRIGHT", -22, -41)
+    place(master.emptyCaption, caption, 18, -78)
+    panel.hotkeyAction = label(bindings, 18, -43, 210, "GameFontHighlight")
+    panel.hotkeyAction:SetText(L("masterDefault"))
+    place(panel.hotkey, bindings, 235, -38)
+    panel.hotkey:SetWidth(150)
+    panel.hotkey:SetNormalFontObject("GameFontNormalSmall")
+    place(panel.hotkeyClear, bindings, 395, -38)
+    panel.hotkeyClear:SetWidth(80)
+    panel.hotkeyClear:ClearAllPoints()
+    panel.hotkeyClear:SetPoint("TOPRIGHT", -18, -38)
+    panel.hotkey:ClearAllPoints()
+    panel.hotkey:SetPoint("RIGHT", panel.hotkeyClear, "LEFT", -10, 0)
+    panel.hotkeyAction:SetPoint("TOPRIGHT", panel.hotkey, "TOPLEFT", -12, -5)
+    place(panel.hotkeyNote, bindings, 18, -90)
+    panel.hotkeyNote:SetWidth(450)
+    panel.hotkeyNote:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -90)
+    panel.pages[4].scroll:SetScript("OnHide", function()
+        panel.hotkey.listening = false
+        panel.hotkey:EnableKeyboard(false)
+        UI.UpdateSettings(app)
+    end)
+    local function resize(self)
+        local maximum = math.max(40, (self:GetWidth() - 48) / 4)
+        local x = 10
+        for _, tab in ipairs(self.tabs) do
+            local text = tab.GetFontString and tab:GetFontString()
+            local width = math.min(maximum, math.max(72, text and text:GetStringWidth() + 28 or 112))
+            tab:ClearAllPoints()
+            tab:SetPoint("BOTTOMLEFT", self.body, "TOPLEFT", x, -3)
+            tab:SetWidth(width)
+            x = x + width + 4
+        end
+    end
+    panel.ResizeTabs = resize
+    panel:SetScript("OnSizeChanged", resize)
+    resize(panel)
+    UI.UpdateMasterSettings(app)
+    UI.SelectSettingsTab(1)
+end
+
 function UI.Settings(app)
     if not app.db or InCombatLockdown() then return end
     if not UI.settings then
@@ -215,19 +449,9 @@ function UI.Settings(app)
             app:Toggle(); UI.UpdateSettings(app)
         end)
         panel.menuToggle:SetPoint("TOPLEFT", 20, -278)
-        panel.scaleLabel = label(panel, 20, -390, 330, "GameFontNormal")
-        panel.scaleSlider = CreateFrame("Slider", "QuestTargetsWindowScaleSlider", panel, "OptionsSliderTemplate")
-        panel.scaleSlider:SetPoint("TOPLEFT", 20, -425)
-        panel.scaleSlider:SetSize(330, 18)
-        panel.scaleSlider:SetMinMaxValues(0.5, 1.5)
-        panel.scaleSlider:SetValueStep(0.05)
-        panel.scaleSlider:SetScript("OnValueChanged", function(_, value)
-            local rounded = math.floor(value * 20 + 0.5) / 20
-            if rounded == app.db.menuScale then return end
-            app.db.menuScale = rounded
-            panel.scaleLabel:SetText(string.format(L("menuScale"), rounded * 100))
-            app:Schedule()
-        end)
+        panel.scaleControl = settingsSlider(panel, "QuestTargetsWindowScaleSlider", "menuScale", 0.5, 1.5, 0.05, app)
+        panel.scaleSlider = panel.scaleControl.slider
+        panel.scaleLabel = panel.scaleControl.caption
         panel.tooltipToggle = checkbox(panel, L("showTooltips"), function()
             app.db.showTooltips = not app.db.showTooltips
             UI.UpdateSettings(app)
@@ -303,11 +527,12 @@ function UI.Settings(app)
                 UIDropDownMenu_AddButton(info)
             end
         end)
+        UI.CreateMasterSettings(app, panel)
+        UI.LayoutSettings(app)
         if Settings and Settings.RegisterCanvasLayoutCategory then
             local category = Settings.RegisterCanvasLayoutCategory(panel, "Quest Targets")
             Settings.RegisterAddOnCategory(category)
             UI.settingsCategoryID = category:GetID()
-            UI.CreateMasterSettings(app, category)
         elseif InterfaceOptions_AddCategory then
             panel.name = "Quest Targets"
             InterfaceOptions_AddCategory(panel)
@@ -319,8 +544,7 @@ function UI.Settings(app)
 end
 
 function UI.CreateMasterSettings(app, category)
-    if not Settings.RegisterCanvasLayoutSubcategory then return end
-    local panel = CreateFrame("Frame", "QuestTargetsMasterSettings")
+    local panel = CreateFrame("Frame", "QuestTargetsMasterSettings", category)
     UI.masterSettings = panel
     panel:SetSize(600, 470)
     panel.titleText = label(panel, 20, -18, 540, "GameFontNormalLarge")
@@ -341,34 +565,9 @@ function UI.CreateMasterSettings(app, category)
     panel.sizeNote = label(panel, 20, -111, 540)
     panel.sizeNote:SetText(L("sizeNote"))
 
-    local function sizeControl(axis, y)
-        local key = axis == "X" and "masterScaleX" or "masterScaleY"
-        local field = {caption = label(panel, 20, y, 240, "GameFontNormal")}
-        field.smaller = button(panel, "–", 35, function()
-            app.db[key] = math.max(0.5, math.floor((app.db[key] - 0.1) * 10 + 0.5) / 10)
-            app:Schedule(); UI.UpdateMasterSettings(app)
-        end)
-        field.smaller:SetPoint("TOPLEFT", 265, y + 4)
-        field.larger = button(panel, "+", 35, function()
-            app.db[key] = math.min(2, math.floor((app.db[key] + 0.1) * 10 + 0.5) / 10)
-            app:Schedule(); UI.UpdateMasterSettings(app)
-        end)
-        field.larger:SetPoint("TOPLEFT", 335, y + 4)
-        return field
-    end
-    panel.widthControl = sizeControl("X", -150)
-    panel.heightControl = sizeControl("Y", -189)
-    panel.modernScaleControl = {caption = label(panel, 20, -150, 240, "GameFontNormal")}
-    panel.modernScaleControl.smaller = button(panel, "–", 35, function()
-        app.db.masterModernScale = math.max(0.5, math.floor((app.db.masterModernScale - 0.1) * 10 + 0.5) / 10)
-        UI.UpdateMasterSettings(app); app:Schedule()
-    end)
-    panel.modernScaleControl.smaller:SetPoint("TOPLEFT", 265, -146)
-    panel.modernScaleControl.larger = button(panel, "+", 35, function()
-        app.db.masterModernScale = math.min(2, math.floor((app.db.masterModernScale + 0.1) * 10 + 0.5) / 10)
-        UI.UpdateMasterSettings(app); app:Schedule()
-    end)
-    panel.modernScaleControl.larger:SetPoint("TOPLEFT", 335, -146)
+    panel.widthControl = settingsSlider(panel, "QuestTargetsMasterWidthSlider", "masterScaleX", 0.5, 2, 0.05, app)
+    panel.heightControl = settingsSlider(panel, "QuestTargetsMasterHeightSlider", "masterScaleY", 0.5, 2, 0.05, app)
+    panel.modernScaleControl = settingsSlider(panel, "QuestTargetsMasterScaleSlider", "masterModernScale", 0.5, 2, 0.05, app)
 
     panel.captionText = label(panel, 20, -246, 540, "GameFontNormal")
     panel.captionText:SetText(L("caption"))
@@ -392,8 +591,6 @@ function UI.CreateMasterSettings(app, category)
     end)
     panel.emptyCaption = label(panel, 20, -314, 540)
     panel.emptyCaption:SetText(L("emptyCaption"))
-    local subcategory = Settings.RegisterCanvasLayoutSubcategory(category, panel, L("master"))
-    UI.masterSettingsCategoryID = subcategory:GetID()
     UI.UpdateMasterSettings(app)
 end
 
@@ -404,21 +601,22 @@ function UI.UpdateMasterSettings(app)
     panel.appearanceText:SetText(L("masterAppearance"))
     panel.classicButton:SetEnabled(modern)
     panel.modernButton:SetEnabled(not modern)
-    panel.sizeNote:SetShown(not modern)
-    for _, field in ipairs({panel.widthControl, panel.heightControl}) do
-        field.caption:SetShown(not modern)
-        field.smaller:SetShown(not modern)
-        field.larger:SetShown(not modern)
+    panel.widthControl:SetShown(not modern)
+    panel.heightControl:SetShown(not modern)
+    panel.modernScaleControl:SetShown(modern)
+    if panel.captionGroup then panel.captionGroup:SetShown(not modern) end
+    if panel.dimensionsGroup then
+        panel.dimensionsGroup:SetHeight(modern and 130 or 220)
+        panel:SetHeight(modern and 300 or 538)
     end
-    panel.modernScaleControl.caption:SetShown(modern)
-    panel.modernScaleControl.smaller:SetShown(modern)
-    panel.modernScaleControl.larger:SetShown(modern)
-    panel.modernScaleControl.caption:SetText(string.format(L("masterModernScale"), app.db.masterModernScale * 100))
-    panel.captionText:SetShown(not modern)
     panel.textEdit:SetShown(not modern)
     panel.emptyCaption:SetShown(not modern)
-    panel.widthControl.caption:SetText(string.format(L("width"), app.db.masterScaleX * 100))
-    panel.heightControl.caption:SetText(string.format(L("height"), app.db.masterScaleY * 100))
+    panel.widthControl.caption:SetText(L("widthLabel"))
+    panel.heightControl.caption:SetText(L("heightLabel"))
+    panel.modernScaleControl.caption:SetText(L("scaleFactor"))
+    panel.widthControl:Refresh()
+    panel.heightControl:Refresh()
+    panel.modernScaleControl:Refresh()
     if not panel.textEdit:HasFocus() then panel.textEdit:SetText(app.db.masterText) end
 end
 
@@ -430,14 +628,12 @@ function UI.UpdateSettings(app)
     local menuShown = app.pendingVisibility
     if menuShown == nil then menuShown = not app.db.hidden end
     UI.settings.menuToggle:SetChecked(menuShown)
-    UI.settings.scaleLabel:SetText(string.format(L("menuScale"), app.db.menuScale * 100))
-    if UI.settings.scaleSlider:GetValue() ~= app.db.menuScale then
-        UI.settings.scaleSlider:SetValue(app.db.menuScale)
-    end
+    UI.settings.scaleLabel:SetText(L("windowSize"))
+    UI.settings.scaleControl:Refresh()
     UI.settings.tooltipToggle:SetChecked(app.db.showTooltips)
     UI.settings.minimapToggle:SetChecked(not app.db.minimapHidden)
     local key = GetBindingKey and GetBindingKey("CLICK QuestTargetsMaster:LeftButton")
-    UI.settings.hotkey:SetText(string.format(L("hotkey"), key or L("unbound")))
+    if not UI.settings.hotkey.listening then UI.settings.hotkey:SetText(key or L("unbound")) end
     UIDropDownMenu_SetSelectedID(UI.settings.languageDropdown, NS.Language())
     UIDropDownMenu_SetText(UI.settings.languageDropdown, NS.LANGUAGE_NAMES[NS.Language()])
     for index, choice in ipairs(UI.settings.icons) do choice:SetEnabled(index ~= app.db.markerIcon) end
@@ -456,6 +652,12 @@ function UI.ApplyLanguage(app)
     local panel = UI.settings
     if panel then
         panel.titleText:SetText(L("title"))
+        if panel.tabs then
+            for _, tab in ipairs(panel.tabs) do tab:SetText(L(tab.localeKey)) end
+            for _, group in ipairs(panel.groups) do group.heading:SetText(L(group.localeKey)) end
+            panel.hotkeyAction:SetText(L("masterDefault"))
+            panel:ResizeTabs()
+        end
         panel.toggle.caption:SetText(L("autoMark"))
         panel.displayText:SetText(L("display"))
         panel.masterToggle.caption:SetText(L("showMaster"))
@@ -583,7 +785,16 @@ function UI.RenderRows(app)
             row:SetAttribute("macrotext1", (NS.Core.EntryMacro(entry, app.db)))
             row.nameText:SetText(entry.title)
             row.nameText:SetTextColor(entry.name and 1 or 0.7, entry.name and 0.82 or 0.7, entry.name and 0 or 0.7)
-            row.icon:SetAtlas(entry.name and "UI-QuestPoi-QuestNumber-SuperTracked" or "UI-QuestPoi-QuestNumber")
+            local atlas = entry.name and "UI-QuestPoi-QuestNumber-SuperTracked" or "UI-QuestPoi-QuestNumber"
+            row:SetNormalAtlas(atlas)
+            row:SetPushedAtlas(atlas)
+            -- Button atlas setters may restore full-button anchors and atlas size.
+            row.icon:ClearAllPoints()
+            row.icon:SetSize(22, 22)
+            row.icon:SetPoint("LEFT", 1, 0)
+            row.pushedIcon:ClearAllPoints()
+            row.pushedIcon:SetSize(20, 20)
+            row.pushedIcon:SetPoint("LEFT", 2, -1)
             row.number:SetText((app.scrollOffset or 0) + index)
             local progress = entry.total > 0 and (entry.done .. "/" .. entry.total) or L("open")
             row.detail:SetText(string.format(L("detail"), progress, #entry.refs, #entry.nameList))

@@ -25,9 +25,9 @@ PIN_SHA256 = '0aa71066dad715aac0af03d79f74acdb669a63df8d2368aed222b63dd20f68b8'
 DEFAULT_ZIP = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.1/QuestieDB-Vanilla.zip'
 
 
-def load_release(path=DEFAULT_ZIP):
+def load_release(path=DEFAULT_ZIP, flavor='Vanilla', expected_hash=PIN_SHA256):
     blob = Path(path).read_bytes()
-    assert hashlib.sha256(blob).hexdigest() == PIN_SHA256, 'Unexpected QuestieDB release bytes'
+    assert hashlib.sha256(blob).hexdigest() == expected_hash, 'Unexpected QuestieDB release bytes'
     lua = LuaRuntime(unpack_returned_tuples=True, encoding=None)
 
     def convert(value):
@@ -45,7 +45,7 @@ def load_release(path=DEFAULT_ZIP):
             return zlib.decompress(blob, -15)
 
     with zipfile.ZipFile(path) as archive:
-        toc = archive.read('QuestieDB/QuestieDB_Vanilla.toc').decode('utf-8')
+        toc = archive.read(f'QuestieDB/QuestieDB_{flavor}.toc').decode('utf-8')
         metadata = {}
         for line in toc.splitlines():
             if line.startswith('## ') and ': ' in line:

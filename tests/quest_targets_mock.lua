@@ -14,10 +14,16 @@ function methods:SetScript(event, callback)
     assert(not (self.secure and event == "OnClick"), "replaced secure click handler")
     self.scripts[event] = callback
 end
+function methods:SetParent(parent) self.parent = parent end
+function methods:SetBackdrop(value) self.backdrop = value end
+function methods:SetBackdropColor(...) self.backdropColor = {...} end
+function methods:SetNormalFontObject(value) self.normalFont = value end
+function methods:SetDisabledFontObject(value) self.disabledFont = value end
+function methods:SetScrollChild(child) self.scrollChild = child end
 function methods:RegisterEvent(event) self.events[event] = true end
 function methods:SetAttribute(key, value) guard(self); self.attributes[key] = value end
 function methods:SetPoint(...) guard(self); self.point = {...} end
-function methods:ClearAllPoints() guard(self); self.point = nil end
+function methods:ClearAllPoints() guard(self); self.point = nil; self.allPoints = false end
 function methods:SetSize(w, h) guard(self); self.width = w; self.height = h end
 function methods:SetHeight(h) guard(self); self.height = h end
 function methods:SetWidth(w) guard(self); self.width = w end
@@ -57,7 +63,7 @@ function methods:CreateTexture()
     self.textures[#self.textures + 1] = texture
     return texture
 end
-function methods:SetAllPoints() end
+function methods:SetAllPoints() self.allPoints = true end
 function methods:SetAlpha(value) self.alpha = value end
 function methods:GetAlpha() return self.alpha or 1 end
 function methods:SetNormalTexture(asset)
@@ -70,6 +76,20 @@ function methods:SetPushedTexture(asset)
     self.pushedTexture = self.pushedTexture or create(self)
     self.pushedTexture.texture = asset
 end
+function methods:SetNormalAtlas(atlas)
+    self.normalTexture = self.normalTexture or create(self)
+    self.normalTexture:SetAtlas(atlas)
+    self.normalTexture:SetAllPoints()
+    self.normalTexture:SetSize(self:GetWidth(), self:GetHeight())
+end
+function methods:SetPushedAtlas(atlas)
+    self.pushedTexture = self.pushedTexture or create(self)
+    self.pushedTexture:SetAtlas(atlas)
+    self.pushedTexture:SetAllPoints()
+    self.pushedTexture:SetSize(self:GetWidth(), self:GetHeight())
+end
+function methods:SetFontString(fontString) self.fontString = fontString end
+function methods:SetPushedTextOffset(x, y) self.pushedTextOffset = {x, y} end
 function methods:SetHighlightTexture(asset)
     assert(type(asset) == 'string', 'SetHighlightTexture requires an asset')
     self.highlight = self.highlight or create(self)
@@ -161,7 +181,7 @@ function CreateFrame(kind, name, parent, template)
             self.parent:SetVerticalScroll(value)
         end
     else
-        assert(template == nil or template == "UIPanelButtonTemplate" or template == "UIPanelCloseButtonNoScripts" or template == "UICheckButtonTemplate" or template == "InputBoxTemplate" or template == "UIDropDownMenuTemplate" or template == "UIPanelScrollBarTemplate" or template == "OptionsSliderTemplate", template)
+        assert(template == nil or template == "UIPanelButtonTemplate" or template == "UIPanelCloseButtonNoScripts" or template == "UICheckButtonTemplate" or template == "InputBoxTemplate" or template == "UIDropDownMenuTemplate" or template == "UIPanelScrollBarTemplate" or template == "OptionsSliderTemplate" or template == "BackdropTemplate" or template == "UIPanelScrollFrameTemplate", template)
     end
     if name then _G[name] = f end
     frames[#frames + 1] = f

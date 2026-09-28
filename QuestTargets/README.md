@@ -1,4 +1,4 @@
-# Quest Targets — 1.0.16
+# Quest Targets — 1.0.22
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)** und **WoW Forever Beta (Interface 160001)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -6,20 +6,25 @@ und Abgabe-NPCs.
 
 ## Installation
 
-Die aktuelle ZIP-Datei steht unter
-[GitHub Releases](https://github.com/simonrath/questtargets/releases/latest)
-zur Verfügung. Den enthaltenen Ordner `QuestTargets` nach `Interface/AddOns`
-kopieren und das Spiel nach dem Update neu starten.
+Für lokale Tests gibt es zwei getrennte Pakete: `QuestTargets-<Version>-Classic.zip`
+für Classic Era und `QuestTargets-<Version>-Forever.zip` für Forever. Jedes ZIP
+enthält auf oberster Ebene `QuestTargets/` und die passende, unveränderte
+offizielle `QuestieDB/` v1.0.4. Vor einem Update das Spiel schließen und einen
+bereits vorhandenen Ordner `Interface/AddOns/QuestieDB` entfernen. Danach beide
+Ordner aus dem zum Client passenden ZIP nach `Interface/AddOns` entpacken und
+das Spiel neu starten. So bleiben keine alten TOC-Dateien zurück.
 
-Der veröffentlichte Build enthält ausschließlich Lua-Dateien, die TOC-Datei
-und die beiden Kompassgrafiken. QuestieDB, Tests und Dokumentation sind nicht
-enthalten.
-
-[QuestieDB](https://github.com/Questie/QuestieDB/releases/) kann
-separat als optionaler Datenanbieter installiert werden. Die Datenbank muss
-zum Client passen: für Forever `QuestieDB-Forever.zip`, für Classic Era `QuestieDB-Vanilla.zip`. Fehlt der Anbieter, zeigt das Addon beim Login einen Hinweis
-mit auswählbarem Download-Link. Die Erkennung über Questtexte und lesbare
+Der bisherige, datenbankfreie Build `QuestTargets-<Version>.zip` bleibt für
+öffentliche Verteilung erhalten. Dafür kann
+[QuestieDB](https://github.com/Questie/QuestieDB/releases/) separat installiert
+werden: `QuestieDB-Forever.zip` für Forever oder `QuestieDB-Vanilla.zip` für
+Classic Era. Bei fehlendem Anbieter zeigt das Addon beim Login einen
+Download-Hinweis. Die Erkennung über Questtexte und lesbare
 Questinformationen sichtbarer Namensplaketten bleibt verfügbar.
+
+Die kombinierten Pakete dürfen erst veröffentlicht werden, wenn die
+Weiterverteilungsrechte von QuestieDB und der Test im Spiel geklärt sind.
+Herkunft und Prüfsummen stehen im [QuestieDB-Hinweis](QUESTIEDB-NOTICE.md).
 
 ## Bedienung
 
@@ -40,6 +45,7 @@ Questinformationen sichtbarer Namensplaketten bleibt verfügbar.
 - Minikarten-Button: Linksklick öffnet das Questfenster, Rechtsklick die
   Einstellungen. Mit der linken Maustaste am Minikartenrand verschieben.
 
+Die kleinen Questbuttons zeigen beim Drücken eine native Klickanimation.
 Jede Quest erscheint einmal mit ihrem Fortschritt. Alle bekannten Mobarten
 aller offenen Unterziele sind gültige Ziele dieses Questbuttons. Erledigte
 Unterziele liefern keine zusätzlichen Mobziele. Tooltips zeigen die Unterziele
@@ -48,12 +54,13 @@ und die gültigen Mobarten an.
 ## Einstellungen
 
 „Einstellungen“ oder `/qt settings` öffnet die native WoW-Addon-Optionsseite.
-Dort lassen sich Questfenster, Masterbutton, Minikarten-Button und Tooltips
-anzeigen oder ausblenden sowie Fenstergröße per Schieberegler und automatische
-Markierung ändern.
+Interne Reiter gliedern die Optionen in Allgemein, Zielmarkierung, Masterbutton
+und Hotkeys. Eingerahmte Gruppen und scrollbare Inhalte halten die Einstellungen
+auch bei kleineren Fenstergrößen erreichbar. Unter Allgemein stehen Anzeige,
+Fenstergröße und Sprache; der Hotkey wird im eigenen Reiter zugewiesen.
 
 Der Masterbutton unterstützt eine Tastenzuweisung einschließlich Kombinationen
-wie STRG+F. Unter „Masterbutton bearbeiten“ stehen zwei Darstellungen bereit:
+wie STRG+F. Im Reiter „Masterbutton“ stehen zwei Darstellungen bereit:
 
 - **Klassisch:** nativer Textbutton mit unabhängig einstellbarer Breite und
   Höhe sowie frei wählbarem, auch leerem Schriftzug.
@@ -63,6 +70,7 @@ wie STRG+F. Unter „Masterbutton bearbeiten“ stehen zwei Darstellungen bereit
 Die Standardsprache ist Englisch. Deutsch, Spanisch, Französisch, Türkisch
 und vereinfachtes Chinesisch sind ebenfalls auswählbar. Die Oberflächensprache
 wechselt sofort; Quest- und NPC-Namen folgen weiterhin der Clientsprache.
+Größenregler bieten ein direkt bearbeitbares Zahlenfeld; 1 entspricht 100 %.
 Einstellungen werden pro Charakter gespeichert.
 
 Automatische Markierung ist standardmäßig mit dem Totenkopf aktiviert. Alle
@@ -120,9 +128,10 @@ Die Test- und Build-Anleitung steht in der
 [Repository-README](../README.md#development).
 
 ```powershell
+./tools/package_quest_targets.ps1
 ./tools/package_quest_targets.ps1 -CurseForge
 ```
 
-Dieser Aufruf erzeugt den minimalen Release-Build ohne QuestieDB. Angaben zum
-separaten Datenanbieter und zum optionalen kombinierten Entwicklungsbuild
+Der erste Aufruf erzeugt beide kombinierten lokalen Test-Builds, der zweite den
+minimalen Build ohne QuestieDB. Angaben zum Datenanbieter und seiner Herkunft
 stehen im [QuestieDB-Hinweis](QUESTIEDB-NOTICE.md).

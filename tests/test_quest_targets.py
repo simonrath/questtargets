@@ -14,6 +14,96 @@ class QuestTargetsTests(unittest.TestCase):
             self.lua.execute('assert(loadstring(...))("QuestTargets", NS)',
                              (ROOT / 'QuestTargets' / name).read_text(encoding='utf-8'))
 
+    def test_quest_buttons_have_native_pressed_state(self):
+        self.lua.execute('''boot()
+            for _,row in ipairs(NS.UI.rows) do
+                assert(row.icon==row:GetNormalTexture())
+                assert(row.pushedIcon==row:GetPushedTexture())
+                assert(row.icon.width==22 and row.icon.height==22)
+                assert(row.pushedIcon.width==20 and row.pushedIcon.height==20)
+                assert(not row.icon.allPoints and not row.pushedIcon.allPoints)
+                assert(row.pushedIcon.point[3]==-1)
+                assert(row.fontString==row.number)
+                assert(row.pushedTextOffset[1]==1 and row.pushedTextOffset[2]==-1)
+                assert(row.icon.atlas==row.pushedIcon.atlas)
+                assert(row.scripts.OnMouseDown==nil and row.scripts.OnMouseUp==nil)
+            end
+            local row=NS.UI.rows[1]
+            row.scripts.PreClick(row,'LeftButton',false)
+            assert(row.attributes.macrotext1)
+        ''')
+
+    def test_settings_tabs_keep_language_inside_scroll_content_and_cancel_capture(self):
+        self.lua.execute('''
+            Settings.RegisterCanvasLayoutSubcategory=function() error('unexpected subcategory') end
+            boot(); NS.UI.Settings(NS.app)
+            local panel=NS.UI.settings
+            assert(#panel.tabs==4 and panel.selectedTab==1)
+            assert(panel.languageDropdown.parent.parent==panel.pages[1].content)
+            for index,page in ipairs(panel.pages) do
+                assert(page.scroll.scrollChild==page.content)
+                assert(page.scroll.shown==(index==1))
+                page.scroll.scripts.OnSizeChanged(page.scroll,480)
+                assert(page.content.width==480)
+            end
+            NS.UI.SelectSettingsTab(4)
+            assert(panel.pages[4].scroll.shown and not panel.pages[1].scroll.shown)
+            assert(panel.hotkey.text==NS.L('unbound'))
+            assert(panel.hotkeyAction.text==NS.L('masterDefault'))
+            panel.hotkey.scripts.OnClick(panel.hotkey)
+            NS.UI.SelectSettingsTab(1)
+            assert(not panel.hotkey.listening and panel.hotkey.text==NS.L('unbound'))
+            assert(GetBindingKey('CLICK QuestTargetsMaster:LeftButton')==nil)
+            NS.UI.SelectSettingsTab(4)
+            panel.hotkey.scripts.OnClick(panel.hotkey)
+            ctrlDown=true
+            panel.hotkey.scripts.OnKeyDown(panel.hotkey,'F')
+            assert(panel.hotkey.text=='CTRL-F')
+            NS.app.db.language='deDE'; NS.UI.ApplyLanguage(NS.app)
+            assert(panel.tabs[1].text=='Allgemein')
+            assert(panel.hotkeyAction.text==NS.L('masterDefault'))
+            assert(panel.hotkey.text=='CTRL-F')
+        ''')
+
+    def test_size_numeric_inputs_clamp_round_and_reject_invalid_values(self):
+        self.lua.execute('''boot(); NS.UI.Settings(NS.app)
+            local control=NS.UI.masterSettings.widthControl
+            local function enter(text)
+                control.edit:SetText(text)
+                control.edit.scripts.OnEnterPressed(control.edit)
+                flush()
+            end
+            enter('1,27')
+            assert(NS.app.db.masterScaleX==1.25 and NS.UI.master.width==175)
+            enter('99'); assert(NS.app.db.masterScaleX==2)
+            enter('-9'); assert(NS.app.db.masterScaleX==0.5)
+            enter('invalid'); assert(NS.app.db.masterScaleX==0.5)
+            enter(''); assert(control.edit.text=='0.5')
+            enter('1e309'); assert(NS.app.db.masterScaleX==0.5)
+            control.edit:SetText('1.5')
+            control.edit.scripts.OnEscapePressed(control.edit)
+            assert(NS.app.db.masterScaleX==0.5 and control.edit.text=='0.5')
+            assert(NS.app.db.masterScaleY==1)
+            local modern=NS.UI.masterSettings
+            modern.modernButton.scripts.OnClick()
+            modern.modernScaleControl.slider:SetValue(1.5); flush()
+            assert(NS.UI.master.width==60 and NS.UI.master.height==60)
+            assert(not modern.captionGroup.shown)
+        ''')
+
+    def test_settings_tabs_work_without_modern_settings_api(self):
+        self.lua.execute('''
+            Settings=nil
+            InterfaceOptions_AddCategory=function(panel) legacyPanel=panel end
+            InterfaceOptionsFrame_OpenToCategory=function(panel) legacyOpened=panel end
+            boot(); NS.UI.Settings(NS.app)
+            assert(legacyPanel==NS.UI.settings and legacyOpened==legacyPanel)
+            NS.UI.SelectSettingsTab(3)
+            assert(NS.UI.settings.pages[3].scroll.shown)
+            NS.UI.masterSettings.widthControl.slider:SetValue(1.5); flush()
+            assert(NS.UI.master.width==210)
+        ''')
+
     def test_compact_window_keeps_position_on_refresh_filter_and_scroll(self):
         self.lua.execute('''boot()
             local frame = NS.UI.frame
@@ -126,15 +216,15 @@ class QuestTargetsTests(unittest.TestCase):
             assert(master.pushedTexture.texture:find('QuestCompassDown', 1, true))
             assert(master.normalTexture:GetAlpha() == 1 and master.pushedTexture:GetAlpha() == 1)
             assert(master.Left:GetAlpha() == 0 and master.Middle:GetAlpha() == 0 and master.Right:GetAlpha() == 0)
-            assert(not controls.textEdit.shown and not controls.widthControl.smaller.shown)
-            controls.modernScaleControl.larger.scripts.OnClick(); flush()
+            assert(not controls.textEdit.shown and not controls.widthControl.shown)
+            controls.modernScaleControl.slider:SetValue(1.1); flush()
             assert(master.width == 44 and master.height == 44)
             controls.classicButton.scripts.OnClick(); flush()
             assert(master.width == 140 and master.height == 22 and master.text == 'Target quest objective')
             assert(master.normalTexture == originalNormal and master.pushedTexture == originalPushed)
             assert(master.normalTexture:GetAlpha() == 0 and master.pushedTexture:GetAlpha() == 0)
             assert(master.Left:GetAlpha() == 1 and master.Middle:GetAlpha() == 1 and master.Right:GetAlpha() == 1)
-            assert(controls.textEdit.shown and controls.widthControl.smaller.shown)
+            assert(controls.textEdit.shown and controls.widthControl.shown)
         ''')
 
     def test_saved_modern_style_loads_with_native_segmented_template(self):
@@ -164,11 +254,11 @@ class QuestTargetsTests(unittest.TestCase):
 
     def test_master_settings_change_independent_size_and_label(self):
         self.lua.execute('''boot(); NS.UI.Settings(NS.app)
-            assert(NS.UI.masterSettingsCategoryID == 43)
+            assert(NS.UI.masterSettingsCategoryID == nil)
             assert(NS.UI.settings.masterConfigButton == nil)
             local controls, master = NS.UI.masterSettings, NS.UI.master
-            controls.widthControl.larger.scripts.OnClick(); flush()
-            controls.heightControl.smaller.scripts.OnClick(); flush()
+            controls.widthControl.slider:SetValue(1.1); flush()
+            controls.heightControl.slider:SetValue(0.9); flush()
             assert(NS.app.db.masterScaleX == 1.1 and NS.app.db.masterScaleY == 0.9)
             assert(master.width == 154 and master.height == 20)
             assert(controls.textureDropdown == nil)
