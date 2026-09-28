@@ -1,4 +1,4 @@
-param([switch]$AddonOnly, [switch]$CurseForge)
+param([switch]$AddonOnly, [switch]$CurseForge, [ValidateSet('Vanilla','Forever')][string]$Flavor = 'Vanilla')
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskAddon = Join-Path $taskRoot 'QuestTargets'
@@ -9,17 +9,18 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $taskProviderZip = $null
 if (-not $AddonOnly -and -not $CurseForge) {
-    $taskCache = Join-Path $env:TEMP 'quest-targets-questiedb-v1.0.1'
+    $taskCache = Join-Path $env:TEMP 'quest-targets-questiedb-v1.0.4'
     New-Item -ItemType Directory -Path $taskCache -Force | Out-Null
-    $taskProviderZip = Join-Path $taskCache 'QuestieDB-Vanilla.zip'
+    $taskProviderZip = Join-Path $taskCache "QuestieDB-$Flavor.zip"
     if (-not (Test-Path -LiteralPath $taskProviderZip)) {
-        Invoke-WebRequest 'https://github.com/Questie/QuestieDB/releases/download/v1.0.1/QuestieDB-Vanilla.zip' -OutFile $taskProviderZip
+        Invoke-WebRequest "https://github.com/Questie/QuestieDB/releases/download/v1.0.4/QuestieDB-$Flavor.zip" -OutFile $taskProviderZip
     }
-    if ((Get-FileHash -LiteralPath $taskProviderZip -Algorithm SHA256).Hash -ne '0AA71066DAD715AAC0AF03D79F74ACDB669A63DF8D2368AED222B63DD20F68B8') {
+    $taskExpectedHash = if ($Flavor -eq 'Forever') { '2435D382C1A78C0876064C197196E73B9F417669F75187F51CC311FD8C2C19E1' } else { 'CF0AC8DFD6B0986A0624DB6364D4E42A3691089663B8B00122D8AE2B2D040EED' }
+    if ((Get-FileHash -LiteralPath $taskProviderZip -Algorithm SHA256).Hash -ne $taskExpectedHash) {
         throw "QuestieDB checksum mismatch: $taskProviderZip"
     }
 }
-$taskSuffix = if ($AddonOnly -or $CurseForge) { '' } else { '-with-QuestieDB' }
+$taskSuffix = if ($AddonOnly -or $CurseForge) { '' } else { "-with-QuestieDB-$Flavor" }
 $taskZip = Join-Path $taskDist "QuestTargets-$taskVersion$taskSuffix.zip"
 $taskRuntimeFiles = @('QuestTargets.toc','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','Master.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga')
 $taskExpected = if ($CurseForge) { $taskRuntimeFiles } else { $taskRuntimeFiles + @('README.md','QUESTIEDB-NOTICE.md') }
@@ -45,14 +46,10 @@ try {
                 $taskName = $taskEntry.FullName.Replace('\', '/')
                 if (-not $taskName.StartsWith('QuestieDB/') -or $taskName -match '(^|/)\.\.(/|$)|:') { throw "Unsafe provider ZIP path: $taskName" }
                 if ($taskName.EndsWith('/')) { continue }
-                if ($taskName -eq 'QuestieDB/QuestieDB_Vanilla.toc') {
+                if ($taskName -eq "QuestieDB/QuestieDB_$Flavor.toc" -or ($Flavor -eq 'Forever' -and $taskName -eq 'QuestieDB/QuestieDB_Camelot.toc')) {
                     $taskReader = [IO.StreamReader]::new($taskEntry.Open())
                     try { $taskText = $taskReader.ReadToEnd() } finally { $taskReader.Dispose() }
-                    $taskText = $taskText -replace '(?m)^## Interface: [^\r\n]+', '## Interface: 11508, 11509, 160001'
-                    $taskText = $taskText -replace '(?m)^## IconTexture: [^\r\n]+', '## IconAtlas: UI-QuestPoi-QuestNumber'
-                    $taskText = "# Quest Targets local Forever loader adaptation; Classic data, not official Forever support.`n" + $taskText
                     Add-QuestTargetsZipText $taskOutput $taskName $taskText
-                    Add-QuestTargetsZipText $taskOutput 'QuestieDB/QuestieDB.toc' $taskText
                 } else {
                     $taskSourceStream = $taskEntry.Open()
                     $taskTargetStream = $taskOutput.CreateEntry($taskName, [IO.Compression.CompressionLevel]::Optimal).Open()
@@ -70,7 +67,7 @@ try {
         if (-not $taskCheck.GetEntry('QuestTargets/' + $taskFile)) { throw "Missing ZIP entry: $taskFile" }
     }
     if (-not $AddonOnly -and -not $CurseForge) {
-        foreach ($taskFile in @('QuestieDB/QuestieDB.toc','QuestieDB/QuestieDB_Vanilla.toc','QuestieDB/src/api.lua')) {
+        foreach ($taskFile in @("QuestieDB/QuestieDB_$Flavor.toc",'QuestieDB/src/api.lua')) {
             if (-not $taskCheck.GetEntry($taskFile)) { throw "Missing provider file: $taskFile" }
         }
     }
