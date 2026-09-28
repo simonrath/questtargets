@@ -6,10 +6,9 @@ Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)** and **WoW
 
 ## Installation
 
-Download `QuestTargets-1.0.16.zip` from the release page and extract the
-`QuestTargets` folder into `Interface/AddOns`. Restart the game after updating.
+Download `QuestTargets-1.0.17-with-QuestieDB-Vanilla.zip` (Classic Era) or `QuestTargets-1.0.17-with-QuestieDB-Forever.zip` from the release page and extract both the `QuestTargets` and `QuestieDB` folders into `Interface/AddOns`. Restart the game after updating.
 
-[QuestieDB](https://github.com/Questie/QuestieDB/releases/) is a separate, optional data provider and is not included in the download. Install the release compatible with your client: QuestieDB-Forever.zip for Forever or QuestieDB-Vanilla.zip for Classic Era.
+The combined release bundles the matching QuestieDB v1.0.4 provider as a separate addon folder. QuestieDB remains optional and can instead be installed separately.
 
 ## Features
 
@@ -29,10 +28,7 @@ See [the detailed documentation](QuestTargets/README.md) for behavior and limita
 
 Install Python dependencies with `python -m pip install -r tests/requirements.txt`.
 Run `python -m unittest discover -s tests -p "test_quest_targets*.py"`.
-Database integration tests additionally use the pinned QuestieDB v1.0.1 Vanilla
-archive in the system temporary directory at
-`quest-targets-questiedb-v1.0.1/QuestieDB-Vanilla.zip`; the build script without
-flags downloads and verifies this archive.
+Build the matching provider bundle with `./tools/package_quest_targets.ps1 -Flavor Vanilla` or `./tools/package_quest_targets.ps1 -Flavor Forever`. The script pins and verifies QuestieDB v1.0.4.
 
 Build a minimal release ZIP with PowerShell:
 
@@ -41,7 +37,7 @@ Build a minimal release ZIP with PowerShell:
 ```
 
 The ZIP contains runtime Lua, TOC, and texture files only. Tests, documentation,
-and QuestieDB are excluded.
+and QuestieDB are excluded from this minimal CurseForge build.
 
 ## License
 
