@@ -64,5 +64,10 @@ for source hashes and the unresolved redistribution terms.
 
 ## License
 
-[GNU GENERAL PUBLIC LICENSE](LICENSE) for Quest Targets only. QuestieDB is a separate upstream project;
-see the [QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md).
+[GNU GENERAL PUBLIC LICENSE](LICENSE) for Quest Targets only.
+
+### QuestieDB attribution
+
+Questie is listed on [CurseForge](https://www.curseforge.com/wow/addons/questie) under the GNU General Public License version 3 (GPLv3). Quest Targets includes an unmodified copy of QuestieDB, the database used by Questie. Quest Targets is a separate addon that accesses QuestieDB through its public API; we have not changed QuestieDB’s code or data.
+
+Credit for QuestieDB belongs to the QuestieDB team and its contributors. The bundled package comes from the [official QuestieDB v1.0.4 release](https://github.com/Questie/QuestieDB/releases/tag/v1.0.4). Its source is available in the [QuestieDB repository](https://github.com/Questie/QuestieDB).
