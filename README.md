@@ -64,5 +64,5 @@ for source hashes and the unresolved redistribution terms.
 
 ## License
 
-[MIT](LICENSE) for Quest Targets only. QuestieDB is a separate upstream project;
+[GNU GENERAL PUBLIC LICENSE](LICENSE) for Quest Targets only. QuestieDB is a separate upstream project;
 see the [QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md).
