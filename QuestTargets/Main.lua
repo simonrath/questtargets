@@ -56,7 +56,11 @@ function app:Refresh()
     self.resolutionCache = {}
     self.entries, self.metadata = Core.BuildEntries(quests, self.learned, self.resolutionCache)
     self.allEntries = self.db.watchedOnly and Core.BuildEntries(allQuests, self.learned, self.resolutionCache) or self.entries
-    self.error = err
+    -- The unfiltered read also feeds the master button.  In tracked-only mode
+    -- it can fail independently of the first read (for example while the quest
+    -- log is temporarily unavailable), so do not report an ordinary empty
+    -- tracked list when the underlying full read actually failed.
+    self.error = err or allError
     self.dirty = false
     UI.Render(self)
     UI.RenderMaster(self)
