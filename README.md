@@ -6,9 +6,10 @@ Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)**, **WoW Fo
 
 ## Installation
 
-The build script produces separate `QuestTargets-<version>-Classic.zip` and
-`QuestTargets-<version>-Forever.zip` packages. Choose the ZIP for your client.
-Each contains `QuestTargets/` and the corresponding official `QuestieDB/` at
+The build script produces local `QuestTargets-<version>-Retail.zip`,
+`QuestTargets-<version>-Classic.zip`, and `QuestTargets-<version>-Forever.zip`
+packages by default. Choose the ZIP for your client. The Classic and Forever
+packages contain `QuestTargets/` and the corresponding official `QuestieDB/` at
 the ZIP root. Close the game, remove an existing `Interface/AddOns/QuestieDB`
 folder, extract both folders into `Interface/AddOns`, then restart the game.
 Removing the old folder prevents TOCs from another game flavor lingering.
@@ -48,13 +49,13 @@ the system temporary directory at
 the official v1.0.4 Vanilla and Forever artifacts; the packaging script
 downloads missing artifacts and verifies their SHA-256 hashes.
 
-Build both combined local test packages with PowerShell:
+Build all three local packages with PowerShell:
 
 ```powershell
 ./tools/package_quest_targets.ps1
 ```
 
-Build minimal and Retail release ZIPs with PowerShell:
+Build a minimal release ZIP or only the Retail package with PowerShell:
 
 ```powershell
 ./tools/package_quest_targets.ps1 -CurseForge

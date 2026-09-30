@@ -22,7 +22,7 @@ class PackageTests(unittest.TestCase):
             raise unittest.SkipTest('Pinned QuestieDB archives are not cached')
         result = subprocess.run(
             ['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
-             str(ROOT / 'tools/package_quest_targets.ps1'), '-Flavor', 'Both',
+             str(ROOT / 'tools/package_quest_targets.ps1'),
              '-ProviderCache', str(CACHE)],
             cwd=ROOT, capture_output=True, text=True,
         )
@@ -51,6 +51,14 @@ class PackageTests(unittest.TestCase):
                     expected_tocs = ({'QuestieDB/QuestieDB_Vanilla.toc'} if label == 'Classic'
                                      else {'QuestieDB/QuestieDB_Forever.toc', 'QuestieDB/QuestieDB_Camelot.toc'})
                     self.assertEqual(tocs, expected_tocs)
+
+    def test_default_build_also_contains_retail_without_questiedb(self):
+        package_path = ROOT / 'dist' / f'QuestTargets-{self.version}-Retail.zip'
+        with zipfile.ZipFile(package_path) as package:
+            self.assertEqual(package.testzip(), None)
+            self.assertTrue(all(name.startswith('QuestTargets/') for name in package.namelist()))
+            self.assertFalse(any(name.endswith('.md') for name in package.namelist()))
+            self.assertIn(b'120100', package.read('QuestTargets/QuestTargets.toc'))
 
     def test_both_official_providers_satisfy_the_addon_contract(self):
         from tests.questiedb_harness import load_release

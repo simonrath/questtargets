@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Both', 'Classic', 'Forever', 'Retail', 'Minimal')][string]$Flavor = 'Both',
+    [ValidateSet('All', 'Both', 'Classic', 'Forever', 'Retail', 'Minimal')][string]$Flavor = 'All',
     [string]$ProviderCache,
     [switch]$AddonOnly,
     [switch]$CurseForge
@@ -10,11 +10,7 @@ $taskAddon = Join-Path $taskRoot 'QuestTargets'
 $taskDist = Join-Path $taskRoot 'dist'
 $taskVersion = (Select-String -LiteralPath (Join-Path $taskAddon 'QuestTargets.toc') -Pattern '^## Version: (.+)$').Matches[0].Groups[1].Value
 $taskRuntimeFiles = @('QuestTargets.toc','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','Master.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga','Textures/TransparencyEye.tga')
-$taskFiles = if ($CurseForge -or $Flavor -eq 'Retail') { $taskRuntimeFiles } else { $taskRuntimeFiles + @('README.md','QUESTIEDB-NOTICE.md') }
 if ($AddonOnly -or $CurseForge) { $Flavor = 'Minimal' }
-foreach ($taskFile in $taskFiles) {
-    if (-not (Test-Path -LiteralPath (Join-Path $taskAddon $taskFile))) { throw "Missing source: $taskFile" }
-}
 if (-not $ProviderCache) { $ProviderCache = Join-Path $env:TEMP 'quest-targets-questiedb-v1.0.4' }
 New-Item -ItemType Directory -Path $taskDist -Force | Out-Null
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -60,8 +56,14 @@ function Add-ProviderEntries($archive, [string]$providerZip, [string]$expectedTo
     } finally { $sourceZip.Dispose() }
 }
 
-$taskFlavors = if ($Flavor -eq 'Both') { @('Classic', 'Forever') } else { @($Flavor) }
+$taskFlavors = if ($Flavor -eq 'All') { @('Retail', 'Classic', 'Forever') }
+    elseif ($Flavor -eq 'Both') { @('Classic', 'Forever') } else { @($Flavor) }
 foreach ($taskFlavor in $taskFlavors) {
+    $taskFiles = if ($CurseForge -or $taskFlavor -eq 'Retail') { $taskRuntimeFiles }
+        else { $taskRuntimeFiles + @('README.md','QUESTIEDB-NOTICE.md') }
+    foreach ($taskFile in $taskFiles) {
+        if (-not (Test-Path -LiteralPath (Join-Path $taskAddon $taskFile))) { throw "Missing source: $taskFile" }
+    }
     $provider = if ($taskFlavor -eq 'Minimal' -or $taskFlavor -eq 'Retail') { $null } else { $taskProviders[$taskFlavor] }
     $providerZip = $null
     if ($provider) {
