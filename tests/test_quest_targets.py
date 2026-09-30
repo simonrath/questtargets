@@ -889,6 +889,19 @@ class QuestTargetsTests(unittest.TestCase):
             NS.app:Refresh(); assert(#NS.app.entries == 0)
         ''')
 
+    def test_tracked_filter_reports_failure_from_master_quest_read(self):
+        self.lua.execute('''QuestTargetsDB = {watchedOnly=true}; boot()
+            local read, calls = NS.Core.ReadQuests, 0
+            NS.Core.ReadQuests = function(watchedOnly)
+                calls = calls + 1
+                if calls == 2 then return {}, 'full quest read failed' end
+                return read(watchedOnly)
+            end
+            NS.app:Refresh()
+            assert(calls == 2)
+            assert(NS.app.error == 'full quest read failed')
+        ''')
+
     def test_quest_update_bursts_are_coalesced(self):
         self.lua.execute('''boot()
             for i=1,100 do event('QUEST_LOG_UPDATE') end
