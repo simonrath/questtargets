@@ -1,6 +1,6 @@
 # Quest Targets
 
-Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)** and **WoW Forever Beta (Interface 160001)**.
+Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)**, **WoW Forever Beta (Interface 160001)**, and **Retail 12.1 (Interface 120100)**.
 
 **[Download the latest release](https://github.com/simonrath/questtargets/releases/latest)**
 
@@ -16,6 +16,10 @@ Removing the old folder prevents TOCs from another game flavor lingering.
 The public minimal `QuestTargets-<version>.zip` remains available without
 QuestieDB; install the matching provider separately from the
 [official QuestieDB releases](https://github.com/Questie/QuestieDB/releases/).
+Retail users can install `QuestTargets-<version>-Retail.zip` directly; it needs
+no QuestieDB and reads objectives from the Retail quest log. Mob names come
+from readable quest text and visible nameplates. Item sources and turn-in NPCs
+without names in the quest text are not inferred on Retail.
 Combined packages are local test builds until QuestieDB redistribution terms
 and in-client compatibility have been confirmed.
 
@@ -50,10 +54,11 @@ Build both combined local test packages with PowerShell:
 ./tools/package_quest_targets.ps1
 ```
 
-Build a minimal release ZIP with PowerShell:
+Build minimal and Retail release ZIPs with PowerShell:
 
 ```powershell
 ./tools/package_quest_targets.ps1 -CurseForge
+./tools/package_quest_targets.ps1 -Flavor Retail
 ```
 
 The minimal ZIP contains runtime Lua, TOC, and texture files only. Tests,

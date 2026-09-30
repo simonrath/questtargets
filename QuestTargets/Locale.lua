@@ -78,6 +78,7 @@ local phrases = {
     scannerPlates = {"Show hostile nameplates for nearby detection.", "Für die Umgebungserkennung gegnerische Namensplaketten einblenden.", "Muestra las placas enemigas para detectar objetivos cercanos.", "Affichez les barres de nom ennemies pour détecter les cibles proches.", "Yakın hedefleri algılamak için düşman ad plakalarını açın.", "显示敌方姓名板以识别附近目标。"},
     scannerLimited = {"The client is not providing all mob information right now.", "Der Client gibt derzeit nicht alle Mobinformationen frei.", "El cliente no proporciona toda la información de enemigos.", "Le client ne fournit pas toutes les informations des ennemis.", "İstemci şu anda tüm yaratık bilgilerini vermiyor.", "客户端目前未提供全部怪物信息。"},
     dbMissing = {"QuestieDB missing", "QuestieDB fehlt", "Falta QuestieDB", "QuestieDB manquant", "QuestieDB yok", "缺少 QuestieDB"},
+    dbRetail = {"Retail · quest log", "Retail · Questlog", "Retail · registro de misiones", "Retail · journal des quêtes", "Retail · görev günlüğü", "正式服 · 任务日志"},
     dbUpdate = {"Update QuestieDB", "QuestieDB aktualisieren", "Actualiza QuestieDB", "Mettez QuestieDB à jour", "QuestieDB'yi güncelle", "请更新 QuestieDB"},
     dbIncompatible = {"QuestieDB incompatible", "QuestieDB inkompatibel", "QuestieDB incompatible", "QuestieDB incompatible", "QuestieDB uyumsuz", "QuestieDB 不兼容"},
     dbIncomplete = {"QuestieDB incomplete", "QuestieDB unvollständig", "QuestieDB incompleta", "QuestieDB incomplet", "QuestieDB eksik", "QuestieDB 不完整"},

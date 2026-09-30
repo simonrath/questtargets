@@ -9,6 +9,14 @@ local function readable(value)
 end
 Core.Readable = readable
 
+function Core.IsRetail()
+    if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE then
+        return WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
+    end
+    local interface = GetBuildInfo and select(4, GetBuildInfo())
+    return type(interface) == "number" and interface >= 120000 and interface < 130000
+end
+
 function Core.NameplateUnit(plate)
     local function valid(unit)
         return readable(unit) and type(unit) == "string" and unit:match("^nameplate%d+$") and unit or nil

@@ -18,7 +18,7 @@ local function selectDatabaseLink(self)
     return true -- Keep the popup open for the native copy shortcut.
 end
 local function showMissingDatabase()
-    if LibQuestieDB or not StaticPopupDialogs or not StaticPopup_Show then return end
+    if Core.IsRetail() or LibQuestieDB or not StaticPopupDialogs or not StaticPopup_Show then return end
     local key = "QUESTTARGETS_MISSING_QUESTIEDB"
     local interface = GetBuildInfo and select(4, GetBuildInfo())
     local forever = type(interface) == "number" and interface >= 160000 and interface < 170000

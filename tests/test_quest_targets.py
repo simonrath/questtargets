@@ -14,6 +14,38 @@ class QuestTargetsTests(unittest.TestCase):
             self.lua.execute('assert(loadstring(...))("QuestTargets", NS)',
                              (ROOT / 'QuestTargets' / name).read_text(encoding='utf-8'))
 
+    def test_retail_uses_live_quest_objectives_without_classic_database(self):
+        self.lua.execute('''
+            WOW_PROJECT_MAINLINE=1; WOW_PROJECT_ID=1
+            StaticPopupDialogs={}; StaticPopup_Show=function() error('Retail popup') end
+            LibQuestieDB={RequireContract=function() error('Classic database used on Retail') end}
+            boot()
+            assert(not StaticPopupDialogs.QUESTTARGETS_MISSING_QUESTIEDB)
+            assert(NS.Database.Provider()==nil)
+            assert(NS.Database.status==NS.L('dbRetail'))
+            assert(NS.app.questEntries[1].title=='Wölfe im Wald')
+            assert(NS.app.questEntries[1].nameList[1]=='Waldwolf')
+            local row=NS.UI.rows[1]
+            row.scripts.PreClick(row,'LeftButton',false)
+            assert(row.attributes.macrotext1:find('/targetexact',1,true))
+            assert(row.attributes.macrotext1:find('Waldwolf',1,true))
+        ''')
+
+    def test_retail_detection_works_without_project_constants(self):
+        self.lua.execute('''
+            GetBuildInfo=function() return '12.1.0','','',120100 end
+            StaticPopupDialogs={}; StaticPopup_Show=function() error('Retail popup') end
+            boot()
+            assert(not StaticPopupDialogs.QUESTTARGETS_MISSING_QUESTIEDB)
+            assert(NS.Database.status==NS.L('dbRetail'))
+        ''')
+
+    def test_forever_is_not_mistaken_for_retail_without_project_constants(self):
+        self.lua.execute('''
+            GetBuildInfo=function() return '1.60.1','','',160001 end
+            assert(not NS.Core.IsRetail())
+        ''')
+
     def test_quest_buttons_have_native_pressed_state(self):
         self.lua.execute('''boot()
             for _,row in ipairs(NS.UI.rows) do

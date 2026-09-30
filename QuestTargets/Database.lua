@@ -76,6 +76,7 @@ local function label(text, kind)
 end
 
 function Database.Provider()
+    if Core.IsRetail() then Database.status = NS.L("dbRetail"); return end
     local db = LibQuestieDB
     if type(db) ~= "table" then Database.status = NS.L("dbMissing"); return end
     if type(db.RequireContract) ~= "function" then Database.status = NS.L("dbUpdate"); return end

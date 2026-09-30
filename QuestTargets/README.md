@@ -1,18 +1,26 @@
-# Quest Targets — 1.1.0
+# Quest Targets — 1.2.0
 
-Addon für **WoW Classic Era 1.15.9 (Interface 11509)** und **WoW Forever Beta (Interface 160001)**. Quest Targets bietet einen
+Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **WoW Forever Beta (Interface 160001)** und **Retail 12.1 (Interface 120100)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
 und Abgabe-NPCs.
 
 ## Installation
 
-Für lokale Tests gibt es zwei getrennte Pakete: `QuestTargets-<Version>-Classic.zip`
-für Classic Era und `QuestTargets-<Version>-Forever.zip` für Forever. Jedes ZIP
-enthält auf oberster Ebene `QuestTargets/` und die passende, unveränderte
+Für lokale Tests gibt es drei getrennte Pakete: `QuestTargets-<Version>-Classic.zip`
+für Classic Era, `QuestTargets-<Version>-Forever.zip` für Forever und
+`QuestTargets-<Version>-Retail.zip` für Retail. Die Classic-Pakete
+enthalten auf oberster Ebene `QuestTargets/` und die passende, unveränderte
 offizielle `QuestieDB/` v1.0.4. Vor einem Update das Spiel schließen und einen
 bereits vorhandenen Ordner `Interface/AddOns/QuestieDB` entfernen. Danach beide
 Ordner aus dem zum Client passenden ZIP nach `Interface/AddOns` entpacken und
 das Spiel neu starten. So bleiben keine alten TOC-Dateien zurück.
+
+Das Retail-Paket enthält nur `QuestTargets/` und benötigt kein QuestieDB.
+Es liest offene Ziele aus dem Retail-Questlog und erkennt lesbare Mobnamen aus
+Zieltexten und sichtbaren Namensplaketten. Für Gegenstandsquellen und
+Abgabe-NPCs ohne Namen im Questtext fehlen auf Retail die QuestieDB-Daten;
+solche Ziele werden nicht geraten. Im Kampf können geschützte Questdaten
+unlesbar sein, bis der Client sie wieder freigibt.
 
 Der bisherige, datenbankfreie Build `QuestTargets-<Version>.zip` bleibt für
 öffentliche Verteilung erhalten. Dafür kann

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Both', 'Classic', 'Forever', 'Minimal')][string]$Flavor = 'Both',
+    [ValidateSet('Both', 'Classic', 'Forever', 'Retail', 'Minimal')][string]$Flavor = 'Both',
     [string]$ProviderCache,
     [switch]$AddonOnly,
     [switch]$CurseForge
@@ -10,7 +10,7 @@ $taskAddon = Join-Path $taskRoot 'QuestTargets'
 $taskDist = Join-Path $taskRoot 'dist'
 $taskVersion = (Select-String -LiteralPath (Join-Path $taskAddon 'QuestTargets.toc') -Pattern '^## Version: (.+)$').Matches[0].Groups[1].Value
 $taskRuntimeFiles = @('QuestTargets.toc','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','Master.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga','Textures/TransparencyEye.tga')
-$taskFiles = if ($CurseForge) { $taskRuntimeFiles } else { $taskRuntimeFiles + @('README.md','QUESTIEDB-NOTICE.md') }
+$taskFiles = if ($CurseForge -or $Flavor -eq 'Retail') { $taskRuntimeFiles } else { $taskRuntimeFiles + @('README.md','QUESTIEDB-NOTICE.md') }
 if ($AddonOnly -or $CurseForge) { $Flavor = 'Minimal' }
 foreach ($taskFile in $taskFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $taskAddon $taskFile))) { throw "Missing source: $taskFile" }
@@ -62,7 +62,7 @@ function Add-ProviderEntries($archive, [string]$providerZip, [string]$expectedTo
 
 $taskFlavors = if ($Flavor -eq 'Both') { @('Classic', 'Forever') } else { @($Flavor) }
 foreach ($taskFlavor in $taskFlavors) {
-    $provider = if ($taskFlavor -eq 'Minimal') { $null } else { $taskProviders[$taskFlavor] }
+    $provider = if ($taskFlavor -eq 'Minimal' -or $taskFlavor -eq 'Retail') { $null } else { $taskProviders[$taskFlavor] }
     $providerZip = $null
     if ($provider) {
         New-Item -ItemType Directory -Path $ProviderCache -Force | Out-Null
