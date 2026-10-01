@@ -1,6 +1,7 @@
 """Verify the distributable package shapes and unchanged upstream payloads."""
 import hashlib
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -13,25 +14,38 @@ HASHES = {
     'Classic': ('Vanilla', 'cf0ac8dfd6b0986a0624db6364d4e42a3691089663b8b00122d8ae2b2d040eed'),
     'Forever': ('Forever', '2435d382c1a78c0876064c197196e73b9f417669f75187f51cc311fd8c2c19e1'),
 }
+POWERSHELL = shutil.which('powershell') or shutil.which('pwsh')
+
+
+def require_powershell():
+    if not POWERSHELL:
+        raise unittest.SkipTest('PowerShell is not installed')
+
+
+def require_provider_cache():
+    if not all((CACHE / f'QuestieDB-{flavor}.zip').exists() for flavor, _ in HASHES.values()):
+        raise unittest.SkipTest('Pinned QuestieDB archives are not cached')
 
 
 class PackageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        if not all((CACHE / f'QuestieDB-{flavor}.zip').exists() for flavor, _ in HASHES.values()):
-            raise unittest.SkipTest('Pinned QuestieDB archives are not cached')
-        result = subprocess.run(
-            ['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
-             str(ROOT / 'tools/package_quest_targets.ps1'),
-             '-ProviderCache', str(CACHE)],
-            cwd=ROOT, capture_output=True, text=True,
-        )
-        assert result.returncode == 0, result.stdout + result.stderr
         cls.version = next(line.partition(': ')[2].strip() for line in
                            (ROOT / 'QuestTargets/QuestTargets.toc').read_text(encoding='utf-8').splitlines()
                            if line.startswith('## Version: '))
 
+    def build(self, flavor, *extra):
+        require_powershell()
+        result = subprocess.run(
+            [POWERSHELL, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+             str(ROOT / 'tools/package_quest_targets.ps1'), '-Flavor', flavor, *extra],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_combined_packages_contain_exact_official_provider_files(self):
+        require_provider_cache()
+        self.build('Both', '-ProviderCache', str(CACHE))
         for label, (flavor, expected_hash) in HASHES.items():
             with self.subTest(label=label):
                 upstream_path = CACHE / f'QuestieDB-{flavor}.zip'
@@ -53,6 +67,7 @@ class PackageTests(unittest.TestCase):
                     self.assertEqual(tocs, expected_tocs)
 
     def test_default_build_also_contains_retail_without_questiedb(self):
+        self.build('Retail')
         package_path = ROOT / 'dist' / f'QuestTargets-{self.version}-Retail.zip'
         with zipfile.ZipFile(package_path) as package:
             self.assertEqual(package.testzip(), None)
@@ -61,6 +76,7 @@ class PackageTests(unittest.TestCase):
             self.assertIn(b'120100', package.read('QuestTargets/QuestTargets.toc'))
 
     def test_both_official_providers_satisfy_the_addon_contract(self):
+        require_provider_cache()
         from tests.questiedb_harness import load_release
         for label, (flavor, expected_hash) in HASHES.items():
             with self.subTest(label=label):
@@ -74,22 +90,18 @@ class PackageTests(unittest.TestCase):
                     assert(LibQuestieDB.RequireContract(1))''')
 
     def test_minimal_package_still_excludes_database_and_documents(self):
-        result = subprocess.run(
-            ['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
-             str(ROOT / 'tools/package_quest_targets.ps1'), '-CurseForge'],
-            cwd=ROOT, capture_output=True, text=True,
-        )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.build('Minimal', '-CurseForge')
         with zipfile.ZipFile(ROOT / 'dist' / f'QuestTargets-{self.version}.zip') as package:
             self.assertTrue(package.namelist())
             self.assertTrue(all(n.startswith('QuestTargets/') for n in package.namelist()))
             self.assertFalse(any(n.endswith('.md') for n in package.namelist()))
 
     def test_corrupt_provider_archive_is_rejected(self):
+        require_powershell()
         with tempfile.TemporaryDirectory() as cache:
             (Path(cache) / 'QuestieDB-Vanilla.zip').write_bytes(b'not a QuestieDB release')
             result = subprocess.run(
-                ['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+                [POWERSHELL, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
                  str(ROOT / 'tools/package_quest_targets.ps1'), '-Flavor', 'Classic',
                  '-ProviderCache', cache],
                 cwd=ROOT, capture_output=True, text=True,
