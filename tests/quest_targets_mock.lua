@@ -41,6 +41,14 @@ function methods:SetShown(value) guard(self); assert(type(value) == "boolean"); 
 function methods:Show() self:SetShown(true) end
 function methods:Hide() self:SetShown(false) end
 function methods:IsShown() return self.shown end
+function methods:IsVisible()
+    local frame = self
+    while frame do
+        if not frame.shown then return false end
+        frame = frame.parent
+    end
+    return true
+end
 function methods:GetHeight() return self.height or 1080 end
 function methods:GetWidth() return self.width or 140 end
 function methods:GetCenter() return 900, 500 end
@@ -109,7 +117,8 @@ function methods:SetPropagateKeyboardInput() end
 function methods:SetTexture(texture)
     assert(texture and (texture:match('^Interface\\TargetingFrame\\UI%-RaidTargetingIcon_[1-8]$')
         or texture:match('^Interface\\Buttons\\UI%-Panel%-Button%-')
-        or texture:match('^Interface\\Common\\dark%-goldframe%-button')))
+        or texture:match('^Interface\\Common\\dark%-goldframe%-button')
+        or texture == 'Interface\\Minimap\\MiniMap-TrackingBorder'))
     self.texture = texture
 end
 function methods:SetAtlas(atlas)

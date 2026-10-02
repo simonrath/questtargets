@@ -12,6 +12,7 @@ class CommandsPopupTests(unittest.TestCase):
             StaticPopup_Show=function(key) popup=StaticPopupDialogs[key] end
             boot()
             assert(NS.UI.feedbackButton.text==NS.L('feedback'))
+            assert(NS.UI.feedbackButton.text=='Feedback')
             NS.UI.feedbackButton.scripts.OnClick()
             assert(popup and popup.hasEditBox)
             local box={SetText=function(self,v) self.text=v end,
@@ -93,7 +94,7 @@ class CommandsPopupTests(unittest.TestCase):
 
     def test_forever_popup_and_select_button_keep_url_available(self):
         self.lua.execute('''
-            function GetBuildInfo() return '1.60.1','69913','',160001 end
+            function GetBuildInfo() return '1.60.1','70170','',16001 end
             function CopyToClipboard() error('restricted API must not be called') end
             StaticPopupDialogs={}
             StaticPopup_Show=function(key) popup=StaticPopupDialogs[key] end

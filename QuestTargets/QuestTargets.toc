@@ -1,10 +1,10 @@
-## Interface: 11509, 160001, 120100
+## Interface: 11509, 16001, 120100
 ## Title: Quest Targets
 ## IconTexture: Interface\AddOns\QuestTargets\Textures\QuestCompassUp
 ## Notes: Anklickbare Ziele für offene Quests.
 ## Author: jackNine
-## Version: 1.2.0
-## OptionalDeps: QuestieDB
+## Version: 1.2.1
+## OptionalDeps: QuestieDB, Questie
 ## SavedVariablesPerCharacter: QuestTargetsDB
 
 Core.lua
@@ -15,4 +15,5 @@ Resolvers.lua
 Scanner.lua
 UI.lua
 Master.lua
+QuestieTracker.lua
 Main.lua

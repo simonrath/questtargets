@@ -10,7 +10,7 @@ class QuestTargetsTests(unittest.TestCase):
     def setUp(self):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute((ROOT / 'tests/quest_targets_mock.lua').read_text(encoding='utf-8'))
-        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Master.lua', 'Main.lua'):
+        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Master.lua', 'QuestieTracker.lua', 'Main.lua'):
             self.lua.execute('assert(loadstring(...))("QuestTargets", NS)',
                              (ROOT / 'QuestTargets' / name).read_text(encoding='utf-8'))
 
@@ -42,8 +42,84 @@ class QuestTargetsTests(unittest.TestCase):
 
     def test_forever_is_not_mistaken_for_retail_without_project_constants(self):
         self.lua.execute('''
-            GetBuildInfo=function() return '1.60.1','','',160001 end
+            GetBuildInfo=function() return '1.60.1','','',16001 end
             assert(not NS.Core.IsRetail())
+        ''')
+
+    def test_new_master_scale_reference_and_saved_size_migration(self):
+        self.lua.execute('''
+            boot()
+            assert(NS.UI.master.width==210 and NS.UI.master.height==33)
+            assert(NS.app.db.masterScaleBaseline==2)
+        ''')
+        self.setUp()
+        self.lua.execute('''
+            QuestTargetsDB={masterScaleX=1.5,masterScaleY=1.5,masterModernScale=1.5}
+            boot()
+            assert(NS.app.db.masterScaleX==1 and NS.app.db.masterScaleY==1)
+            assert(NS.app.db.masterModernScale==1)
+            assert(NS.UI.master.width==210 and NS.UI.master.height==33)
+            NS.app.db.masterAppearance='modern'; NS.app:Refresh()
+            assert(NS.UI.master.width==60 and NS.UI.master.height==60)
+            event('ADDON_LOADED','QuestTargets')
+            assert(NS.app.db.masterScaleX==1 and NS.app.db.masterModernScale==1)
+        ''')
+
+    def test_transparency_reveals_icon_over_window_and_marks_drag_area(self):
+        self.lua.execute('''
+            boot()
+            local ui, app = NS.UI, NS.app
+            ui.frame.mouseOver=false
+            ui.transparencyButton.scripts.OnClick()
+            assert(ui.dragHint:GetAlpha()==0)
+            flush()
+            assert(ui.transparencyButton:GetAlpha()==0)
+            ui.frame.mouseOver=true
+            ui.frame.scripts.OnUpdate(ui.frame,0.2)
+            assert(ui.transparencyButton:GetAlpha()==1)
+            assert(ui.dragHint:GetAlpha()==0.1)
+            ui.frame.mouseOver=false
+            ui.frame.scripts.OnUpdate(ui.frame,0.2)
+            assert(ui.dragHint:GetAlpha()==0)
+            flush()
+            assert(ui.transparencyButton:GetAlpha()==0)
+            ui.transparencyButton.scripts.OnClick()
+            assert(ui.dragHint:GetAlpha()==0)
+        ''')
+
+    def test_quest_update_does_not_interrupt_window_drag(self):
+        self.lua.execute('''
+            boot()
+            local ui, app = NS.UI, NS.app
+            ui.drag.scripts.OnDragStart()
+            assert(ui.moving and ui.frame.moving)
+            quests[3]={questID=3,title='Neue Quest',objectives={
+                {type='monster',text='Spinne getötet: 0/2',numFulfilled=0,numRequired=2,finished=false}}}
+            event('QUEST_ACCEPTED',3)
+            flush()
+            assert(ui.moving and ui.frame.moving)
+            assert(app.dirty)
+            app.pendingData=true
+            tick()
+            assert(ui.moving and ui.frame.moving)
+            ui.drag.scripts.OnDragStop()
+            flush()
+            assert(not ui.moving and not ui.frame.moving)
+            assert(not app.dirty and #app.questEntries==3)
+        ''')
+
+    def test_quest_window_has_two_adjacent_footer_buttons(self):
+        self.lua.execute('''
+            boot()
+            local ui=NS.UI
+            assert(ui.frame.height==354)
+            assert(ui.refreshButton==nil)
+            assert(ui.settingsButton.width==126 and ui.feedbackButton.width==126)
+            assert(ui.settingsButton.point[1]=='BOTTOMLEFT')
+            assert(ui.settingsButton.point[2]==10 and ui.settingsButton.point[3]==8)
+            assert(ui.feedbackButton.point[1]=='BOTTOMRIGHT')
+            assert(ui.feedbackButton.point[2]==-10 and ui.feedbackButton.point[3]==8)
+            assert(ui.feedbackButton.text==NS.L('feedback'))
         ''')
 
     def test_quest_buttons_have_native_pressed_state(self):
@@ -79,7 +155,7 @@ class QuestTargetsTests(unittest.TestCase):
             assert(ui.scrollbar.point[3]==-82 and ui.scrollbar.height==206)
             assert(ui.transparencyButton.normalTexture.texture:find('TransparencyEye',1,true))
             assert(ui.transparencyButton.pushedTexture.texture:find('TransparencyEye',1,true))
-            assert(ui.frame.scripts.OnUpdate==nil)
+            assert(type(ui.frame.scripts.OnUpdate)=='function')
             ui.transparencyButton.scripts.OnClick()
             assert(app.db.transparencyMode and ui.settings.transparencyToggle:GetChecked())
             assert(ui.chromeAlpha == 0)
@@ -150,20 +226,20 @@ class QuestTargetsTests(unittest.TestCase):
                 flush()
             end
             enter('1,27')
-            assert(NS.app.db.masterScaleX==1.25 and NS.UI.master.width==175)
+            assert(NS.app.db.masterScaleX==1.27 and NS.UI.master.width==267)
             enter('99'); assert(NS.app.db.masterScaleX==2)
-            enter('-9'); assert(NS.app.db.masterScaleX==0.5)
-            enter('invalid'); assert(NS.app.db.masterScaleX==0.5)
-            enter(''); assert(control.edit.text=='0.5')
-            enter('1e309'); assert(NS.app.db.masterScaleX==0.5)
+            enter('-9'); assert(NS.app.db.masterScaleX==0.3)
+            enter('invalid'); assert(NS.app.db.masterScaleX==0.3)
+            enter(''); assert(control.edit.text=='0.3')
+            enter('1e309'); assert(NS.app.db.masterScaleX==0.3)
             control.edit:SetText('1.5')
             control.edit.scripts.OnEscapePressed(control.edit)
-            assert(NS.app.db.masterScaleX==0.5 and control.edit.text=='0.5')
+            assert(NS.app.db.masterScaleX==0.3 and control.edit.text=='0.3')
             assert(NS.app.db.masterScaleY==1)
             local modern=NS.UI.masterSettings
             modern.modernButton.scripts.OnClick()
             modern.modernScaleControl.slider:SetValue(1.5); flush()
-            assert(NS.UI.master.width==60 and NS.UI.master.height==60)
+            assert(NS.UI.master.width==90 and NS.UI.master.height==90)
             assert(not modern.captionGroup.shown)
         ''')
 
@@ -177,13 +253,13 @@ class QuestTargetsTests(unittest.TestCase):
             NS.UI.SelectSettingsTab(3)
             assert(NS.UI.settings.pages[3].scroll.shown)
             NS.UI.masterSettings.widthControl.slider:SetValue(1.5); flush()
-            assert(NS.UI.master.width==210)
+            assert(NS.UI.master.width==315)
         ''')
 
     def test_compact_window_keeps_position_on_refresh_filter_and_scroll(self):
         self.lua.execute('''boot()
             local frame = NS.UI.frame
-            assert(frame.width == 282 and frame.height == 386)
+            assert(frame.width == 282 and frame.height == 354)
             frame:ClearAllPoints()
             frame:SetPoint('CENTER', UIParent, 'CENTER', 137, -42)
             NS.app.db.position = {x=137,y=-42}
@@ -287,16 +363,16 @@ class QuestTargetsTests(unittest.TestCase):
             assert(master.normalTexture:GetAlpha() == 0 and master.pushedTexture:GetAlpha() == 0)
             controls.modernButton.scripts.OnClick(); flush()
             assert(NS.app.db.masterAppearance == 'modern')
-            assert(master.width == 40 and master.height == 40 and master.text == '')
+            assert(master.width == 60 and master.height == 60 and master.text == '')
             assert(master.normalTexture.texture:find('QuestCompassUp', 1, true))
             assert(master.pushedTexture.texture:find('QuestCompassDown', 1, true))
             assert(master.normalTexture:GetAlpha() == 1 and master.pushedTexture:GetAlpha() == 1)
             assert(master.Left:GetAlpha() == 0 and master.Middle:GetAlpha() == 0 and master.Right:GetAlpha() == 0)
             assert(not controls.textEdit.shown and not controls.widthControl.shown)
             controls.modernScaleControl.slider:SetValue(1.1); flush()
-            assert(master.width == 44 and master.height == 44)
+            assert(master.width == 66 and master.height == 66)
             controls.classicButton.scripts.OnClick(); flush()
-            assert(master.width == 140 and master.height == 22 and master.text == 'Target quest objective')
+            assert(master.width == 210 and master.height == 33 and master.text == 'Target quest objective')
             assert(master.normalTexture == originalNormal and master.pushedTexture == originalPushed)
             assert(master.normalTexture:GetAlpha() == 0 and master.pushedTexture:GetAlpha() == 0)
             assert(master.Left:GetAlpha() == 1 and master.Middle:GetAlpha() == 1 and master.Right:GetAlpha() == 1)
@@ -316,7 +392,7 @@ class QuestTargetsTests(unittest.TestCase):
     def test_master_stays_freely_positioned_and_keeps_hotkey_target(self):
         self.lua.execute('''boot(); NS.UI.Settings(NS.app)
             local master = NS.UI.master
-            assert(master.point[2] == UIParent and master.width == 140)
+            assert(master.point[2] == UIParent and master.width == 210)
             assert(NS.UI.settings.actionBarToggle == nil)
             assert(NS.app.db.actionBarMode == nil)
             local macro = master.attributes.macrotext1
@@ -324,7 +400,7 @@ class QuestTargetsTests(unittest.TestCase):
             master.scripts.OnDragStart(master)
             assert(master.moving)
             master.scripts.OnDragStop(master)
-            assert(master.point[2] == UIParent and master.width == 140)
+            assert(master.point[2] == UIParent and master.width == 210)
             assert(master.text == 'Target quest objective')
         ''')
 
@@ -336,7 +412,7 @@ class QuestTargetsTests(unittest.TestCase):
             controls.widthControl.slider:SetValue(1.1); flush()
             controls.heightControl.slider:SetValue(0.9); flush()
             assert(NS.app.db.masterScaleX == 1.1 and NS.app.db.masterScaleY == 0.9)
-            assert(master.width == 154 and master.height == 20)
+            assert(master.width == 231 and master.height == 30)
             assert(controls.textureDropdown == nil)
             assert(NS.app.db.masterTexture == nil)
             controls.textEdit:SetText('Quest-Mobs')
@@ -369,7 +445,8 @@ class QuestTargetsTests(unittest.TestCase):
             assert(NS.UI.settings.languageDropdown.selectedID==5)
             assert(NS.UI.settings.languageDropdown.text=='Türkçe')
             assert(NS.UI.settings.refreshButton == nil)
-            assert(NS.UI.refreshButton.text==NS.L('refresh'))
+            assert(NS.UI.refreshButton == nil)
+            assert(NS.UI.feedbackButton.text==NS.L('feedback'))
             assert(NS.UI.settings.toggle.caption.text==NS.L('autoMark'))
             assert(NS.UI.settings.hotkeysText.text==NS.L('hotkeys'))
             assert(NS.UI.master.text==NS.L('masterDefault'))
@@ -378,7 +455,7 @@ class QuestTargetsTests(unittest.TestCase):
             dropdownChoices[1].func()
             assert(NS.app.db.language=='enUS' and not reloaded)
             assert(NS.UI.settings.toggle.caption.text=='Automatically mark targets')
-            assert(NS.UI.refreshButton.text=='Refresh')
+            assert(NS.UI.feedbackButton.text=='Feedback')
             NS.app.db.masterText='Mein Button'
             dropdownChoices[4].func()
             assert(NS.app.db.language=='frFR' and NS.UI.master.text=='Mein Button')
@@ -450,7 +527,7 @@ class QuestTargetsTests(unittest.TestCase):
             assert(QuestTargetsTarget2.entry.total == 6)
         ''')
 
-    def test_tracking_and_manual_refresh_update_quest_buttons(self):
+    def test_tracking_and_slash_refresh_update_quest_buttons(self):
         self.lua.execute('''boot(); NS.app:ToggleFilter()
             assert(#NS.app.questEntries == 1)
             quests[2].watched = true
@@ -460,11 +537,11 @@ class QuestTargetsTests(unittest.TestCase):
             event('QUEST_WATCH_LIST_CHANGED',1,false); flush()
             assert(#NS.app.questEntries == 1 and QuestTargetsTarget1.entry.questID == 2)
             quests[1].watched = true
-            NS.UI.refreshButton.scripts.OnClick()
+            SlashCmdList.QUESTTARGETS('refresh')
             assert(#NS.app.questEntries == 2)
             combat = true
             quests[2].watched = false
-            NS.UI.refreshButton.scripts.OnClick()
+            SlashCmdList.QUESTTARGETS('refresh')
             assert(#NS.app.questEntries == 2 and NS.app.dirty)
             combat = false; event('PLAYER_REGEN_ENABLED')
             assert(#NS.app.questEntries == 1)

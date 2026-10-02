@@ -31,7 +31,10 @@ and in-client compatibility have been confirmed.
 - Name targeting and nearby nameplate detection.
 - Configurable target markers, hotkeys, and tooltips.
 - Native addon settings, a minimap button, and classic or modern master-button appearance.
-- Optional transparency mode immediately leaves only the quest list visible; its toggle icon hides after two seconds and reappears on hover.
+- Optional quest-specific target buttons beside quest rows in Questie's tracker when Questie is installed and enabled.
+- Optional transparency mode immediately leaves only the quest list visible. Its toggle icon hides two seconds after the cursor leaves the window and reappears when the cursor moves anywhere over it. A 90% transparent draggable strip is shown only while the cursor is over the window.
+- The compact quest window has adjacent Settings and Feedback buttons; quest data also refreshes automatically or with `/qt refresh`.
+- At 100%, both master-button styles are the size previously shown at 150%; saved scales are migrated to preserve their visible size.
 - English, German, Spanish, French, Turkish, and Simplified Chinese.
 - In-game feedback button linking to [the public feedback form](https://feedback.jacknine.org); no GitHub account needed.
 

@@ -106,12 +106,12 @@ function UI.PositionMaster(app)
         frame.modernAppearance = modern
     end
     if modern then
-        local size = math.floor(40 * app.db.masterModernScale + 0.5)
+        local size = math.floor(60 * app.db.masterModernScale + 0.5)
         frame:SetSize(size, size)
         frame:SetText("")
     else
-        frame:SetSize(math.floor(140 * app.db.masterScaleX + 0.5),
-            math.floor(22 * app.db.masterScaleY + 0.5))
+        frame:SetSize(math.floor(210 * app.db.masterScaleX + 0.5),
+            math.floor(33 * app.db.masterScaleY + 0.5))
         frame:SetText(app.db.masterText)
     end
 end
@@ -125,6 +125,17 @@ function UI.CreateMinimap(app)
     UI.PositionMinimap(app)
     frame:SetNormalTexture(COMPASS_UP)
     frame:SetPushedTexture(COMPASS_DOWN)
+    local normal, pushed = frame:GetNormalTexture(), frame:GetPushedTexture()
+    normal:ClearAllPoints()
+    normal:SetSize(22, 22)
+    normal:SetPoint("CENTER", frame, "CENTER", 0, 0)
+    pushed:ClearAllPoints()
+    pushed:SetSize(21, 21)
+    pushed:SetPoint("CENTER", frame, "CENTER", 0, -1)
+    frame.border = frame:CreateTexture(nil, "OVERLAY")
+    frame.border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    frame.border:SetSize(48, 48)
+    frame.border:SetPoint("TOPLEFT", frame, "TOPLEFT", -1, 0)
     frame:SetHighlightAtlas("UI-QuestPoi-InnerGlow")
     frame:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     frame:RegisterForDrag("LeftButton")

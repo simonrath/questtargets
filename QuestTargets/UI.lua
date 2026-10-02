@@ -16,7 +16,7 @@ local function scheduleTransparencyIconHide(app)
     if not app.db.transparencyMode then return end
     C_Timer.After(2, function()
         if timer == UI.transparencyTimer and app.db.transparencyMode
-            and UI.transparencyButton and not UI.transparencyButton:IsMouseOver() then
+            and UI.transparencyButton and not UI.frame:IsMouseOver() then
             UI.transparencyButton:SetAlpha(0)
         end
     end)
@@ -26,10 +26,14 @@ function UI.UpdateTransparency(app)
     if not UI.frame then return end
     local alpha = app.db.transparencyMode and 0 or 1
     if UI.chromeAlpha ~= alpha then setChromeAlpha(alpha) end
+    if UI.dragHint then
+        UI.dragHint:SetAlpha(app.db.transparencyMode and UI.frame:IsMouseOver() and 0.1 or 0)
+    end
     if UI.transparencyButton then
         UI.transparencyButton:GetNormalTexture():SetDesaturated(not app.db.transparencyMode)
         UI.transparencyButton:SetAlpha(1)
-        scheduleTransparencyIconHide(app)
+        UI.transparencyOver = app.db.transparencyMode and UI.frame:IsMouseOver() or false
+        if not UI.transparencyOver then scheduleTransparencyIconHide(app) end
     end
 end
 
@@ -63,7 +67,7 @@ end
 function UI.Create(app)
     local frame = CreateFrame("Frame", "QuestTargetsFrame", UIParent, "DefaultPanelFlatTemplate")
     UI.frame = frame
-    frame:SetSize(282, 386)
+    frame:SetSize(282, 354)
     frame:SetFrameStrata("MEDIUM")
     frame:SetClampedToScreen(true)
     frame:SetMovable(true)
@@ -80,16 +84,37 @@ function UI.Create(app)
     close:SetScript("OnClick", function() app:Toggle() end)
     -- A guarded drag region: the panel becomes protected through its secure children.
     local drag = CreateFrame("Frame", nil, frame)
+    UI.drag = drag
     drag:SetPoint("TOPLEFT", 8, 0)
     drag:SetPoint("TOPRIGHT", -30, 0)
     drag:SetHeight(23)
     drag:SetFrameLevel(511)
     drag:EnableMouse(true)
     drag:RegisterForDrag("LeftButton")
+    UI.dragHint = drag:CreateTexture(nil, "BACKGROUND")
+    UI.dragHint:SetAllPoints()
+    UI.dragHint:SetColorTexture(0.9, 0.75, 0.3, 1)
+    UI.dragHint:SetAlpha(0)
     drag:SetScript("OnDragStart", function()
         if not InCombatLockdown() then frame:StartMoving(); UI.moving = true end
     end)
-    drag:SetScript("OnDragStop", function() UI.StopMoving(app.db) end)
+    drag:SetScript("OnDragStop", function()
+        UI.StopMoving(app.db)
+        if app.dirty then app:Schedule() end
+    end)
+    frame:SetScript("OnUpdate", function(self)
+        if not app.db.transparencyMode then return end
+        local over = self:IsMouseOver()
+        if over == UI.transparencyOver then return end
+        UI.transparencyOver = over
+        UI.dragHint:SetAlpha(over and 0.1 or 0)
+        if over then
+            UI.transparencyTimer = (UI.transparencyTimer or 0) + 1
+            UI.transparencyButton:SetAlpha(1)
+        else
+            scheduleTransparencyIconHide(app)
+        end
+    end)
 
     UI.transparencyButton = CreateFrame("Button", nil, frame)
     UI.transparencyButton:SetSize(20, 20)
@@ -112,7 +137,7 @@ function UI.Create(app)
     end)
     UI.transparencyButton:SetScript("OnLeave", function()
         GameTooltip:Hide()
-        scheduleTransparencyIconHide(app)
+        if not frame:IsMouseOver() then scheduleTransparencyIconHide(app) end
     end)
 
     UI.filter = button(frame, L("all"), 116, function() app:ToggleFilter() end)
@@ -197,12 +222,10 @@ function UI.Create(app)
     UI.scrollbar:SetValue(0)
     frame:EnableMouseWheel(true)
     frame:SetScript("OnMouseWheel", function(_, delta) UI.ScrollQuests(app, -delta) end)
-    UI.settingsButton = button(frame, L("settings"), 94, function() UI.Settings(app) end)
-    UI.settingsButton:SetPoint("BOTTOMLEFT", 10, 40)
-    UI.refreshButton = button(frame, L("refresh"), 94, function() app:Refresh() end)
-    UI.refreshButton:SetPoint("BOTTOMRIGHT", -10, 40)
-    UI.feedbackButton = button(frame, L("feedback"), 260, function() UI.FeedbackLink() end)
-    UI.feedbackButton:SetPoint("BOTTOM", 0, 8)
+    UI.settingsButton = button(frame, L("settings"), 126, function() UI.Settings(app) end)
+    UI.settingsButton:SetPoint("BOTTOMLEFT", 10, 8)
+    UI.feedbackButton = button(frame, L("feedback"), 126, function() UI.FeedbackLink() end)
+    UI.feedbackButton:SetPoint("BOTTOMRIGHT", -10, 8)
     UI.chrome = {}
     for _, region in ipairs({frame:GetRegions()}) do UI.chrome[#UI.chrome + 1] = region end
     local function addChrome(region)
@@ -221,7 +244,6 @@ function UI.Create(app)
     addChrome(help)
     addChrome(UI.scrollbar)
     addChrome(UI.settingsButton)
-    addChrome(UI.refreshButton)
     addChrome(UI.feedbackButton)
     UI.chromeAlpha = 1
     UI.UpdateTransparency(app)
@@ -358,7 +380,7 @@ function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "master", "hotkeys"}
-    local heights = {550, 310, 538, 216}
+    local heights = {580, 310, 538, 216}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -399,9 +421,9 @@ function UI.LayoutSettings(app)
         panel.pages[index] = {scroll=scroll, content=content}
     end
     local general, markers, hotkeys = panel.pages[1].content, panel.pages[2].content, panel.pages[4].content
-    local display = settingsBox(general, "display", -32, 196)
-    local window = settingsBox(general, "window", -262, 125)
-    local language = settingsBox(general, "language", -421, 102)
+    local display = settingsBox(general, "display", -32, 226)
+    local window = settingsBox(general, "window", -292, 125)
+    local language = settingsBox(general, "language", -451, 102)
     local marking = settingsBox(markers, "targetMarkers", -32, 260)
     local appearance = settingsBox(master, "masterAppearance", -32, 84)
     local dimensions = settingsBox(master, "buttonSize", -150, 220)
@@ -412,7 +434,7 @@ function UI.LayoutSettings(app)
     panel.languageText:Hide()
     panel.hotkeysText:Hide()
     for i, control in ipairs({panel.masterToggle, panel.menuToggle, panel.transparencyToggle,
-        panel.tooltipToggle, panel.minimapToggle}) do
+        panel.tooltipToggle, panel.minimapToggle, panel.questieTrackerToggle}) do
         place(control, display, 18, -32 - (i-1)*30)
     end
     place(panel.scaleControl, window, 22, -31)
@@ -545,6 +567,11 @@ function UI.Settings(app)
             UI.UpdateSettings(app)
         end)
         panel.minimapToggle:SetPoint("TOPLEFT", 20, -338)
+        panel.questieTrackerToggle = checkbox(panel, L("questieTrackerButtons"), function()
+            app.db.questieTrackerButtons = not app.db.questieTrackerButtons
+            NS.QuestieTracker.Sync(app)
+            UI.UpdateSettings(app)
+        end)
         panel.hotkeysText = label(panel, 20, -472, 330, "GameFontNormal")
         panel.hotkeysText:SetText(L("hotkeys"))
         panel.hotkey = button(panel, "", 200, function(self)
@@ -647,9 +674,9 @@ function UI.CreateMasterSettings(app, category)
     panel.sizeNote = label(panel, 20, -111, 540)
     panel.sizeNote:SetText(L("sizeNote"))
 
-    panel.widthControl = settingsSlider(panel, "QuestTargetsMasterWidthSlider", "masterScaleX", 0.5, 2, 0.05, app)
-    panel.heightControl = settingsSlider(panel, "QuestTargetsMasterHeightSlider", "masterScaleY", 0.5, 2, 0.05, app)
-    panel.modernScaleControl = settingsSlider(panel, "QuestTargetsMasterScaleSlider", "masterModernScale", 0.5, 2, 0.05, app)
+    panel.widthControl = settingsSlider(panel, "QuestTargetsMasterWidthSlider", "masterScaleX", 0.3, 2, 0.01, app)
+    panel.heightControl = settingsSlider(panel, "QuestTargetsMasterHeightSlider", "masterScaleY", 0.3, 2, 0.01, app)
+    panel.modernScaleControl = settingsSlider(panel, "QuestTargetsMasterScaleSlider", "masterModernScale", 0.3, 2, 0.01, app)
 
     panel.captionText = label(panel, 20, -246, 540, "GameFontNormal")
     panel.captionText:SetText(L("caption"))
@@ -715,6 +742,7 @@ function UI.UpdateSettings(app)
     UI.settings.scaleControl:Refresh()
     UI.settings.tooltipToggle:SetChecked(app.db.showTooltips)
     UI.settings.minimapToggle:SetChecked(not app.db.minimapHidden)
+    UI.settings.questieTrackerToggle:SetChecked(app.db.questieTrackerButtons)
     local key = GetBindingKey and GetBindingKey("CLICK QuestTargetsMaster:LeftButton")
     if not UI.settings.hotkey.listening then UI.settings.hotkey:SetText(key or L("unbound")) end
     UIDropDownMenu_SetSelectedID(UI.settings.languageDropdown, NS.Language())
@@ -729,7 +757,6 @@ function UI.ApplyLanguage(app)
     if UI.frame then
         UI.frame.TitleContainer.TitleText:SetText(L("title"))
         UI.settingsButton:SetText(L("settings"))
-        UI.refreshButton:SetText(L("refresh"))
         UI.feedbackButton:SetText(L("feedback"))
     end
     local panel = UI.settings
@@ -748,6 +775,7 @@ function UI.ApplyLanguage(app)
         panel.transparencyToggle.caption:SetText(L("transparencyMode"))
         panel.tooltipToggle.caption:SetText(L("showTooltips"))
         panel.minimapToggle.caption:SetText(L("showMinimap"))
+        panel.questieTrackerToggle.caption:SetText(L("questieTrackerButtons"))
         panel.hotkeyNote:SetText(L("hotkeyNote"))
         panel.hotkeyClear:SetText(L("clear"))
         panel.hotkeysText:SetText(L("hotkeys"))

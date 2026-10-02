@@ -21,7 +21,7 @@ local function showMissingDatabase()
     if Core.IsRetail() or LibQuestieDB or not StaticPopupDialogs or not StaticPopup_Show then return end
     local key = "QUESTTARGETS_MISSING_QUESTIEDB"
     local interface = GetBuildInfo and select(4, GetBuildInfo())
-    local forever = type(interface) == "number" and interface >= 160000 and interface < 170000
+    local forever = type(interface) == "number" and interface >= 16000 and interface < 17000
     StaticPopupDialogs[key] = {
         text = NS.L(forever and "dbInstallForeverTitle" or "dbInstallTitle") .. "\n\n"
             .. NS.L(forever and "dbInstallForeverText" or "dbInstallText"),
@@ -42,8 +42,8 @@ end
 function app:Refresh()
     if not self.db then return end
     if InCombatLockdown() then self.dirty = true; UI.UpdateStatus(self); return end
+    if UI.moving then self.dirty = true; return end
     if not UI.frame then UI.Create(self) end
-    UI.StopMoving(self.db)
     local quests, err, pending = Core.ReadQuests(self.db.watchedOnly)
     local allQuests, allError, allPending = quests, err, pending
     if self.db.watchedOnly then allQuests, allError, allPending = Core.ReadQuests(false) end
@@ -64,6 +64,7 @@ function app:Refresh()
     self.dirty = false
     UI.Render(self)
     UI.RenderMaster(self)
+    NS.QuestieTracker.Sync(self)
     if self.pendingVisibility ~= nil then
         UI.frame:SetShown(self.pendingVisibility)
         self.db.hidden = not self.pendingVisibility
@@ -117,6 +118,7 @@ function app:Poll()
     else
         UI.UpdateStatus(self)
     end
+    NS.QuestieTracker.Sync(self)
 end
 
 function app:Help()
@@ -159,11 +161,17 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         app.db.watchedOnly = app.db.watchedOnly == true
         app.db.masterHidden = app.db.masterHidden == true
         app.db.actionBarMode = nil -- obsolete setting from the former docking mode
-        for _, key in ipairs({"masterScaleX", "masterScaleY"}) do
+        local legacyMasterScale = app.db.masterScaleBaseline ~= 2
+        for _, key in ipairs({"masterScaleX", "masterScaleY", "masterModernScale"}) do
             local value = app.db[key]
-            app.db[key] = type(value) == "number" and value == value
-                and math.max(0.5, math.min(2, value)) or 1
+            if type(value) == "number" and value == value and value < math.huge then
+                if legacyMasterScale then value = math.floor(value / 1.5 * 100 + 0.5) / 100 end
+                app.db[key] = math.max(0.3, math.min(2, value))
+            else
+                app.db[key] = 1
+            end
         end
+        app.db.masterScaleBaseline = 2
         app.db.masterTexture = nil
         local title = app.db.masterText
         if not app.db.language then
@@ -173,11 +181,9 @@ events:SetScript("OnEvent", function(_, event, loadedName)
             end
         end
         app.db.masterAppearance = app.db.masterAppearance == "modern" and "modern" or "classic"
-        local modernScale = app.db.masterModernScale
-        app.db.masterModernScale = type(modernScale) == "number" and modernScale == modernScale
-            and math.max(0.5, math.min(2, modernScale)) or 1
         app.db.masterText = type(title) == "string" and Core.Clean(title) or NS.L("masterDefault")
         app.db.minimapHidden = app.db.minimapHidden == true
+        app.db.questieTrackerButtons = app.db.questieTrackerButtons == true
         app.db.minimapStyle = nil -- remove the premature design-selection setting
         app.db.showTooltips = app.db.showTooltips == true
         local scale = app.db.menuScale

@@ -28,6 +28,17 @@ def require_provider_cache():
 
 
 class PackageTests(unittest.TestCase):
+    def test_forever_interface_matches_official_provider(self):
+        require_provider_cache()
+        with zipfile.ZipFile(CACHE / 'QuestieDB-Forever.zip') as provider:
+            provider_toc = provider.read('QuestieDB/QuestieDB_Forever.toc').splitlines()
+        interface = next(line.partition(b': ')[2].decode('ascii') for line in provider_toc
+                         if line.startswith(b'## Interface: '))
+        addon_toc = (ROOT / 'QuestTargets/QuestTargets.toc').read_text(encoding='utf-8')
+        declared = next(line.partition(': ')[2].strip().split(', ') for line in addon_toc.splitlines()
+                        if line.startswith('## Interface: '))
+        self.assertIn(interface, declared)
+
     @classmethod
     def setUpClass(cls):
         cls.version = next(line.partition(': ')[2].strip() for line in

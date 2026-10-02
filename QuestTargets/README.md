@@ -1,6 +1,6 @@
-# Quest Targets — 1.2.0
+# Quest Targets — 1.2.1
 
-Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **WoW Forever Beta (Interface 160001)** und **Retail 12.1 (Interface 120100)**. Quest Targets bietet einen
+Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **WoW Forever Beta 1.60.1, Build 70170 (Interface 16001)** und **Retail 12.1 (Interface 120100)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
 und Abgabe-NPCs.
 
@@ -44,14 +44,19 @@ Herkunft und Prüfsummen stehen im [QuestieDB-Hinweis](QUESTIEDB-NOTICE.md).
 - „Alle Quests“ / „Verfolgte Quests“: die Liste filtern. Der Masterbutton
   arbeitet unabhängig von diesem Filter.
 - Mausrad oder Scrollbalken: weitere Quests in der Liste anzeigen.
-- „Aktualisieren“: Questdaten erneut einlesen. Änderungen an Quests,
+- `/qt refresh`: Questdaten manuell erneut einlesen. Änderungen an Quests,
   Fortschritt und Verfolgung aktualisieren das Addon auch automatisch.
-- „Bug melden / Verbesserung vorschlagen“: kopierbaren Link zum englischen
+- „Feedback“: kopierbaren Link zum englischen
   Feedbackformular anzeigen. Eine GitHub-Anmeldung ist nicht erforderlich.
 - Titelleiste ziehen: Questfenster verschieben. Den Masterbutton mit gedrückter
   rechter Maustaste verschieben.
 - Minikarten-Button: Linksklick öffnet das Questfenster, Rechtsklick die
   Einstellungen. Mit der linken Maustaste am Minikartenrand verschieben.
+- Optional „Zielbuttons im Questie-Tracker anzeigen“ unter Allgemein: Wenn
+  Questie mit aktivem Tracker installiert ist, steht links neben jeder
+  passenden Questzeile ein eigener Zielbutton. Er verwendet dieselben
+  Questziele wie der Button im Quest-Targets-Fenster. Questie selbst bleibt
+  unverändert; ohne Questie werden keine zusätzlichen Buttons angezeigt.
 
 Die kleinen Questbuttons zeigen beim Drücken eine native Klickanimation.
 Jede Quest erscheint einmal mit ihrem Fortschritt. Alle bekannten Mobarten
@@ -79,6 +84,12 @@ Die Standardsprache ist Englisch. Deutsch, Spanisch, Französisch, Türkisch
 und vereinfachtes Chinesisch sind ebenfalls auswählbar. Die Oberflächensprache
 wechselt sofort; Quest- und NPC-Namen folgen weiterhin der Clientsprache.
 Größenregler bieten ein direkt bearbeitbares Zahlenfeld; 1 entspricht 100 %.
+Bei Masterbuttons entspricht 100 % nun der bisherigen Größe von 150 %.
+Gespeicherte Skalierungen werden beim Update einmalig umgerechnet, damit
+vorhandene Buttons ihre tatsächliche Größe behalten.
+Im Transparenzmodus erscheinen das ausgeblendete Umschalticon und der zu 90 %
+transparente Ziehstreifen oben wieder, sobald die Maus über dem Questfenster
+steht. Der Streifen verschwindet wieder, wenn die Maus das Fenster verlässt.
 Einstellungen werden pro Charakter gespeichert.
 
 Automatische Markierung ist standardmäßig mit dem Totenkopf aktiviert. Alle
