@@ -1,6 +1,6 @@
 # Quest Targets
 
-Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)**, **WoW Forever Beta (Interface 160001)**, and **Retail 12.1 (Interface 120100)**.
+Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)**, **WoW Forever Beta (Interface 16001)**, and **Retail 12.1 (Interface 120100)**.
 
 **[Download the latest release](https://github.com/simonrath/questtargets/releases/latest)**
 
