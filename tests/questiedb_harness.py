@@ -63,6 +63,7 @@ def load_release(path=DEFAULT_ZIP, flavor='Vanilla', expected_hash=PIN_SHA256):
             function GetLocale() return 'deDE' end
             function UnitClassBase() return 'WARRIOR' end
             function UnitFactionGroup() return 'Alliance' end
+            function UnitRace() return 'Human', 'Human', 1 end
             C_Seasons={GetActiveSeason=function() return 0 end}
             Enum={SeasonID={SeasonOfDiscovery=2}}
             provider={}

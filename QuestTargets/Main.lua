@@ -22,9 +22,15 @@ local function showMissingDatabase()
     local key = "QUESTTARGETS_MISSING_QUESTIEDB"
     local interface = GetBuildInfo and select(4, GetBuildInfo())
     local forever = type(interface) == "number" and interface >= 16000 and interface < 17000
+    local expansion = type(interface) == "number" and
+        ((interface >= 20500 and interface < 20600 and "TBC")
+            or (interface >= 50500 and interface < 50600 and "Mists"))
+    local title = expansion and (NS.L("dbMissing") .. " (" .. expansion .. ")")
+        or NS.L(forever and "dbInstallForeverTitle" or "dbInstallTitle")
+    local detail = expansion and NS.L("dbInstallExpansionText"):format("QuestieDB-" .. expansion .. ".zip")
+        or NS.L(forever and "dbInstallForeverText" or "dbInstallText")
     StaticPopupDialogs[key] = {
-        text = NS.L(forever and "dbInstallForeverTitle" or "dbInstallTitle") .. "\n\n"
-            .. NS.L(forever and "dbInstallForeverText" or "dbInstallText"),
+        text = title .. "\n\n" .. detail,
         button1 = NS.L("selectLink"),
         button2 = OKAY or "OK",
         hasEditBox = true,

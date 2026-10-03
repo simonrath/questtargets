@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('All', 'Both', 'Classic', 'Forever', 'Retail', 'Minimal')][string]$Flavor = 'All',
+    [ValidateSet('All', 'Both', 'Classic', 'TBC', 'Mists', 'Forever', 'Retail', 'Minimal')][string]$Flavor = 'All',
     [string]$ProviderCache,
     [switch]$AddonOnly,
     [switch]$CurseForge
@@ -19,6 +19,8 @@ Add-Type -AssemblyName System.IO.Compression
 # Pinned to QuestieDB v1.0.4 release.json. Do not use a moving release URL.
 $taskProviders = @{
     Classic = @{ Artifact = 'Vanilla'; Sha256 = 'cf0ac8dfd6b0986a0624db6364d4e42a3691089663b8b00122d8ae2b2d040eed'; Toc = 'QuestieDB_Vanilla.toc' }
+    TBC = @{ Artifact = 'TBC'; Sha256 = '5b2c398579425b22171e25bd7396268117caaed0f61b19785b81158e3988bf26'; Toc = 'QuestieDB_TBC.toc' }
+    Mists = @{ Artifact = 'Mists'; Sha256 = 'cf2e33ccc6e8fd4b4a827fa3b7d33e70a37301ed3123edb618a806205bd542b6'; Toc = 'QuestieDB_Mists.toc' }
     Forever = @{ Artifact = 'Forever'; Sha256 = '2435d382c1a78c0876064c197196e73b9f417669f75187f51cc311fd8c2c19e1'; Toc = 'QuestieDB_Forever.toc' }
 }
 
@@ -56,7 +58,7 @@ function Add-ProviderEntries($archive, [string]$providerZip, [string]$expectedTo
     } finally { $sourceZip.Dispose() }
 }
 
-$taskFlavors = if ($Flavor -eq 'All') { @('Retail', 'Classic', 'Forever') }
+$taskFlavors = if ($Flavor -eq 'All') { @('Retail', 'Classic', 'TBC', 'Mists', 'Forever') }
     elseif ($Flavor -eq 'Both') { @('Classic', 'Forever') } else { @($Flavor) }
 foreach ($taskFlavor in $taskFlavors) {
     $taskFiles = if ($CurseForge -or $taskFlavor -eq 'Retail') { $taskRuntimeFiles }

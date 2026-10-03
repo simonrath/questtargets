@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CACHE = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.4'
 HASHES = {
     'Classic': ('Vanilla', 'cf0ac8dfd6b0986a0624db6364d4e42a3691089663b8b00122d8ae2b2d040eed'),
+    'TBC': ('TBC', '5b2c398579425b22171e25bd7396268117caaed0f61b19785b81158e3988bf26'),
+    'Mists': ('Mists', 'cf2e33ccc6e8fd4b4a827fa3b7d33e70a37301ed3123edb618a806205bd542b6'),
     'Forever': ('Forever', '2435d382c1a78c0876064c197196e73b9f417669f75187f51cc311fd8c2c19e1'),
 }
 POWERSHELL = shutil.which('powershell') or shutil.which('pwsh')
@@ -28,6 +30,14 @@ def require_provider_cache():
 
 
 class PackageTests(unittest.TestCase):
+    def test_addon_category_and_client_interfaces(self):
+        toc = (ROOT / 'QuestTargets/QuestTargets.toc').read_text(encoding='utf-8')
+        self.assertIn('## Category: Quests', toc)
+        self.assertIn('## Category-deDE: Quests', toc)
+        interface = next(line.partition(': ')[2] for line in toc.splitlines()
+                         if line.startswith('## Interface: '))
+        self.assertTrue({'20506', '50504'} <= set(interface.split(', ')))
+
     def test_forever_interface_matches_official_provider(self):
         require_provider_cache()
         with zipfile.ZipFile(CACHE / 'QuestieDB-Forever.zip') as provider:
@@ -56,7 +66,7 @@ class PackageTests(unittest.TestCase):
 
     def test_combined_packages_contain_exact_official_provider_files(self):
         require_provider_cache()
-        self.build('Both', '-ProviderCache', str(CACHE))
+        self.build('All', '-ProviderCache', str(CACHE))
         for label, (flavor, expected_hash) in HASHES.items():
             with self.subTest(label=label):
                 upstream_path = CACHE / f'QuestieDB-{flavor}.zip'
@@ -73,8 +83,8 @@ class PackageTests(unittest.TestCase):
                         self.assertEqual(package.read(name), upstream.read(name), name)
                     self.assertEqual(package.testzip(), None)
                     tocs = {n for n in provider_names if n.endswith('.toc')}
-                    expected_tocs = ({'QuestieDB/QuestieDB_Vanilla.toc'} if label == 'Classic'
-                                     else {'QuestieDB/QuestieDB_Forever.toc', 'QuestieDB/QuestieDB_Camelot.toc'})
+                    expected_tocs = ({'QuestieDB/QuestieDB_Forever.toc', 'QuestieDB/QuestieDB_Camelot.toc'}
+                                     if label == 'Forever' else {f'QuestieDB/QuestieDB_{flavor}.toc'})
                     self.assertEqual(tocs, expected_tocs)
 
     def test_default_build_also_contains_retail_without_questiedb(self):
@@ -96,6 +106,9 @@ class PackageTests(unittest.TestCase):
                 for source in ('Core.lua', 'Locale.lua', 'Database.lua'):
                     lua.execute('assert(loadstring(...))("QuestTargets",NS)',
                                 (ROOT / 'QuestTargets' / source).read_bytes())
+                if label in ('TBC', 'Mists'):
+                    interface = 20506 if label == 'TBC' else 50504
+                    lua.execute(f'function GetBuildInfo() return "", "", "", {interface} end')
                 lua.execute(f'''assert(NS.Database.Provider() == LibQuestieDB)
                     assert(LibQuestieDB.flavor.name == "{flavor}")
                     assert(LibQuestieDB.RequireContract(1))''')

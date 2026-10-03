@@ -1,14 +1,16 @@
-# Quest Targets — 1.2.2
+# Quest Targets — 1.2.3
 
-Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **WoW Forever Beta 1.60.1, Build 70170 (Interface 16001)** und **Retail 12.1 (Interface 120100)**. Quest Targets bietet einen
+Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever Beta 1.60.1, Build 70170 (16001)** und **Retail 12.1 (120100)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
 und Abgabe-NPCs.
 
 ## Installation
 
-Für lokale Tests gibt es drei getrennte Pakete: `QuestTargets-<Version>-Classic.zip`
-für Classic Era, `QuestTargets-<Version>-Forever.zip` für Forever und
-`QuestTargets-<Version>-Retail.zip` für Retail. Die Classic-Pakete
+Für lokale Tests gibt es fünf getrennte Pakete: `QuestTargets-<Version>-Classic.zip`
+für Classic Era, `QuestTargets-<Version>-TBC.zip` für Burning Crusade,
+`QuestTargets-<Version>-Mists.zip` für Mists of Pandaria,
+`QuestTargets-<Version>-Forever.zip` für Forever und
+`QuestTargets-<Version>-Retail.zip` für Retail. Die Nicht-Retail-Pakete
 enthalten auf oberster Ebene `QuestTargets/` und die passende, unveränderte
 offizielle `QuestieDB/` v1.0.4. Vor einem Update das Spiel schließen und einen
 bereits vorhandenen Ordner `Interface/AddOns/QuestieDB` entfernen. Danach beide
@@ -25,14 +27,14 @@ unlesbar sein, bis der Client sie wieder freigibt.
 Der bisherige, datenbankfreie Build `QuestTargets-<Version>.zip` bleibt für
 öffentliche Verteilung erhalten. Dafür kann
 [QuestieDB](https://github.com/Questie/QuestieDB/releases/) separat installiert
-werden: `QuestieDB-Forever.zip` für Forever oder `QuestieDB-Vanilla.zip` für
-Classic Era. Bei fehlendem Anbieter zeigt das Addon beim Login einen
+werden: `QuestieDB-Forever.zip` für Forever, `QuestieDB-Vanilla.zip` für
+Classic Era, `QuestieDB-TBC.zip` für Burning Crusade oder
+`QuestieDB-Mists.zip` für Mists of Pandaria. Bei fehlendem Anbieter zeigt das Addon beim Login einen
 Download-Hinweis. Die Erkennung über Questtexte und lesbare
 Questinformationen sichtbarer Namensplaketten bleibt verfügbar.
 
-Die kombinierten Pakete dürfen erst veröffentlicht werden, wenn die
-Weiterverteilungsrechte von QuestieDB und der Test im Spiel geklärt sind.
-Herkunft und Prüfsummen stehen im [QuestieDB-Hinweis](QUESTIEDB-NOTICE.md).
+Herkunft und Prüfsummen der kombinierten Pakete stehen im
+[QuestieDB-Hinweis](QUESTIEDB-NOTICE.md).
 
 ## Bedienung
 

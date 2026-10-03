@@ -92,12 +92,21 @@ function Database.Provider()
     if not db.l10n or db.l10n.currentLocale ~= locale then
         Database.status = NS.L("dbLocale"); return
     end
-    -- Native Forever data and the legacy Vanilla baseline are supported.
-    -- Proximity handles their different coordinate frames independently.
-    if not db.flavor or (db.flavor.name ~= "Vanilla" and db.flavor.name ~= "Forever") then
+    -- Use expansion-specific data for TBC and Mists. Forever may also use the
+    -- legacy Vanilla baseline; Proximity handles its coordinate conversion.
+    local interface = GetBuildInfo and select(4, GetBuildInfo())
+    local flavor = db.flavor and db.flavor.name
+    local matchingExpansion = type(interface) == "number"
+        and ((interface >= 20500 and interface < 20600 and flavor == "TBC")
+            or (interface >= 50500 and interface < 50600 and flavor == "Mists"))
+    local expansionClient = type(interface) == "number"
+        and ((interface >= 20500 and interface < 20600)
+            or (interface >= 50500 and interface < 50600))
+    if not (matchingExpansion or (not expansionClient and (flavor == "Vanilla" or flavor == "Forever"))) then
         Database.status = NS.L("dbClassic"); return
     end
-    Database.status = db.readMode == "source" and NS.L("dbSource") or (db.flavor.name == "Forever" and "QuestieDB · Forever" or "QuestieDB · Classic")
+    Database.status = db.readMode == "source" and NS.L("dbSource")
+        or (flavor == "Vanilla" and "QuestieDB · Classic" or "QuestieDB · " .. flavor)
     return db
 end
 

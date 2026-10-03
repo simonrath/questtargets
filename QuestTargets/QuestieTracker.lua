@@ -1,5 +1,7 @@
 local _, NS = ...
 local Core, UI = NS.Core, NS.UI
+local COMPASS_UP = "Interface\\AddOns\\QuestTargets\\Textures\\QuestCompassUp"
+local COMPASS_DOWN = "Interface\\AddOns\\QuestTargets\\Textures\\QuestCompassDown"
 local Integration = {buttons = {}}
 NS.QuestieTracker = Integration
 
@@ -11,9 +13,9 @@ local function createButton(index)
     button:RegisterForClicks("LeftButtonUp")
     button:SetAttribute("type1", "macro")
     button:SetAttribute("useOnKeyDown", false)
-    button:SetNormalAtlas("UI-QuestPoi-QuestNumber-SuperTracked")
-    button:SetPushedAtlas("UI-QuestPoi-QuestNumber-SuperTracked")
-    button:SetHighlightAtlas("UI-QuestPoi-InnerGlow")
+    button:SetNormalTexture(COMPASS_UP)
+    button:SetPushedTexture(COMPASS_DOWN)
+    button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
     button:SetScript("PreClick", function(self, mouseButton, down)
         if mouseButton ~= "LeftButton" or down or InCombatLockdown() or not self.entry then return end
         self:SetAttribute("macrotext1", Core.ClickMacro(self.entry, {self.entry}, NS.app.db, self))

@@ -1,14 +1,15 @@
 # Quest Targets
 
-Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)**, **WoW Forever Beta (Interface 16001)**, and **Retail 12.1 (Interface 120100)**.
+Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever Beta (16001)**, and **Retail 12.1 (120100)**.
 
 **[Download the latest release](https://github.com/simonrath/questtargets/releases/latest)**
 
 ## Installation
 
 The build script produces local `QuestTargets-<version>-Retail.zip`,
-`QuestTargets-<version>-Classic.zip`, and `QuestTargets-<version>-Forever.zip`
-packages by default. Choose the ZIP for your client. The Classic and Forever
+`QuestTargets-<version>-Classic.zip`, `QuestTargets-<version>-TBC.zip`,
+`QuestTargets-<version>-Mists.zip`, and `QuestTargets-<version>-Forever.zip`
+packages by default. Choose the ZIP for your client. The non-Retail
 packages contain `QuestTargets/` and the corresponding official `QuestieDB/` at
 the ZIP root. Close the game, remove an existing `Interface/AddOns/QuestieDB`
 folder, extract both folders into `Interface/AddOns`, then restart the game.
@@ -21,8 +22,8 @@ Retail users can install `QuestTargets-<version>-Retail.zip` directly; it needs
 no QuestieDB and reads objectives from the Retail quest log. Mob names come
 from readable quest text and visible nameplates. Item sources and turn-in NPCs
 without names in the quest text are not inferred on Retail.
-Combined packages are local test builds until QuestieDB redistribution terms
-and in-client compatibility have been confirmed.
+The combined packages include the matching QuestieDB release; see the
+[QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md) for its provenance.
 
 ## Features
 
@@ -50,10 +51,10 @@ Run `python -m unittest discover -s tests -p "test_quest_targets*.py"`.
 Database integration tests use the pinned QuestieDB v1.0.1 Vanilla archive in
 the system temporary directory at
 `quest-targets-questiedb-v1.0.1/QuestieDB-Vanilla.zip`. Package tests use
-the official v1.0.4 Vanilla and Forever artifacts; the packaging script
+the official v1.0.4 Vanilla, TBC, Mists, and Forever artifacts; the packaging script
 downloads missing artifacts and verifies their SHA-256 hashes.
 
-Build all three local packages with PowerShell:
+Build all five local packages with PowerShell:
 
 ```powershell
 ./tools/package_quest_targets.ps1
@@ -68,7 +69,7 @@ Build a minimal release ZIP or only the Retail package with PowerShell:
 
 The minimal ZIP contains runtime Lua, TOC, and texture files only. Tests,
 documentation, and QuestieDB are excluded. `-AddonOnly` also omits QuestieDB
-but includes documentation. Use `-Flavor Classic` or `-Flavor Forever` to build
+but includes documentation. Use `-Flavor Classic`, `-Flavor TBC`, `-Flavor Mists`, or `-Flavor Forever` to build
 only one combined flavor. See the [QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md)
 for source hashes and the unresolved redistribution terms.
 
