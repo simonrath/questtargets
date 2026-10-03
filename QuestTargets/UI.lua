@@ -380,7 +380,7 @@ function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "master", "hotkeys"}
-    local heights = {580, 310, 538, 216}
+    local heights = {620, 310, 538, 216}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -421,9 +421,9 @@ function UI.LayoutSettings(app)
         panel.pages[index] = {scroll=scroll, content=content}
     end
     local general, markers, hotkeys = panel.pages[1].content, panel.pages[2].content, panel.pages[4].content
-    local display = settingsBox(general, "display", -32, 226)
-    local window = settingsBox(general, "window", -292, 125)
-    local language = settingsBox(general, "language", -451, 102)
+    local display = settingsBox(general, "display", -32, 256)
+    local window = settingsBox(general, "window", -322, 125)
+    local language = settingsBox(general, "language", -481, 102)
     local marking = settingsBox(markers, "targetMarkers", -32, 260)
     local appearance = settingsBox(master, "masterAppearance", -32, 84)
     local dimensions = settingsBox(master, "buttonSize", -150, 220)
@@ -434,7 +434,8 @@ function UI.LayoutSettings(app)
     panel.languageText:Hide()
     panel.hotkeysText:Hide()
     for i, control in ipairs({panel.masterToggle, panel.menuToggle, panel.transparencyToggle,
-        panel.tooltipToggle, panel.minimapToggle, panel.questieTrackerToggle}) do
+        panel.tooltipToggle, panel.minimapToggle, panel.questieTrackerToggle,
+        panel.restedXPToggle}) do
         place(control, display, 18, -32 - (i-1)*30)
     end
     place(panel.scaleControl, window, 22, -31)
@@ -570,6 +571,12 @@ function UI.Settings(app)
         panel.questieTrackerToggle = checkbox(panel, L("questieTrackerButtons"), function()
             app.db.questieTrackerButtons = not app.db.questieTrackerButtons
             NS.QuestieTracker.Sync(app)
+            UI.UpdateSettings(app)
+        end)
+        panel.restedXPToggle = checkbox(panel, L("restedXPIntegration"), function()
+            if InCombatLockdown() then return end
+            app.db.restedXPIntegration = not app.db.restedXPIntegration
+            NS.RestedXP.Sync(app)
             UI.UpdateSettings(app)
         end)
         panel.hotkeysText = label(panel, 20, -472, 330, "GameFontNormal")
@@ -743,6 +750,7 @@ function UI.UpdateSettings(app)
     UI.settings.tooltipToggle:SetChecked(app.db.showTooltips)
     UI.settings.minimapToggle:SetChecked(not app.db.minimapHidden)
     UI.settings.questieTrackerToggle:SetChecked(app.db.questieTrackerButtons)
+    UI.settings.restedXPToggle:SetChecked(app.db.restedXPIntegration)
     local key = GetBindingKey and GetBindingKey("CLICK QuestTargetsMaster:LeftButton")
     if not UI.settings.hotkey.listening then UI.settings.hotkey:SetText(key or L("unbound")) end
     UIDropDownMenu_SetSelectedID(UI.settings.languageDropdown, NS.Language())
@@ -776,6 +784,7 @@ function UI.ApplyLanguage(app)
         panel.tooltipToggle.caption:SetText(L("showTooltips"))
         panel.minimapToggle.caption:SetText(L("showMinimap"))
         panel.questieTrackerToggle.caption:SetText(L("questieTrackerButtons"))
+        panel.restedXPToggle.caption:SetText(L("restedXPIntegration"))
         panel.hotkeyNote:SetText(L("hotkeyNote"))
         panel.hotkeyClear:SetText(L("clear"))
         panel.hotkeysText:SetText(L("hotkeys"))

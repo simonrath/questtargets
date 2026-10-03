@@ -9,7 +9,7 @@ $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskAddon = Join-Path $taskRoot 'QuestTargets'
 $taskDist = Join-Path $taskRoot 'dist'
 $taskVersion = (Select-String -LiteralPath (Join-Path $taskAddon 'QuestTargets.toc') -Pattern '^## Version: (.+)$').Matches[0].Groups[1].Value
-$taskRuntimeFiles = @('QuestTargets.toc','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','Master.lua','QuestieTracker.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga','Textures/TransparencyEye.tga')
+$taskRuntimeFiles = @('QuestTargets.toc','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','Master.lua','QuestieTracker.lua','RestedXP.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga','Textures/TransparencyEye.tga')
 if ($AddonOnly -or $CurseForge) { $Flavor = 'Minimal' }
 if (-not $ProviderCache) { $ProviderCache = Join-Path $env:TEMP 'quest-targets-questiedb-v1.0.4' }
 New-Item -ItemType Directory -Path $taskDist -Force | Out-Null

@@ -36,20 +36,27 @@ function UI.RenderMaster(app)
         frame:SetScript("OnDragStop", function(self) self.pendingStop = true; UI.StopMaster(app) end)
         frame:SetScript("PreClick", function(self, mouseButton, down)
             if mouseButton ~= "LeftButton" or down or InCombatLockdown() then return end
+            if NS.RestedXP.PreClick(app, self) then return end
             self:SetAttribute("macrotext1", Core.ClickMacro(self.entry, app.allEntries or {}, app.db, self))
         end)
         frame:SetScript("PostClick", function(self, _, down)
             if down then return end
             Core.RecordClickResult()
+            if NS.RestedXP.PostClick(app) then return end
             if not InCombatLockdown() then self:SetAttribute("macrotext1", (Core.EntryMacro(self.entry, app.db))) end
         end)
         frame:SetScript("OnEnter", function(self)
             if not app.db.showTooltips then return end
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText(L("active"))
-            GameTooltip:AddLine(L("masterTip1"), 1, 1, 1, true)
-            GameTooltip:AddLine(L("masterTip2"), 1, 0.82, 0, true)
-            GameTooltip:AddLine(L("masterTip3"), 0.75, 0.75, 0.75, true)
+            if NS.RestedXP.active then
+                GameTooltip:AddLine(L("restedXPButton"), 1, 0.82, 0, true)
+                GameTooltip:AddLine(self.entry and self.entry.name or L("restedXPNoTarget"), 1, 1, 1, true)
+            else
+                GameTooltip:AddLine(L("masterTip1"), 1, 1, 1, true)
+                GameTooltip:AddLine(L("masterTip2"), 1, 0.82, 0, true)
+                GameTooltip:AddLine(L("masterTip3"), 0.75, 0.75, 0.75, true)
+            end
             GameTooltip:Show()
         end)
         frame:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -87,6 +94,7 @@ function UI.RenderMaster(app)
     entry.mobCount = #entry.nameList - #finisherNames
     entry.turnInCount = #finisherNames
     entry.name = entry.nameList[1]
+    UI.master.defaultEntry = entry
     UI.master.entry = entry
     UI.master:SetAttribute("macrotext1", (Core.EntryMacro(entry, app.db)))
     UI.master:SetShown(not app.db.masterHidden)

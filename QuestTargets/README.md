@@ -1,4 +1,4 @@
-# Quest Targets — 1.2.1
+# Quest Targets — 1.2.2
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **WoW Forever Beta 1.60.1, Build 70170 (Interface 16001)** und **Retail 12.1 (Interface 120100)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -57,6 +57,15 @@ Herkunft und Prüfsummen stehen im [QuestieDB-Hinweis](QUESTIEDB-NOTICE.md).
   passenden Questzeile ein eigener Zielbutton. Er verwendet dieselben
   Questziele wie der Button im Quest-Targets-Fenster. Questie selbst bleibt
   unverändert; ohne Questie werden keine zusätzlichen Buttons angezeigt.
+- Optional „RestedXP-Guideziele nutzen und Zielbutton anzeigen“ unter
+  Allgemein: Der Masterbutton berücksichtigt dann nur Questmobs und bereite
+  Abgabe-NPCs, die im aktiven RestedXP-Schritt stehen. Ein weiterer Button
+  erscheint am RestedXP-Zielmenü, sofern dieses angezeigt wird. Beide Buttons
+  gehen bei wiederholtem Klick zum nächsten passenden Namen über. Ohne
+  passendes Ziel im aktiven Schritt wird kein anderes Questziel anvisiert;
+  ohne RestedXP bleibt der normale Masterbutton aktiv. Im Kampf bleibt das
+  zuletzt vorbereitete Ziel aktiv, bis geschützte Aktionen wieder geändert
+  werden dürfen.
 
 Die kleinen Questbuttons zeigen beim Drücken eine native Klickanimation.
 Jede Quest erscheint einmal mit ihrem Fortschritt. Alle bekannten Mobarten

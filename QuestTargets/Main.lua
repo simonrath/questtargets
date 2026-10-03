@@ -65,6 +65,7 @@ function app:Refresh()
     UI.Render(self)
     UI.RenderMaster(self)
     NS.QuestieTracker.Sync(self)
+    NS.RestedXP.Sync(self)
     if self.pendingVisibility ~= nil then
         UI.frame:SetShown(self.pendingVisibility)
         self.db.hidden = not self.pendingVisibility
@@ -119,6 +120,7 @@ function app:Poll()
         UI.UpdateStatus(self)
     end
     NS.QuestieTracker.Sync(self)
+    NS.RestedXP.Sync(self)
 end
 
 function app:Help()
@@ -184,6 +186,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         app.db.masterText = type(title) == "string" and Core.Clean(title) or NS.L("masterDefault")
         app.db.minimapHidden = app.db.minimapHidden == true
         app.db.questieTrackerButtons = app.db.questieTrackerButtons == true
+        app.db.restedXPIntegration = app.db.restedXPIntegration == true
         app.db.minimapStyle = nil -- remove the premature design-selection setting
         app.db.showTooltips = app.db.showTooltips == true
         local scale = app.db.menuScale
