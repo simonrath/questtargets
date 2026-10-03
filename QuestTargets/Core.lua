@@ -172,7 +172,7 @@ function Core.NextUnit(entry, entries)
     return candidates[1] and candidates[1].unit, candidates[1] and candidates[1].friendly
 end
 
-function Core.ClickMacro(entry, entries, settings, state)
+function Core.ClickMacro(entry, entries, settings, state, preserveEntry)
     Core.ConfirmSearchResult()
     Core.pendingSearch = nil -- a new hardware click supersedes the previous attempt
     Core.lastCycle = nil
@@ -195,6 +195,17 @@ function Core.ClickMacro(entry, entries, settings, state)
             return Core.MarkerMacro(settings, true, true)
         end
         return Core.MarkerMacro(settings, true, false)
+    end
+    if not validCurrent and not unit and preserveEntry
+        and Core.ValidCurrentTarget(preserveEntry) then
+        -- Even /targetexact can drop the old target when the next guide name
+        -- cannot be found. Keep it until another visible candidate exists.
+        Core.lastClick.path = "Ziel behalten"
+        Core.lastClick.validCurrent = true
+        local currentName = Core.SafeName(UnitName("target"))
+        local friendlyCurrent = preserveEntry.finisherNames
+            and preserveEntry.finisherNames[currentName]
+        return Core.MarkerMacro(settings, true, friendlyCurrent)
     end
     if not validCurrent and not unit then
         if NS.Proximity then

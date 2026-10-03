@@ -17,25 +17,19 @@ local function restedXP()
 end
 
 local function currentNames(rxp, validNames)
-    local names, seen, acceptNames = {}, {}, {}
+    local names, seen, guideFriendlyNames = {}, {}, {}
     for _, step in ipairs(rxp.RXPFrame.activeSteps) do
         if step.active == true then
-            local accepting = false
-            for _, element in ipairs(step.elements or {}) do
-                if (element.tag == "accept" or element.tag == "daily"
-                    or element.tag == "acceptmultiple") and not element.completed then
-                    accepting = true
-                    break
-                end
-            end
             for _, element in ipairs(step.elements or {}) do
                 for _, key in ipairs({"unitscan", "mobs", "targets"}) do
                     for _, id in ipairs(element[key] or {}) do
                         local ok, raw = pcall(rxp.GetCreatureName, id)
                         if ok and type(raw) == "string" then
                             local name = Core.SafeName(raw:gsub("^%*", ""))
-                            if name and (validNames[name] or (accepting and key == "targets")) then
-                                if accepting and key == "targets" then acceptNames[name] = true end
+                            if name then
+                                if key == "targets" and not validNames[name] then
+                                    guideFriendlyNames[name] = true
+                                end
                                 if not seen[name] then
                                     seen[name] = true
                                     names[#names + 1] = name
@@ -47,7 +41,7 @@ local function currentNames(rxp, validNames)
             end
         end
     end
-    return names, acceptNames
+    return names, guideFriendlyNames
 end
 
 local function createButton(frame)
@@ -84,7 +78,31 @@ end
 local function setMacro(button, entry, settings)
     if not button then return end
     button.entry = entry
-    button:SetAttribute("macrotext1", entry and Core.EntryMacro(entry, settings) or nil)
+    local macro = entry and Core.EntryMacro(entry, settings) or nil
+    if entry and Integration.active and Integration.allEntry
+        and Core.ValidCurrentTarget(Integration.allEntry) then
+        local name = Core.SafeName(UnitName("target"))
+        local friendly = Integration.allEntry.finisherNames[name]
+        macro = Core.MarkerMacro(settings, true, friendly)
+    end
+    button:SetAttribute("macrotext1", macro)
+end
+
+local function appendNativeFallback(macro, base, settings)
+    if not macro or not macro:find("/cleartarget", 1, true)
+        or not base or not base.nameList or #base.nameList == 0 then return macro end
+    local marker = Core.MarkerMacro(settings, true)
+    local index = Integration.nativeCursor or 1
+    for _ = 1, #base.nameList do
+        local name = base.nameList[index]
+        local line = "\n/targetexact [noexists] " .. name .. "\n/cleartarget [dead]"
+        if #macro + #line + #marker > Core.MACRO_BYTES then break end
+        macro = macro .. line
+        index = index % #base.nameList + 1
+    end
+    Integration.nativeCursor = index
+    if #macro + #marker <= Core.MACRO_BYTES then macro = macro .. marker end
+    return macro
 end
 
 function Integration.Sync(app)
@@ -94,8 +112,11 @@ function Integration.Sync(app)
     Integration.active = rxp and true or false
     if not rxp then
         Integration.targets = {}
+        Integration.allEntry = nil
         Integration.signature = nil
         Integration.cursor = 1
+        Integration.nativeCursor = 1
+        Integration.fallbackOnce = false
         if wasActive then setMacro(UI.master, UI.master.defaultEntry, app.db) end
         if Integration.button then
             setMacro(Integration.button, nil, app.db)
@@ -105,26 +126,42 @@ function Integration.Sync(app)
     end
 
     local base = UI.master.defaultEntry or {}
-    local names, acceptNames = currentNames(rxp, base.names or {})
+    local names, guideFriendlyNames = currentNames(rxp, base.names or {})
     local signatureParts = {}
     for i, target in ipairs(names) do
-        signatureParts[i] = target .. (acceptNames[target] and ":accept" or "")
+        signatureParts[i] = target .. (guideFriendlyNames[target] and ":friendly" or "")
     end
     local signature = table.concat(signatureParts, "\n")
-    if signature ~= Integration.signature then Integration.cursor = 1 end
+    if signature ~= Integration.signature then
+        Integration.cursor = 1
+        Integration.nativeCursor = 1
+        Integration.fallbackOnce = false
+    end
     Integration.signature = signature
     Integration.targets = names
+    local allNames, allFriendly = {}, {}
+    for target in pairs(base.names or {}) do allNames[target] = true end
+    for target in pairs(base.finisherNames or {}) do allFriendly[target] = true end
+    for _, target in ipairs(names) do
+        allNames[target] = true
+        if guideFriendlyNames[target]
+            or (base.finisherNames and base.finisherNames[target]) then
+            allFriendly[target] = true
+        end
+    end
+    Integration.allEntry = {names=allNames, finisherNames=allFriendly}
     local name = names[Integration.cursor]
-    local finisher = name and (acceptNames[name]
+    local finisher = name and (guideFriendlyNames[name]
         or (base.finisherNames and base.finisherNames[name] == true))
-    local entry = name and {name=name, title=NS.L("restedXPButton"), questID=0,
+    local guideEntry = name and {name=name, title=NS.L("restedXPButton"), questID=0,
         nameList={name}, names={[name]=true}, refs=base.refs or {},
         finisherNames=finisher and {[name]=true} or {},
         mobCount=finisher and 0 or 1, turnInCount=finisher and 1 or 0} or nil
+    local entry = (not name or Integration.fallbackOnce) and base.name and base or guideEntry
     setMacro(UI.master, entry, app.db)
 
     local frame = rxp.targeting and rxp.targeting.activeTargetFrame
-    if not frame or not name or not rxp.settings or not rxp.settings.profile
+    if not frame or not entry or not rxp.settings or not rxp.settings.profile
         or not rxp.settings.profile.enableTargetFrame then
         if Integration.button then
             setMacro(Integration.button, nil, app.db)
@@ -150,16 +187,50 @@ function Integration.PreClick(app, button)
     if not Integration.active then return false end
     if InCombatLockdown() then return true end
     local entry = button.entry
-    button.rxpState = {entry=entry}
-    button:SetAttribute("macrotext1", entry and Core.ClickMacro(entry, {entry}, app.db, button.rxpState) or nil)
+    local native = entry and entry == UI.master.defaultEntry
+    Integration.attemptSerial = (Integration.attemptSerial or 0) + 1
+    Integration.lastAttempt = {serial=Integration.attemptSerial,
+        signature=Integration.signature, native=native}
+    local macro
+    if native then
+        button.nativeState = button.nativeState or {}
+        button.nativeState.entry = entry
+        macro = Core.ClickMacro(entry, app.allEntries or {}, app.db,
+            button.nativeState, Integration.allEntry)
+    else
+        button.rxpState = {entry=entry}
+        macro = entry and Core.ClickMacro(entry, {entry}, app.db,
+            button.rxpState, Integration.allEntry) or nil
+        if entry and not Core.ValidCurrentTarget(Integration.allEntry) then
+            macro = appendNativeFallback(macro, UI.master.defaultEntry, app.db)
+        end
+    end
+    button:SetAttribute("macrotext1", macro)
     return true
 end
 
 function Integration.PostClick(app)
     if not Integration.active then return false end
-    if not InCombatLockdown() and #Integration.targets > 0 then
-        Integration.cursor = Integration.cursor % #Integration.targets + 1
-        Integration.Sync(app)
+    if InCombatLockdown() then return true end
+    local attempt = Integration.lastAttempt
+    Integration.lastAttempt = nil
+    if attempt and attempt.native then
+        Integration.fallbackOnce = false
+    elseif attempt then
+        local serial, signature = attempt.serial, attempt.signature
+        C_Timer.After(0, function()
+            if not Integration.active or serial ~= Integration.attemptSerial
+                or signature ~= Integration.signature or InCombatLockdown() then return end
+            if not Core.ValidCurrentTarget(Integration.allEntry)
+                and not Core.ValidCurrentTarget(UI.master.defaultEntry or {}) then
+                Integration.fallbackOnce = true
+            end
+            Integration.Sync(app)
+        end)
+        if #Integration.targets > 0 then
+            Integration.cursor = Integration.cursor % #Integration.targets + 1
+        end
     end
+    Integration.Sync(app)
     return true
 end

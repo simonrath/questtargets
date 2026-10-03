@@ -1,4 +1,4 @@
-# Quest Targets — 1.2.3
+# Quest Targets — 1.2.4
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever Beta 1.60.1, Build 70170 (16001)** und **Retail 12.1 (120100)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -60,15 +60,18 @@ Herkunft und Prüfsummen der kombinierten Pakete stehen im
   Questziele wie der Button im Quest-Targets-Fenster. Questie selbst bleibt
   unverändert; ohne Questie werden keine zusätzlichen Buttons angezeigt.
 - Optional „RestedXP-Guideziele nutzen und Zielbutton anzeigen“ unter
-  Allgemein: Der Masterbutton berücksichtigt Questmobs und bereite
-  Abgabe-NPCs im aktiven RestedXP-Schritt sowie ausdrücklich genannte NPCs
-  für noch anzunehmende Quests. Ein weiterer Button
+  Allgemein: Der Masterbutton berücksichtigt Mobs und andere ausdrücklich
+  genannte Ziele aktiver RestedXP-Schritte, auch wenn sie nicht zu einer offenen
+  Quest gehören (etwa Sammelmobs, Annahme-NPCs oder Flugmeister). Ein weiterer Button
   erscheint am RestedXP-Zielmenü, sofern dieses angezeigt wird. Beide Buttons
-  gehen bei wiederholtem Klick zum nächsten passenden Namen über. Ohne
-  passendes Ziel im aktiven Schritt wird kein anderes Questziel anvisiert;
-  ohne RestedXP bleibt der normale Masterbutton aktiv. Im Kampf bleibt das
+  wechseln bei wiederholtem Klick zu einem sichtbaren passenden Ziel. Gibt
+  RestedXP kein Ziel vor, übernimmt sofort die native Questsuche. Nach einer
+  erfolglosen Guideziel-Suche versucht das Makro nach Möglichkeit bereits ein
+  natives Questziel; andernfalls übernimmt der nächste Klick die native Suche.
+  Ohne RestedXP bleibt der normale Masterbutton aktiv. Im Kampf bleibt das
   zuletzt vorbereitete Ziel aktiv, bis geschützte Aktionen wieder geändert
-  werden dürfen.
+  werden dürfen. Ein bereits gültiges Ziel bleibt ausgewählt, solange kein
+  anderes passendes Ziel sichtbar ist.
 
 Die kleinen Questbuttons zeigen beim Drücken eine native Klickanimation.
 Jede Quest erscheint einmal mit ihrem Fortschritt. Alle bekannten Mobarten
