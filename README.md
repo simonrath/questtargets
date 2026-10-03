@@ -33,7 +33,7 @@ The combined packages include the matching QuestieDB release; see the
 - Configurable target markers, hotkeys, and tooltips.
 - Native addon settings, a minimap button, and classic or modern master-button appearance.
 - Optional quest-specific target buttons beside quest rows in Questie's tracker when Questie is installed and enabled.
-- Optional RestedXP guide targeting for the master button, with a matching button on RestedXP's target frame. Only active-step targets that match open quest objectives or ready turn-in NPCs are used; repeated clicks advance through them. Secure targets refresh after combat.
+- Optional RestedXP guide targeting for the master button, with a matching button on RestedXP's target frame. Active-step targets include open quest objectives, ready turn-in NPCs, and explicitly named NPCs for quests to accept; repeated clicks advance through them. Secure targets refresh after combat.
 - Optional transparency mode immediately leaves only the quest list visible. Its toggle icon hides two seconds after the cursor leaves the window and reappears when the cursor moves anywhere over it. A 90% transparent draggable strip is shown only while the cursor is over the window.
 - The compact quest window has adjacent Settings and Feedback buttons; quest data also refreshes automatically or with `/qt refresh`.
 - At 100%, both master-button styles are the size previously shown at 150%; saved scales are migrated to preserve their visible size.

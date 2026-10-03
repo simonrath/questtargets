@@ -6,6 +6,35 @@ import test_quest_targets as addon
 class RestedXPTests(unittest.TestCase):
     setUp = addon.QuestTargetsTests.setUp
 
+    def test_active_accept_step_targets_its_npc_before_quest_is_in_log(self):
+        self.lua.execute('''
+            local frame=CreateFrame('Frame','RXPTargetFrame',UIParent)
+            local accept={tag='accept',questId=6661,completed=false}
+            local rxp={RXPFrame={activeSteps={
+                {active=true,elements={{tag='target',targets={'Monty'}},accept}},
+                {active=true,elements={{tag='target',targets={'Unrelated vendor'}}}},
+                {active=true,elements={{tag='mob',mobs={'Waldwolf'}}}}
+            }},targeting={activeTargetFrame=frame},
+                settings={profile={enableTargetFrame=true}},
+                GetCreatureName=function(id) return id end}
+            LibStub=function(name) if name=='AceAddon-3.0' then
+                return {GetAddon=function() return rxp end}
+            end end
+            QuestTargetsDB={restedXPIntegration=true}
+            boot()
+            assert(NS.UI.master.entry.name=='Monty')
+            assert(NS.UI.master.entry.finisherNames.Monty)
+            assert(NS.UI.master.attributes.macrotext1:find('Monty',1,true))
+            assert(NS.RestedXP.button.entry.name=='Monty')
+            NS.UI.master.scripts.PreClick(NS.UI.master,'LeftButton',false)
+            NS.UI.master.scripts.PostClick(NS.UI.master,'LeftButton',false)
+            assert(NS.UI.master.entry.name=='Waldwolf')
+            accept.completed=true
+            NS.RestedXP.Sync(NS.app)
+            assert(NS.UI.master.entry.name=='Waldwolf')
+            assert(#NS.RestedXP.targets==1)
+        ''')
+
     def test_guided_master_and_attached_button_cycle_matching_quest_targets(self):
         self.lua.execute('''
             quests[3]={questID=3,title='Spinnen',objectives={

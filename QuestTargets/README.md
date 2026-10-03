@@ -60,8 +60,9 @@ Herkunft und Prüfsummen der kombinierten Pakete stehen im
   Questziele wie der Button im Quest-Targets-Fenster. Questie selbst bleibt
   unverändert; ohne Questie werden keine zusätzlichen Buttons angezeigt.
 - Optional „RestedXP-Guideziele nutzen und Zielbutton anzeigen“ unter
-  Allgemein: Der Masterbutton berücksichtigt dann nur Questmobs und bereite
-  Abgabe-NPCs, die im aktiven RestedXP-Schritt stehen. Ein weiterer Button
+  Allgemein: Der Masterbutton berücksichtigt Questmobs und bereite
+  Abgabe-NPCs im aktiven RestedXP-Schritt sowie ausdrücklich genannte NPCs
+  für noch anzunehmende Quests. Ein weiterer Button
   erscheint am RestedXP-Zielmenü, sofern dieses angezeigt wird. Beide Buttons
   gehen bei wiederholtem Klick zum nächsten passenden Namen über. Ohne
   passendes Ziel im aktiven Schritt wird kein anderes Questziel anvisiert;

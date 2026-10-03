@@ -17,18 +17,29 @@ local function restedXP()
 end
 
 local function currentNames(rxp, validNames)
-    local names, seen = {}, {}
+    local names, seen, acceptNames = {}, {}, {}
     for _, step in ipairs(rxp.RXPFrame.activeSteps) do
         if step.active == true then
+            local accepting = false
+            for _, element in ipairs(step.elements or {}) do
+                if (element.tag == "accept" or element.tag == "daily"
+                    or element.tag == "acceptmultiple") and not element.completed then
+                    accepting = true
+                    break
+                end
+            end
             for _, element in ipairs(step.elements or {}) do
                 for _, key in ipairs({"unitscan", "mobs", "targets"}) do
                     for _, id in ipairs(element[key] or {}) do
                         local ok, raw = pcall(rxp.GetCreatureName, id)
                         if ok and type(raw) == "string" then
                             local name = Core.SafeName(raw:gsub("^%*", ""))
-                            if name and validNames[name] and not seen[name] then
-                                seen[name] = true
-                                names[#names + 1] = name
+                            if name and (validNames[name] or (accepting and key == "targets")) then
+                                if accepting and key == "targets" then acceptNames[name] = true end
+                                if not seen[name] then
+                                    seen[name] = true
+                                    names[#names + 1] = name
+                                end
                             end
                         end
                     end
@@ -36,7 +47,7 @@ local function currentNames(rxp, validNames)
             end
         end
     end
-    return names
+    return names, acceptNames
 end
 
 local function createButton(frame)
@@ -94,13 +105,18 @@ function Integration.Sync(app)
     end
 
     local base = UI.master.defaultEntry or {}
-    local names = currentNames(rxp, base.names or {})
-    local signature = table.concat(names, "\n")
+    local names, acceptNames = currentNames(rxp, base.names or {})
+    local signatureParts = {}
+    for i, target in ipairs(names) do
+        signatureParts[i] = target .. (acceptNames[target] and ":accept" or "")
+    end
+    local signature = table.concat(signatureParts, "\n")
     if signature ~= Integration.signature then Integration.cursor = 1 end
     Integration.signature = signature
     Integration.targets = names
     local name = names[Integration.cursor]
-    local finisher = name and base.finisherNames and base.finisherNames[name] == true
+    local finisher = name and (acceptNames[name]
+        or (base.finisherNames and base.finisherNames[name] == true))
     local entry = name and {name=name, title=NS.L("restedXPButton"), questID=0,
         nameList={name}, names={[name]=true}, refs=base.refs or {},
         finisherNames=finisher and {[name]=true} or {},
