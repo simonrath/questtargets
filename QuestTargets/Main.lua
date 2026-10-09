@@ -1,6 +1,7 @@
 local addonName, NS = ...
 local Core, UI, Scanner = NS.Core, NS.UI, NS.Scanner
-local app = {scrollOffset = 0, entries = {}, metadata = {unresolved = 0, objectives = 0}, dirty = true}
+local app = {scrollOffset = 0, entries = {}, metadata = {unresolved = 0, objectives = 0}, dirty = true,
+    zoneDirty = true}
 NS.app = app
 
 local function message(text)
@@ -45,7 +46,7 @@ local function showMissingDatabase()
     StaticPopup_Show(key)
 end
 
-function app:Refresh()
+function app:Refresh(forceResolution)
     if not self.db then return end
     if InCombatLockdown() then self.dirty = true; UI.UpdateStatus(self); return end
     if UI.moving then self.dirty = true; return end
@@ -56,12 +57,29 @@ function app:Refresh()
     self.allQuests = allQuests
     self.pendingData = pending or allPending
     self.quests = quests
-    if NS.Database then NS.Database.RefreshZone() end
+    local provider = NS.Database and NS.Database.Provider()
+    if forceResolution ~= false or self.zoneDirty or provider ~= self.resolutionProvider then
+        if NS.Database then NS.Database.RefreshZone() end
+        self.resolutionCache = {}
+        self.zoneDirty = false
+    end
+    self.resolutionProvider = provider
     if NS.Proximity then NS.Proximity.Sample() end
+    if not (err or allError or pending or allPending) and #allQuests > 0 then
+        Scanner.Prune(allQuests or {}, self.learned)
+    end
     Scanner.Scan(allQuests, self.learned)
-    self.resolutionCache = {}
+    self.resolutionCache = self.resolutionCache or {}
     self.entries, self.metadata = Core.BuildEntries(quests, self.learned, self.resolutionCache)
     self.allEntries = self.db.watchedOnly and Core.BuildEntries(allQuests, self.learned, self.resolutionCache) or self.entries
+    if not (err or allError or pending or allPending) then
+        local active = {}
+        for _, quest in ipairs(allQuests or {}) do active[quest.id] = true end
+        if self.db.focusQuestID and not active[self.db.focusQuestID] then self.db.focusQuestID = nil end
+        for questID in pairs(self.resolutionCache) do
+            if not active[questID] then self.resolutionCache[questID] = nil end
+        end
+    end
     -- The unfiltered read also feeds the master button.  In tracked-only mode
     -- it can fail independently of the first read (for example while the quest
     -- log is temporarily unavailable), so do not report an ordinary empty
@@ -70,6 +88,7 @@ function app:Refresh()
     self.dirty = false
     UI.Render(self)
     UI.RenderMaster(self)
+    UI.SyncFocusBinding(self)
     NS.QuestieTracker.Sync(self)
     NS.RestedXP.Sync(self)
     if self.pendingVisibility ~= nil then
@@ -85,7 +104,7 @@ function app:Schedule()
     self.scheduled = true
     C_Timer.After(0.15, function()
         self.scheduled = false
-        if self.dirty then self:Refresh() end
+        if self.dirty then self:Refresh(false) end
     end)
 end
 
@@ -112,7 +131,7 @@ end
 
 function app:Poll()
     if not self.db or not UI.frame or InCombatLockdown() then return end
-    if self.dirty or self.pendingData then self:Refresh(); return end
+    if self.dirty or self.pendingData then self:Refresh(false); return end
     local moved = NS.Proximity and NS.Proximity.Sample()
     if Scanner.Scan(self.allQuests or {}, self.learned) then
         self.entries, self.metadata = Core.BuildEntries(self.quests or {}, self.learned, self.resolutionCache)
@@ -153,7 +172,10 @@ events:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 events:RegisterEvent("ZONE_CHANGED_INDOORS")
 events:SetScript("OnEvent", function(_, event, loadedName)
     if event == "ADDON_LOADED" then
-        if loadedName ~= addonName then return end
+        if loadedName ~= addonName then
+            if loadedName == "QuestieDB" and app.db then app:Schedule() end
+            return
+        end
         if type(QuestTargetsDB) ~= "table" then QuestTargetsDB = {} end
         app.db = QuestTargetsDB
         -- Manual overrides from 0.1 remain untouched but are never used for detection.
@@ -191,10 +213,14 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         app.db.masterAppearance = app.db.masterAppearance == "modern" and "modern" or "classic"
         app.db.masterText = type(title) == "string" and Core.Clean(title) or NS.L("masterDefault")
         app.db.minimapHidden = app.db.minimapHidden == true
-        app.db.questieTrackerButtons = app.db.questieTrackerButtons == true
+        app.db.questieTrackerButtons = nil -- removed setting; Questie is detected automatically
         app.db.restedXPIntegration = app.db.restedXPIntegration == true
         app.db.minimapStyle = nil -- remove the premature design-selection setting
         app.db.showTooltips = app.db.showTooltips == true
+        app.db.focusMarkEnabled = nil -- focused quests are always highlighted
+        app.db.focusHotkeyEnabled = nil -- removed setting; an assigned key always works
+        if type(app.db.focusQuestID) ~= "number" then app.db.focusQuestID = nil end
+        if type(app.db.focusHotkeyKey) ~= "string" then app.db.focusHotkeyKey = nil end
         local scale = app.db.menuScale
         app.db.menuScale = type(scale) == "number" and scale == scale and math.max(0.5, math.min(1.5, scale)) or 1
         app.db.autoMark = app.db.autoMark ~= false
@@ -208,11 +234,17 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         -- writing any protected attributes from the event handler.
         Core.ConfirmSearchResult()
     elseif event == "PLAYER_REGEN_DISABLED" then
+        UI.StopMoving(app.db)
         app.dirty = true
         UI.UpdateStatus(app)
     elseif event == "PLAYER_REGEN_ENABLED" then
-        app:Refresh()
+        UI.StopMoving(app.db)
+        app:Refresh(false)
     else
+        if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED"
+            or event == "ZONE_CHANGED_NEW_AREA" or event == "ZONE_CHANGED_INDOORS" then
+            app.zoneDirty = true
+        end
         app:Schedule()
     end
 end)

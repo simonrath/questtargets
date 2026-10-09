@@ -1,4 +1,4 @@
-# Quest Targets — 1.2.4
+# Quest Targets — 1.2.5
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever Beta 1.60.1, Build 70170 (16001)** und **Retail 12.1 (120100)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -12,7 +12,7 @@ für Classic Era, `QuestTargets-<Version>-TBC.zip` für Burning Crusade,
 `QuestTargets-<Version>-Forever.zip` für Forever und
 `QuestTargets-<Version>-Retail.zip` für Retail. Die Nicht-Retail-Pakete
 enthalten auf oberster Ebene `QuestTargets/` und die passende, unveränderte
-offizielle `QuestieDB/` v1.0.4. Vor einem Update das Spiel schließen und einen
+offizielle `QuestieDB/` v1.0.5. Vor einem Update das Spiel schließen und einen
 bereits vorhandenen Ordner `Interface/AddOns/QuestieDB` entfernen. Danach beide
 Ordner aus dem zum Client passenden ZIP nach `Interface/AddOns` entpacken und
 das Spiel neu starten. So bleiben keine alten TOC-Dateien zurück.
@@ -40,7 +40,14 @@ Herkunft und Prüfsummen der kombinierten Pakete stehen im
 
 - `/qt`: Questfenster öffnen oder schließen.
 - Linksklick auf eine Quest: passende Ziele ihrer offenen Unterziele anvisieren.
-- Rechtsklick auf eine Quest: diese im nativen Questlog öffnen.
+- Rechtsklick auf den Questtext: diese Quest im nativen Questlog öffnen.
+- Rechtsklick auf das kleine Quest-Symbol setzt oder löst den Fokus dieser
+  Quest. Das gilt auch für den Button im Questie-Tracker. Der Fokus ist in
+  beiden Listen derselbe.
+  Der separate Fokus-Hotkey visiert nur Ziele der fokussierten Quest an;
+  der Masterbutton und sein Hotkey behalten ihre bisherige Funktion.
+  Die Fokusmarkierung ist in beiden Listen immer sichtbar. Der
+  Fokus-Hotkey ist immer verfügbar, aber zunächst unbelegt.
 - Masterbutton: Ziele aller aktiven Quests berücksichtigen; offene Mobziele
   haben Vorrang vor Abgabe-NPCs bereiter Quests.
 - „Alle Quests“ / „Verfolgte Quests“: die Liste filtern. Der Masterbutton
@@ -54,14 +61,15 @@ Herkunft und Prüfsummen der kombinierten Pakete stehen im
   rechter Maustaste verschieben.
 - Minikarten-Button: Linksklick öffnet das Questfenster, Rechtsklick die
   Einstellungen. Mit der linken Maustaste am Minikartenrand verschieben.
-- Optional „Zielbuttons im Questie-Tracker anzeigen“ unter Allgemein: Wenn
-  Questie mit aktivem Tracker installiert ist, steht links neben jeder
+- Wenn Questie mit aktivem Tracker installiert ist, steht links neben jeder
   passenden Questzeile ein eigener Zielbutton. Er verwendet dieselben
   Questziele wie der Button im Quest-Targets-Fenster. Questie selbst bleibt
   unverändert; ohne Questie werden keine zusätzlichen Buttons angezeigt.
 - Optional „RestedXP-Guideziele nutzen und Zielbutton anzeigen“ unter
-  Allgemein: Der Masterbutton berücksichtigt Mobs und andere ausdrücklich
-  genannte Ziele aktiver RestedXP-Schritte, auch wenn sie nicht zu einer offenen
+  Allgemein: Der Masterbutton berücksichtigt die von RestedXP aktuell geführten
+  Mob- und NPC-Ziele; bei älteren RestedXP-Versionen ohne Ziellisten-Schnittstelle
+  liest er ausdrücklich genannte Ziele aktiver Guide-Schritte. Diese Ziele dürfen
+  auch außerhalb einer offenen
   Quest gehören (etwa Sammelmobs, Annahme-NPCs oder Flugmeister). Ein weiterer Button
   erscheint am RestedXP-Zielmenü, sofern dieses angezeigt wird. Beide Buttons
   wechseln bei wiederholtem Klick zu einem sichtbaren passenden Ziel. Gibt
@@ -82,13 +90,18 @@ und die gültigen Mobarten an.
 ## Einstellungen
 
 „Einstellungen“ oder `/qt settings` öffnet die native WoW-Addon-Optionsseite.
-Interne Reiter gliedern die Optionen in Allgemein, Zielmarkierung, Masterbutton
-und Hotkeys. Eingerahmte Gruppen und scrollbare Inhalte halten die Einstellungen
-auch bei kleineren Fenstergrößen erreichbar. Unter Allgemein stehen Anzeige,
-Fenstergröße und Sprache; der Hotkey wird im eigenen Reiter zugewiesen.
+In Retail, Classic Era, Burning Crusade, Mists of Pandaria und Forever erscheinen
+die Optionen als kompakte Liste mit nativen
+Abschnittsüberschriften, Checkboxen, Reglern, Dropdowns und Buttons. Der
+Schriftzug des klassischen Masterbuttons wird dort direkt im Textfeld geändert;
+Eingabe mit Enter oder durch Verlassen des Felds übernehmen, mit Escape verwerfen.
+Für ältere Clients ohne native Settings-Liste bleibt die Oberfläche mit internen
+Reitern als Fallback erhalten.
+Die RestedXP-Option ist ausgegraut, solange das Addon nicht geladen ist.
 
 Der Masterbutton unterstützt eine Tastenzuweisung einschließlich Kombinationen
-wie STRG+F. Im Reiter „Masterbutton“ stehen zwei Darstellungen bereit:
+wie STRG+F. Im Eingabefeld löscht Entf oder Backspace eine bestehende Belegung;
+Escape bricht die Eingabe ab. Für den Masterbutton stehen zwei Darstellungen bereit:
 
 - **Klassisch:** nativer Textbutton mit unabhängig einstellbarer Breite und
   Höhe sowie frei wählbarem, auch leerem Schriftzug.
@@ -119,6 +132,11 @@ Die Resolver kombinieren direkte Datenbankziele, NPC-Dropquellen benötigter
 Gegenstände, eindeutige Vorstufen-Gegenstandsquellen und automatisch erkannte
 Clientinformationen. Es ist keine manuelle Zuordnung eines Mobs zu einer
 Quest erforderlich. Mehrdeutige Zuordnungen werden ausgelassen.
+QuestieDB-Ergebnisse werden für unveränderte Questziele zwischengespeichert;
+Namensplaketten-Ereignisse lesen diese Daten daher nicht erneut ein. Ein
+Zonenwechsel oder `/qt refresh` löst die Daten neu auf. Beobachtete Mobnamen
+für abgeschlossene oder geänderte Ziele werden aus den gespeicherten Daten
+entfernt.
 
 Bekannte Spawn-Zonen begrenzen die Datenbankziele auf die aktuelle Zone.
 Verfügbare Spawn-Koordinaten helfen bei der Reihenfolge der Namenssuche.
@@ -166,6 +184,6 @@ Die Test- und Build-Anleitung steht in der
 ./tools/package_quest_targets.ps1 -CurseForge
 ```
 
-Der erste Aufruf erzeugt beide kombinierten lokalen Test-Builds, der zweite den
+Der erste Aufruf erzeugt alle fünf lokalen Flavor-Pakete, der zweite den
 minimalen Build ohne QuestieDB. Angaben zum Datenanbieter und seiner Herkunft
 stehen im [QuestieDB-Hinweis](QUESTIEDB-NOTICE.md).

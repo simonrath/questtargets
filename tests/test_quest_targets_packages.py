@@ -9,12 +9,13 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CACHE = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.4'
+CACHE = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.5'
+PRODUCER_COMMIT = b'e0a6eaa86f181ac99262e34126bcd2ed1a1712d6'
 HASHES = {
-    'Classic': ('Vanilla', 'cf0ac8dfd6b0986a0624db6364d4e42a3691089663b8b00122d8ae2b2d040eed'),
-    'TBC': ('TBC', '5b2c398579425b22171e25bd7396268117caaed0f61b19785b81158e3988bf26'),
-    'Mists': ('Mists', 'cf2e33ccc6e8fd4b4a827fa3b7d33e70a37301ed3123edb618a806205bd542b6'),
-    'Forever': ('Forever', '2435d382c1a78c0876064c197196e73b9f417669f75187f51cc311fd8c2c19e1'),
+    'Classic': ('Vanilla', '9b84a8ab028a84d4df92460ce1e9f80d2b3594cd066772fff61411466d213111'),
+    'TBC': ('TBC', '5c4ad573c57f53a28e83b7b8fcd324191dcd241a916d1639826a7aeccde16705'),
+    'Mists': ('Mists', '87106b580cc2e4dd2468379abba6518ba12fe7826a1997d470b05003e02b165c'),
+    'Forever': ('Forever', '993680e91b8bcc1f5454af94478b1f70e0bf02bc4bd596001c8136b440939712'),
 }
 POWERSHELL = shutil.which('powershell') or shutil.which('pwsh')
 
@@ -73,6 +74,10 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(hashlib.sha256(upstream_path.read_bytes()).hexdigest(), expected_hash)
                 package_path = ROOT / 'dist' / f'QuestTargets-{self.version}-{label}.zip'
                 with zipfile.ZipFile(upstream_path) as upstream, zipfile.ZipFile(package_path) as package:
+                    toc = upstream.read(f'QuestieDB/QuestieDB_{flavor}.toc')
+                    self.assertIn(b'## Version: 1.0.5', toc)
+                    self.assertIn(b'## X-Contract-Version: 3', toc)
+                    self.assertIn(b'## X-BUILD-COMMIT: ' + PRODUCER_COMMIT, toc)
                     provider_names = {n for n in package.namelist() if n.startswith('QuestieDB/')}
                     source_names = {n for n in upstream.namelist() if not n.endswith('/')}
                     self.assertEqual(provider_names, source_names)
@@ -86,6 +91,14 @@ class PackageTests(unittest.TestCase):
                     expected_tocs = ({'QuestieDB/QuestieDB_Forever.toc', 'QuestieDB/QuestieDB_Camelot.toc'}
                                      if label == 'Forever' else {f'QuestieDB/QuestieDB_{flavor}.toc'})
                     self.assertEqual(tocs, expected_tocs)
+
+    def test_forever_archive_contains_v105_base_data(self):
+        require_provider_cache()
+        with zipfile.ZipFile(CACHE / 'QuestieDB-Forever.zip') as upstream:
+            toc = upstream.read('QuestieDB/QuestieDB_Forever.toc')
+        self.assertIn(b'## Version: 1.0.5', toc)
+        self.assertGreater(sum(line.startswith(b'## X-Npc-') for line in toc.splitlines()), 28000)
+        self.assertGreater(sum(line.startswith(b'## X-Quest-') for line in toc.splitlines()), 29000)
 
     def test_default_build_also_contains_retail_without_questiedb(self):
         self.build('Retail')

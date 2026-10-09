@@ -1,19 +1,18 @@
 # QuestieDB provider and provenance
 
-The Classic, TBC, Mists, and Forever combined builds include the official QuestieDB v1.0.4
+The Classic, TBC, Mists, and Forever combined builds include the official QuestieDB v1.0.5
 flavor archive, without changing any QuestieDB file. Quest Targets is a separate
 addon; the QuestieDB code and data belong to QuestieDB and its contributors.
 
 - Project: https://github.com/Questie/QuestieDB
-- Source release: https://github.com/Questie/QuestieDB/releases/tag/v1.0.4
-- Producing commit: `365537a340473291f5af3b7a53a5eca94e2a5f1a`
-- Classic artifact: `QuestieDB-Vanilla.zip`
-- Burning Crusade artifact: `QuestieDB-TBC.zip` (SHA-256: `5b2c398579425b22171e25bd7396268117caaed0f61b19785b81158e3988bf26`)
-- Mists of Pandaria artifact: `QuestieDB-Mists.zip` (SHA-256: `cf2e33ccc6e8fd4b4a827fa3b7d33e70a37301ed3123edb618a806205bd542b6`)
-- Classic SHA-256: `cf0ac8dfd6b0986a0624db6364d4e42a3691089663b8b00122d8ae2b2d040eed`
-- Forever artifact: `QuestieDB-Forever.zip`
-- Forever SHA-256: `2435d382c1a78c0876064c197196e73b9f417669f75187f51cc311fd8c2c19e1`
-- QuestieDB API contract: 2, supporting consumer contract 1.
+- Source release: https://github.com/Questie/QuestieDB/releases/tag/v1.0.5
+- Release metadata: https://github.com/Questie/QuestieDB/releases/download/v1.0.5/release.json
+- Producing commit: `e0a6eaa86f181ac99262e34126bcd2ed1a1712d6`
+- Classic artifact: `QuestieDB-Vanilla.zip` (SHA-256: `9b84a8ab028a84d4df92460ce1e9f80d2b3594cd066772fff61411466d213111`)
+- Burning Crusade artifact: `QuestieDB-TBC.zip` (SHA-256: `5c4ad573c57f53a28e83b7b8fcd324191dcd241a916d1639826a7aeccde16705`)
+- Mists of Pandaria artifact: `QuestieDB-Mists.zip` (SHA-256: `87106b580cc2e4dd2468379abba6518ba12fe7826a1997d470b05003e02b165c`)
+- Forever artifact: `QuestieDB-Forever.zip` (SHA-256: `993680e91b8bcc1f5454af94478b1f70e0bf02bc4bd596001c8136b440939712`)
+- QuestieDB API contract: 3, supporting consumer contract 1.
 - Upstream code attribution: Logonz. Upstream data attribution is recorded in
   the included QuestieDB TOC files.
 
@@ -21,8 +20,10 @@ The official Forever archive contains both `QuestieDB_Forever.toc` and
 `QuestieDB_Camelot.toc`; both are retained byte for byte. The packaging script
 does not create a generic TOC or adapt the Classic provider for Forever.
 
-The v1.0.4 source repository and the flavor archives contain no LICENSE or
-COPYING file, and the GitHub repository does not declare a license. This notice
+Redistribution check for v1.0.5 (2026-10-06): the release-tag repository has
+no LICENSE file, none of the four pinned flavor archives contains a LICENSE,
+COPYING, or NOTICE file, and the release notes do not specify redistribution
+terms. No permission for redistribution was established. This notice
 does **not** grant redistribution rights. Resolve the distribution terms with
 the upstream maintainers before publishing a combined build. Until then, the
 minimal Quest Targets package remains the public distribution option, with

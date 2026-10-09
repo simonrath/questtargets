@@ -18,6 +18,29 @@ end
 
 local function currentNames(rxp, validNames)
     local names, seen, guideFriendlyNames = {}, {}, {}
+    local targeting = rxp.targeting
+    if targeting and type(targeting.GetCurrentTargets) == "function" then
+        local ok, targets, mobs, unitscan = pcall(targeting.GetCurrentTargets)
+        if ok and type(targets) == "table" and type(mobs) == "table"
+            and type(unitscan) == "table" then
+            -- These are the effective lists after RestedXP filters completed or
+            -- inactive guide elements. They already contain localized names.
+            for _, list in ipairs({unitscan, mobs, targets}) do
+                for _, raw in ipairs(list) do
+                    local name = Core.SafeName(raw)
+                    if name and not seen[name] then
+                        seen[name] = true
+                        names[#names + 1] = name
+                    end
+                    if list == targets and name and not validNames[name] then
+                        guideFriendlyNames[name] = true
+                    end
+                end
+            end
+            return names, guideFriendlyNames
+        end
+    end
+    -- Older RestedXP builds have no public target-list accessor.
     for _, step in ipairs(rxp.RXPFrame.activeSteps) do
         if step.active == true then
             for _, element in ipairs(step.elements or {}) do
@@ -45,10 +68,11 @@ local function currentNames(rxp, validNames)
 end
 
 local function createButton(frame)
-    local button = CreateFrame("Button", "QuestTargetsRestedXPTarget", frame, "SecureActionButtonTemplate")
+    -- A secure child or anchor would protect RestedXP's scroll frame and make
+    -- its ordinary scroll updates fail after a guide step changes.
+    local button = CreateFrame("Button", "QuestTargetsRestedXPTarget", UIParent, "SecureActionButtonTemplate")
     button.rxpFrame = frame
     button:SetSize(25, 25)
-    button:SetPoint("TOPLEFT", frame, "TOPRIGHT", 4, -15)
     button:RegisterForClicks("LeftButtonUp")
     button:SetAttribute("type1", "macro")
     button:SetAttribute("useOnKeyDown", false)
@@ -73,6 +97,25 @@ local function createButton(frame)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
     button:Hide()
     return button
+end
+
+local function positionButton(button, frame)
+    local cx, cy = frame:GetCenter()
+    if not cx or not cy then return false end
+    local scale = frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    local x = (cx + frame:GetWidth() / 2 + 4) * scale
+    local y = (cy + frame:GetHeight() / 2 - 15) * scale
+    if button.positionX ~= x or button.positionY ~= y then
+        button:ClearAllPoints()
+        button:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
+        button.positionX, button.positionY = x, y
+    end
+    button.rxpFrame = frame
+    local strata = frame:GetFrameStrata()
+    if button:GetFrameStrata() ~= strata then button:SetFrameStrata(strata) end
+    local level = frame:GetFrameLevel() + 1
+    if button:GetFrameLevel() ~= level then button:SetFrameLevel(level) end
+    return true
 end
 
 local function setMacro(button, entry, settings)
@@ -161,7 +204,7 @@ function Integration.Sync(app)
     setMacro(UI.master, entry, app.db)
 
     local frame = rxp.targeting and rxp.targeting.activeTargetFrame
-    if not frame or not entry or not rxp.settings or not rxp.settings.profile
+    if not frame or not frame:IsVisible() or not entry or not rxp.settings or not rxp.settings.profile
         or not rxp.settings.profile.enableTargetFrame then
         if Integration.button then
             setMacro(Integration.button, nil, app.db)
@@ -173,11 +216,11 @@ function Integration.Sync(app)
     if not button then
         button = createButton(frame)
         Integration.button = button
-    elseif button.rxpFrame ~= frame then
-        button:SetParent(frame)
-        button:ClearAllPoints()
-        button:SetPoint("TOPLEFT", frame, "TOPRIGHT", 4, -15)
-        button.rxpFrame = frame
+    end
+    if not positionButton(button, frame) then
+        setMacro(button, nil, app.db)
+        button:Hide()
+        return
     end
     setMacro(button, entry, app.db)
     button:Show()

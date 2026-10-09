@@ -6,6 +6,60 @@ import test_quest_targets as addon
 class RestedXPTests(unittest.TestCase):
     setUp = addon.QuestTargetsTests.setUp
 
+    def test_target_button_does_not_protect_restedxp_scroll_frame(self):
+        self.lua.execute('''
+            local scroll=CreateFrame('ScrollFrame','RXPFrame_bottomFrameScrollFrame',UIParent)
+            local frame=CreateFrame('Frame','RXPTargetFrame',scroll)
+            frame.centerX=300; frame.centerY=400
+            frame:SetSize(80,40)
+            local rxp={RXPFrame={activeSteps={{active=true,elements={{mobs={'Waldwolf'}}}}}},
+                targeting={activeTargetFrame=frame},
+                settings={profile={enableTargetFrame=true}},
+                GetCreatureName=function(id) return id end}
+            LibStub=function(name) if name=='AceAddon-3.0' then
+                return {GetAddon=function() return rxp end}
+            end end
+            QuestTargetsDB={restedXPIntegration=true}
+            boot()
+            local button=NS.RestedXP.button
+            assert(button and button:IsVisible())
+            assert(not frame.protected and not scroll.protected)
+            assert(button.parent==UIParent and button.point[2]==UIParent)
+            local x=button.point[4]
+            frame.centerX=320
+            NS.RestedXP.Sync(NS.app)
+            assert(button.point[4]==x+20)
+            frame:Hide()
+            NS.RestedXP.Sync(NS.app)
+            assert(not button:IsVisible())
+        ''')
+
+    def test_effective_target_lists_override_stale_guide_elements(self):
+        self.lua.execute('''
+            local frame=CreateFrame('Frame','RXPTargetFrame',UIParent)
+            local friendly={'Gryth Thurden'}
+            local mobs={'Alter Klippeneber'}
+            local scans={}
+            local rxp={RXPFrame={activeSteps={{active=true,elements={{mobs={'Stale Boar'}}}}}},
+                targeting={activeTargetFrame=frame,
+                    GetCurrentTargets=function() return friendly,mobs,scans,{'Rare'} end},
+                settings={profile={enableTargetFrame=true}},
+                GetCreatureName=function(id) return id end}
+            LibStub=function(name) if name=='AceAddon-3.0' then
+                return {GetAddon=function() return rxp end}
+            end end
+            QuestTargetsDB={restedXPIntegration=true}
+            boot()
+            assert(table.concat(NS.RestedXP.targets,'|')=='Alter Klippeneber|Gryth Thurden')
+            assert(not NS.RestedXP.allEntry.names['Stale Boar'])
+            assert(NS.RestedXP.allEntry.finisherNames['Gryth Thurden'])
+            assert(not NS.RestedXP.allEntry.finisherNames['Alter Klippeneber'])
+            friendly={}; mobs={}; scans={}
+            NS.RestedXP.Sync(NS.app)
+            assert(#NS.RestedXP.targets==0)
+            assert(NS.UI.master.entry==NS.UI.master.defaultEntry)
+        ''')
+
     def test_active_accept_step_targets_its_npc_before_quest_is_in_log(self):
         self.lua.execute('''
             local frame=CreateFrame('Frame','RXPTargetFrame',UIParent)
@@ -188,8 +242,8 @@ class RestedXPTests(unittest.TestCase):
             assert(NS.app.db.restedXPIntegration)
             assert(NS.UI.master.entry.name=='Nicht im Questlog')
             local button=NS.RestedXP.button
-            assert(button and button.parent==frame and button:IsVisible())
-            assert(button.point[2]==frame and button.point[4]==4)
+            assert(button and button.parent==UIParent and button:IsVisible())
+            assert(button.point[2]==UIParent and button.point[4]==974)
             assert(button.attributes.type1=='macro')
             assert(button.entry.name=='Nicht im Questlog')
             assert(button.attributes.macrotext1:find('Nicht im Questlog',1,true))
@@ -212,8 +266,9 @@ class RestedXPTests(unittest.TestCase):
             local replacement=CreateFrame('Frame',nil,UIParent)
             rxp.targeting.activeTargetFrame=replacement
             NS.RestedXP.Sync(NS.app)
-            assert(button.parent==replacement and button.rxpFrame==replacement)
+            assert(button.parent==UIParent and button.rxpFrame==replacement)
             replacement:Hide()
+            NS.RestedXP.Sync(NS.app)
             assert(not button:IsVisible())
             NS.UI.settings.restedXPToggle.scripts.OnClick()
             assert(not NS.app.db.restedXPIntegration and not button.shown)

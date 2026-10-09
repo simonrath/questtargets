@@ -1,4 +1,4 @@
-"""Integration against the SHA256-pinned, real QuestieDB v1.0.1 Vanilla release.
+"""Integration against the SHA256-pinned, real QuestieDB v1.0.5 Vanilla release.
 
 Run tools/package_quest_targets.ps1 first to populate its download cache.
 Requires the test-only cbor2 package as well as lupa.
@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.1/QuestieDB-Vanilla.zip'
+RELEASE = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.5/QuestieDB-Vanilla.zip'
 
 
 @unittest.skipUnless(RELEASE.is_file(), 'Pinned QuestieDB release not downloaded')

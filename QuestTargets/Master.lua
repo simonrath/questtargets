@@ -54,9 +54,9 @@ function UI.RenderMaster(app)
                 GameTooltip:AddLine(self.entry and self.entry.name or L("restedXPNoTarget"), 1, 1, 1, true)
             else
                 GameTooltip:AddLine(L("masterTip1"), 1, 1, 1, true)
-                GameTooltip:AddLine(L("masterTip2"), 1, 0.82, 0, true)
                 GameTooltip:AddLine(L("masterTip3"), 0.75, 0.75, 0.75, true)
             end
+            GameTooltip:AddLine(L("masterTip2"), 1, 0.82, 0, true)
             GameTooltip:Show()
         end)
         frame:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -65,7 +65,7 @@ function UI.RenderMaster(app)
     UI.PositionMaster(app)
     UI.CreateMinimap(app)
     local entry = {title = L("active"), refs = {}, names = {}, nameList = {}, finisherNames = {}}
-    for _, quest in ipairs(Core.QuestEntries(app.allEntries or {})) do
+    for _, quest in ipairs(Core.QuestEntriesFor(app, true)) do
         for _, ref in ipairs(quest.refs) do entry.refs[#entry.refs + 1] = ref end
         for name in pairs(quest.names) do
             if not entry.names[name] then
@@ -98,6 +98,37 @@ function UI.RenderMaster(app)
     UI.master.entry = entry
     UI.master:SetAttribute("macrotext1", (Core.EntryMacro(entry, app.db)))
     UI.master:SetShown(not app.db.masterHidden)
+    UI.RenderFocus(app)
+end
+
+function UI.RenderFocus(app)
+    if InCombatLockdown() then return end
+    if not UI.focusButton then
+        local frame = CreateFrame("Button", "QuestTargetsFocused", UIParent, "SecureActionButtonTemplate")
+        UI.focusButton = frame
+        frame:SetSize(1, 1)
+        frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        frame:SetAlpha(0)
+        frame:EnableMouse(false)
+        frame:RegisterForClicks("AnyUp")
+        frame:SetAttribute("useOnKeyDown", false)
+        frame:SetAttribute("type1", "macro")
+        frame:SetScript("PreClick", function(self, mouseButton, down)
+            if mouseButton ~= "LeftButton" or down or InCombatLockdown() then return end
+            self:SetAttribute("macrotext1", Core.ClickMacro(self.entry, app.allEntries or {}, app.db, self))
+        end)
+        frame:SetScript("PostClick", function(self, _, down)
+            if down then return end
+            Core.RecordClickResult()
+            if not InCombatLockdown() then self:SetAttribute("macrotext1", (Core.EntryMacro(self.entry, app.db))) end
+        end)
+    end
+    local selected
+    for _, quest in ipairs(Core.QuestEntriesFor(app, true)) do
+        if quest.questID == app.db.focusQuestID then selected = quest; break end
+    end
+    UI.focusButton.entry = selected
+    UI.focusButton:SetAttribute("macrotext1", (selected and Core.EntryMacro(selected, app.db) or ""))
 end
 
 function UI.PositionMaster(app)

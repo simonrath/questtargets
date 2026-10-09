@@ -31,8 +31,9 @@ The combined packages include the matching QuestieDB release; see the
 - Prioritizes quest mobs, then NPCs for quests ready to turn in.
 - Name targeting and nearby nameplate detection.
 - Configurable target markers, hotkeys, and tooltips.
-- Native addon settings, a minimap button, and classic or modern master-button appearance.
-- Optional quest-specific target buttons beside quest rows in Questie's tracker when Questie is installed and enabled.
+- Compact native addon settings in every supported client, with inline master-button text editing, a minimap button, and classic or modern master-button appearance.
+- Quest-specific target buttons appear automatically beside quest rows in Questie's tracker when Questie is installed and enabled.
+- Right-click a quest icon in either quest list to focus that quest. The always-visible focus highlight is shared between both lists; a separate configurable hotkey targets only the focused quest while the master button keeps its normal behavior.
 - Optional RestedXP guide targeting for the master button, with a matching button on RestedXP's target frame. Active-step mobs and explicitly named targets are eligible even outside the quest log, including gathering mobs, quest NPCs, and flight masters. If the guide has no target, the native quest search takes over immediately; failed guide searches try a native quest target in the same macro when space allows, then fall back to the full native search on the next click. Repeated clicks keep a valid current target unless another matching target is visible. Secure targets refresh after combat.
 - Optional transparency mode immediately leaves only the quest list visible. Its toggle icon hides two seconds after the cursor leaves the window and reappears when the cursor moves anywhere over it. A 90% transparent draggable strip is shown only while the cursor is over the window.
 - The compact quest window has adjacent Settings and Feedback buttons; quest data also refreshes automatically or with `/qt refresh`.
@@ -48,10 +49,10 @@ See [the detailed documentation](QuestTargets/README.md) for behavior and limita
 
 Install Python dependencies with `python -m pip install -r tests/requirements.txt`.
 Run `python -m unittest discover -s tests -p "test_quest_targets*.py"`.
-Database integration tests use the pinned QuestieDB v1.0.1 Vanilla archive in
+Database integration tests use the pinned QuestieDB v1.0.5 Vanilla archive in
 the system temporary directory at
-`quest-targets-questiedb-v1.0.1/QuestieDB-Vanilla.zip`. Package tests use
-the official v1.0.4 Vanilla, TBC, Mists, and Forever artifacts; the packaging script
+`quest-targets-questiedb-v1.0.5/QuestieDB-Vanilla.zip`. Package tests use
+the official v1.0.5 Vanilla, TBC, Mists, and Forever artifacts; the packaging script
 downloads missing artifacts and verifies their SHA-256 hashes.
 
 Build all five local packages with PowerShell:
@@ -81,4 +82,4 @@ for source hashes and the unresolved redistribution terms.
 
 Questie is listed on [CurseForge](https://www.curseforge.com/wow/addons/questie) under the GNU General Public License version 3 (GPLv3). Quest Targets includes an unmodified copy of QuestieDB, the database used by Questie. Quest Targets is a separate addon that accesses QuestieDB through its public API; we have not changed QuestieDB’s code or data.
 
-Credit for QuestieDB belongs to the QuestieDB team and its contributors. The bundled package comes from the [official QuestieDB v1.0.4 release](https://github.com/Questie/QuestieDB/releases/tag/v1.0.4). Its source is available in the [QuestieDB repository](https://github.com/Questie/QuestieDB).
+Credit for QuestieDB belongs to the QuestieDB team and its contributors. Local combined packages use the [official QuestieDB v1.0.5 release](https://github.com/Questie/QuestieDB/releases/tag/v1.0.5). Its source is available in the [QuestieDB repository](https://github.com/Questie/QuestieDB). Redistribution terms remain unresolved; see the [QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md) before publishing combined packages.

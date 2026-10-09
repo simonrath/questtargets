@@ -5,6 +5,74 @@ local L = NS.L
 local FEEDBACK_URL = "https://feedback.jacknine.org"
 UI.PAGE_SIZE = 6
 
+local function addonLoaded(name)
+    if C_AddOns and C_AddOns.IsAddOnLoaded then
+        return C_AddOns.IsAddOnLoaded(name) == true
+    end
+    return true -- Older clients without the query API retain their existing settings behavior.
+end
+
+local MASTER_BINDING = "CLICK QuestTargetsMaster:LeftButton"
+local FOCUS_BINDING = "CLICK QuestTargetsFocused:LeftButton"
+local function setMasterBinding(binding)
+    local first, second = GetBindingKey(MASTER_BINDING)
+    if binding and not SetBindingClick(binding, "QuestTargetsMaster", "LeftButton") then return false end
+    if first and first ~= binding then SetBinding(first) end
+    if second and second ~= first and second ~= binding then SetBinding(second) end
+    if binding or first or second then SaveBindings(GetCurrentBindingSet()) end
+    return true
+end
+
+local function setFocusBinding(app, binding)
+    local first, second = GetBindingKey(FOCUS_BINDING)
+    if first then SetBinding(first) end
+    if second and second ~= first then SetBinding(second) end
+    if binding then
+        if not SetBindingClick(binding, "QuestTargetsFocused", "LeftButton") then return false end
+    end
+    app.db.focusHotkeyKey = binding
+    if binding or first or second then SaveBindings(GetCurrentBindingSet()) end
+    return true
+end
+
+function UI.SyncFocusBinding(app)
+    if InCombatLockdown() then return end
+    local binding = app.db.focusHotkeyKey
+    local first = GetBindingKey(FOCUS_BINDING)
+    if first ~= binding then setFocusBinding(app, binding) end
+end
+
+function UI.ToggleFocus(app, entry)
+    if InCombatLockdown() or not entry or not entry.questID then return end
+    if app.db.focusQuestID == entry.questID then
+        app.db.focusQuestID = nil
+    else
+        app.db.focusQuestID = entry.questID
+    end
+    UI.RenderRows(app)
+    UI.RenderFocus(app)
+    if NS.QuestieTracker and NS.QuestieTracker.UpdateFocusMarks then
+        NS.QuestieTracker.UpdateFocusMarks(app)
+    end
+end
+
+function UI.CreateFocusMark(parent, anchor, size)
+    local mark = parent:CreateTexture(nil, "OVERLAY")
+    local atlas = "UI-QuestPoi-InnerGlow"
+    if C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) then
+        mark:SetAtlas(atlas)
+    else
+        -- Same highlight sprite as Blizzard's POIButtonTemplate on older clients.
+        mark:SetTexture("Interface\\WorldMap\\UI-QuestPoi-NumberIcons")
+        mark:SetTexCoord(0.625, 0.75, 0.375, 0.5)
+    end
+    mark:SetBlendMode("ADD")
+    mark:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+    mark:SetSize(size, size)
+    mark:Hide()
+    return mark
+end
+
 local function setChromeAlpha(alpha)
     for _, region in ipairs(UI.chrome or {}) do region:SetAlpha(alpha) end
     UI.chromeAlpha = alpha
@@ -162,7 +230,11 @@ function UI.Create(app)
         row:SetScript("PostClick", function(self, mouseButton, down)
             if down then return end
             if mouseButton == "RightButton" then
-                UI.OpenQuest(self.entry)
+                if self.icon:IsMouseOver() then
+                    UI.ToggleFocus(app, self.entry)
+                else
+                    UI.OpenQuest(self.entry)
+                end
                 return
             end
             if mouseButton and mouseButton ~= "LeftButton" then return end
@@ -185,6 +257,7 @@ function UI.Create(app)
         row.number = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         row.number:SetPoint("CENTER", row.icon, "CENTER", 0, 0)
         row.number:SetText(index)
+        row.focusMark = UI.CreateFocusMark(row, row.icon, 28)
         row:SetFontString(row.number)
         row:SetPushedTextOffset(1, -1)
         row:SetHighlightAtlas("UI-QuestPoi-InnerGlow")
@@ -367,6 +440,8 @@ function UI.SelectSettingsTab(index)
     if not panel or not panel.pages[index] then return end
     panel.hotkey.listening = false
     panel.hotkey:EnableKeyboard(false)
+    panel.focusHotkey.listening = false
+    panel.focusHotkey:EnableKeyboard(false)
     UI.UpdateSettings(NS.app)
     panel.selectedTab = index
     for i, page in ipairs(panel.pages) do
@@ -380,7 +455,7 @@ function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "master", "hotkeys"}
-    local heights = {620, 310, 538, 216}
+    local heights = {590, 340, 538, 210}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -421,20 +496,20 @@ function UI.LayoutSettings(app)
         panel.pages[index] = {scroll=scroll, content=content}
     end
     local general, markers, hotkeys = panel.pages[1].content, panel.pages[2].content, panel.pages[4].content
-    local display = settingsBox(general, "display", -32, 256)
-    local window = settingsBox(general, "window", -322, 125)
-    local language = settingsBox(general, "language", -481, 102)
-    local marking = settingsBox(markers, "targetMarkers", -32, 260)
+    local display = settingsBox(general, "display", -32, 226)
+    local window = settingsBox(general, "window", -292, 125)
+    local language = settingsBox(general, "language", -451, 102)
+    local marking = settingsBox(markers, "targetMarkers", -32, 292)
     local appearance = settingsBox(master, "masterAppearance", -32, 84)
     local dimensions = settingsBox(master, "buttonSize", -150, 220)
     local caption = settingsBox(master, "caption", -404, 112)
-    local bindings = settingsBox(hotkeys, "hotkeys", -32, 164)
+    local bindings = settingsBox(hotkeys, "hotkeys", -32, 160)
     panel.groups = {display, window, language, marking, appearance, dimensions, caption, bindings}
     panel.displayText:Hide()
     panel.languageText:Hide()
     panel.hotkeysText:Hide()
     for i, control in ipairs({panel.masterToggle, panel.menuToggle, panel.transparencyToggle,
-        panel.tooltipToggle, panel.minimapToggle, panel.questieTrackerToggle,
+        panel.tooltipToggle, panel.minimapToggle,
         panel.restedXPToggle}) do
         place(control, display, 18, -32 - (i-1)*30)
     end
@@ -465,21 +540,26 @@ function UI.LayoutSettings(app)
     panel.hotkeyAction = label(bindings, 18, -43, 210, "GameFontHighlight")
     panel.hotkeyAction:SetText(L("masterDefault"))
     place(panel.hotkey, bindings, 235, -38)
-    panel.hotkey:SetWidth(150)
+    panel.hotkey:SetWidth(200)
     panel.hotkey:SetNormalFontObject("GameFontNormalSmall")
-    place(panel.hotkeyClear, bindings, 395, -38)
-    panel.hotkeyClear:SetWidth(80)
-    panel.hotkeyClear:ClearAllPoints()
-    panel.hotkeyClear:SetPoint("TOPRIGHT", -18, -38)
     panel.hotkey:ClearAllPoints()
-    panel.hotkey:SetPoint("RIGHT", panel.hotkeyClear, "LEFT", -10, 0)
+    panel.hotkey:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -38)
     panel.hotkeyAction:SetPoint("TOPRIGHT", panel.hotkey, "TOPLEFT", -12, -5)
-    place(panel.hotkeyNote, bindings, 18, -90)
+    panel.focusHotkeyAction = label(bindings, 18, -81, 210, "GameFontHighlight")
+    panel.focusHotkeyAction:SetText(L("focusHotkey"))
+    place(panel.focusHotkey, bindings, 235, -76)
+    panel.focusHotkey:SetWidth(200)
+    panel.focusHotkey:ClearAllPoints()
+    panel.focusHotkey:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -76)
+    panel.focusHotkeyAction:SetPoint("TOPRIGHT", panel.focusHotkey, "TOPLEFT", -12, -5)
+    place(panel.hotkeyNote, bindings, 18, -119)
     panel.hotkeyNote:SetWidth(450)
     panel.hotkeyNote:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -90)
     panel.pages[4].scroll:SetScript("OnHide", function()
         panel.hotkey.listening = false
         panel.hotkey:EnableKeyboard(false)
+        panel.focusHotkey.listening = false
+        panel.focusHotkey:EnableKeyboard(false)
         UI.UpdateSettings(app)
     end)
     local function resize(self)
@@ -501,8 +581,264 @@ function UI.LayoutSettings(app)
     UI.SelectSettingsTab(1)
 end
 
+QuestTargetsCaptionSettingMixin = {}
+
+function QuestTargetsCaptionSettingMixin:OnLoad()
+    SettingsListElementMixin.OnLoad(self)
+    local edit = CreateFrame("EditBox", nil, self, "InputBoxTemplate")
+    self.EditBox = edit
+    edit:SetSize(200, 22)
+    edit:SetPoint("LEFT", self, "CENTER", -40, 0)
+    edit:SetAutoFocus(false)
+    edit:SetMaxLetters(48)
+    edit:SetScript("OnEnterPressed", function(input) input:ClearFocus() end)
+    edit:SetScript("OnEscapePressed", function(input)
+        if self.data then input:SetText(self.data.get()) end
+        input:ClearFocus()
+    end)
+    edit:SetScript("OnEditFocusLost", function(input)
+        if not self.data then return end
+        local value = NS.Core.Clean(input:GetText())
+        if value ~= self.data.get() then self.data.set(value) end
+        input:SetText(self.data.get())
+    end)
+end
+
+function QuestTargetsCaptionSettingMixin:Init(initializer)
+    SettingsListElementMixin.Init(self, initializer)
+    self.Text:SetText(initializer.data.name)
+    self.EditBox:SetText(initializer.data.get())
+end
+
+function QuestTargetsCaptionSettingMixin:Release()
+    self.EditBox:ClearFocus()
+    SettingsListElementMixin.Release(self)
+end
+
+local function nativeSettings(app)
+    if UI.nativeCategory then
+        Settings.OpenToCategory(UI.nativeCategory:GetID())
+        return
+    end
+
+    local category, layout = Settings.RegisterVerticalLayoutCategory(L("title"))
+    UI.nativeHeaders = {}
+    UI.nativeButtons = {}
+    local function section(key)
+        local initializer = CreateSettingsListSectionHeaderInitializer(L(key))
+        layout:AddInitializer(initializer)
+        UI.nativeHeaders[#UI.nativeHeaders + 1] = {initializer=initializer, key=key}
+    end
+    local function setting(key, kind, default, get, set)
+        return Settings.RegisterProxySetting(category, "QUESTTARGETS_" .. key,
+            Settings.VarType[kind], function() return L(key) end, default, get, set)
+    end
+    local function checkboxSetting(key, default, get, set, descriptionKey)
+        return Settings.CreateCheckbox(category, setting(key, "Boolean", default, get, set),
+            descriptionKey and L(descriptionKey) or nil)
+    end
+    local function sliderSetting(key, savedKey, minimum, maximum, step)
+        local value = setting(key, "Number", 1,
+            function() return app.db[savedKey] end,
+            function(nextValue)
+                app.db[savedKey] = nextValue
+                app:Schedule()
+            end)
+        local options = Settings.CreateSliderOptions(minimum, maximum, step)
+        options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right,
+            function(number) return string.format("%d%%", math.floor(number * 100 + 0.5)) end)
+        return Settings.CreateSlider(category, value, options)
+    end
+    local function dropdownSetting(key, default, get, set, choices)
+        local value = setting(key, "Number", default, get, set)
+        Settings.CreateDropdown(category, value, function()
+            local options = Settings.CreateControlTextContainer()
+            for index, text in ipairs(choices()) do options:Add(index, text) end
+            return options:GetData()
+        end)
+        return value
+    end
+    local function settingsButton(key, text, callback, descriptionKey)
+        local initializer = CreateSettingsButtonInitializer(L(key), text, callback,
+            descriptionKey and L(descriptionKey) or nil, true)
+        layout:AddInitializer(initializer)
+        UI.nativeButtons[#UI.nativeButtons + 1] = {
+            initializer=initializer, key=key, descriptionKey=descriptionKey}
+        return initializer
+    end
+    local function refresh()
+        if SettingsPanel and SettingsPanel.RepairDisplay then SettingsPanel:RepairDisplay() end
+    end
+
+    section("display")
+    checkboxSetting("showMaster", true, function() return not app.db.masterHidden end,
+        function(value) app.db.masterHidden = not value; app:Schedule() end, "masterMoveTip")
+    checkboxSetting("showMenu", true, function()
+        if app.pendingVisibility ~= nil then return app.pendingVisibility end
+        return not app.db.hidden
+    end, function(value)
+        local current = app.pendingVisibility
+        if current == nil then current = not app.db.hidden end
+        if current ~= value then app:Toggle() end
+    end)
+    checkboxSetting("showTooltips", false, function() return app.db.showTooltips end,
+        function(value) app.db.showTooltips = value end)
+    checkboxSetting("showMinimap", true, function() return not app.db.minimapHidden end,
+        function(value)
+            app.db.minimapHidden = not value
+            if UI.minimap then UI.minimap:SetShown(value) end
+        end)
+    local restedXPToggle = checkboxSetting("restedXPIntegration", false,
+        function() return app.db.restedXPIntegration end,
+        function(value)
+            if InCombatLockdown() or not addonLoaded("RXPGuides") then return end
+            app.db.restedXPIntegration = value
+            NS.RestedXP.Sync(app)
+        end)
+    restedXPToggle:AddModifyPredicate(function() return addonLoaded("RXPGuides") end)
+
+    section("window")
+    checkboxSetting("transparencyMode", false,
+        function() return app.db.transparencyMode end,
+        function(value)
+            app.db.transparencyMode = value
+            UI.UpdateTransparency(app)
+        end)
+    sliderSetting("windowSize", "menuScale", 0.5, 1.5, 0.05)
+
+    section("targetMarkers")
+    checkboxSetting("autoMark", true, function() return app.db.autoMark end,
+        function(value) app.db.autoMark = value; app:Schedule() end)
+    dropdownSetting("targetMarkers", 8, function() return app.db.markerIcon end,
+        function(value) app.db.markerIcon = value; app:Schedule() end,
+        function() return {strsplit(",", L("markers"))} end)
+
+    section("master")
+    dropdownSetting("masterAppearance", 1,
+        function() return app.db.masterAppearance == "modern" and 2 or 1 end,
+        function(value)
+            app.db.masterAppearance = value == 2 and "modern" or "classic"
+            app:Schedule()
+            refresh()
+        end,
+        function() return {L("masterClassic"), L("masterModern")} end)
+    local width = sliderSetting("widthLabel", "masterScaleX", 0.3, 2, 0.01)
+    local height = sliderSetting("heightLabel", "masterScaleY", 0.3, 2, 0.01)
+    local modernScale = sliderSetting("scaleFactor", "masterModernScale", 0.3, 2, 0.01)
+    width:AddShownPredicate(function() return app.db.masterAppearance ~= "modern" end)
+    height:AddShownPredicate(function() return app.db.masterAppearance ~= "modern" end)
+    modernScale:AddShownPredicate(function() return app.db.masterAppearance == "modern" end)
+
+    local caption = Settings.CreateElementInitializer("QuestTargetsCaptionSettingTemplate", {
+        name = L("caption"),
+        get = function() return app.db.masterText or "" end,
+        set = function(value)
+            app.db.masterText = NS.Core.Clean(value)
+            app:Schedule()
+        end,
+    })
+    layout:AddInitializer(caption)
+    UI.nativeCaption = caption
+    caption:AddShownPredicate(function() return app.db.masterAppearance ~= "modern" end)
+
+    section("hotkeys")
+    settingsButton("masterDefault", function()
+        return GetBindingKey(MASTER_BINDING) or L("unbound")
+    end, function(button)
+        if InCombatLockdown() then return end
+        button:SetText(L("pressKey"))
+        button:EnableKeyboard(true)
+        button:SetPropagateKeyboardInput(false)
+        button:SetScript("OnKeyDown", function(self, key)
+            if key == "LSHIFT" or key == "RSHIFT" or key == "SHIFT"
+                or key == "LCTRL" or key == "RCTRL" or key == "CTRL"
+                or key == "LALT" or key == "RALT" or key == "ALT" then return end
+            self:EnableKeyboard(false)
+            self:SetScript("OnKeyDown", nil)
+            if (key == "DELETE" or key == "BACKSPACE") and not InCombatLockdown() then
+                setMasterBinding(nil)
+            elseif key ~= "ESCAPE" and key ~= "UNKNOWN" and not InCombatLockdown() then
+                local modifier = (IsControlKeyDown() and "CTRL-" or "")
+                    .. (IsAltKeyDown() and "ALT-" or "")
+                    .. (IsShiftKeyDown() and "SHIFT-" or "")
+                local binding = modifier .. key
+                setMasterBinding(binding)
+            end
+            self:SetText(GetBindingKey(MASTER_BINDING) or L("unbound"))
+            refresh()
+        end)
+        if not button.questTargetsHideHook then
+            button.questTargetsHideHook = true
+            button:HookScript("OnHide", function(self)
+                self:EnableKeyboard(false)
+                self:SetScript("OnKeyDown", nil)
+            end)
+        end
+    end)
+    settingsButton("focusHotkey", function()
+        return app.db.focusHotkeyKey or L("unbound")
+    end, function(button)
+        if InCombatLockdown() then return end
+        button:SetText(L("pressKey"))
+        button:EnableKeyboard(true)
+        button:SetPropagateKeyboardInput(false)
+        button:SetScript("OnKeyDown", function(self, key)
+            if key == "LSHIFT" or key == "RSHIFT" or key == "SHIFT"
+                or key == "LCTRL" or key == "RCTRL" or key == "CTRL"
+                or key == "LALT" or key == "RALT" or key == "ALT" then return end
+            self:EnableKeyboard(false)
+            self:SetScript("OnKeyDown", nil)
+            if not InCombatLockdown() then
+                if key == "DELETE" or key == "BACKSPACE" then
+                    setFocusBinding(app, nil)
+                elseif key ~= "ESCAPE" and key ~= "UNKNOWN" then
+                    local modifier = (IsControlKeyDown() and "CTRL-" or "")
+                        .. (IsAltKeyDown() and "ALT-" or "")
+                        .. (IsShiftKeyDown() and "SHIFT-" or "")
+                    setFocusBinding(app, modifier .. key)
+                end
+            end
+            self:SetText(app.db.focusHotkeyKey or L("unbound"))
+            refresh()
+        end)
+        if not button.questTargetsHideHook then
+            button.questTargetsHideHook = true
+            button:HookScript("OnHide", function(self)
+                self:EnableKeyboard(false)
+                self:SetScript("OnKeyDown", nil)
+            end)
+        end
+    end, "focusHotkeyTip")
+    section("language")
+    dropdownSetting("language", NS.Language(), NS.Language, function(value)
+        if InCombatLockdown() or value == NS.Language() then return end
+        local oldDefault = L("masterDefault")
+        app.db.language = NS.LANGUAGES[value]
+        if app.db.masterText == oldDefault then app.db.masterText = L("masterDefault") end
+        UI.ApplyLanguage(app)
+        category:SetName(L("title"))
+        for _, header in ipairs(UI.nativeHeaders) do header.initializer.data.name = L(header.key) end
+        for _, button in ipairs(UI.nativeButtons) do
+            button.initializer.data.name = L(button.key)
+            if button.descriptionKey then
+                button.initializer.data.tooltip = L(button.descriptionKey)
+            end
+        end
+        UI.nativeCaption.data.name = L("caption")
+        refresh()
+    end, function() return NS.LANGUAGE_NAMES end)
+
+    Settings.RegisterAddOnCategory(category)
+    UI.nativeCategory = category
+    Settings.OpenToCategory(category:GetID())
+end
+
 function UI.Settings(app)
     if not app.db or InCombatLockdown() then return end
+    if Settings and Settings.RegisterVerticalLayoutCategory then
+        nativeSettings(app)
+        return
+    end
     if not UI.settings then
         local panel = CreateFrame("Frame", "QuestTargetsSettings")
         UI.settings = panel
@@ -544,6 +880,13 @@ function UI.Settings(app)
             app.db.masterHidden = not app.db.masterHidden
             app:Schedule(); UI.UpdateSettings(app)
         end)
+        panel.masterToggle:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(L("showMaster"))
+            GameTooltip:AddLine(L("masterMoveTip"), 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        panel.masterToggle:SetScript("OnLeave", function() GameTooltip:Hide() end)
         panel.masterToggle:SetPoint("TOPLEFT", 20, -248)
         panel.menuToggle = checkbox(panel, L("showMenu"), function()
             app:Toggle(); UI.UpdateSettings(app)
@@ -568,13 +911,8 @@ function UI.Settings(app)
             UI.UpdateSettings(app)
         end)
         panel.minimapToggle:SetPoint("TOPLEFT", 20, -338)
-        panel.questieTrackerToggle = checkbox(panel, L("questieTrackerButtons"), function()
-            app.db.questieTrackerButtons = not app.db.questieTrackerButtons
-            NS.QuestieTracker.Sync(app)
-            UI.UpdateSettings(app)
-        end)
         panel.restedXPToggle = checkbox(panel, L("restedXPIntegration"), function()
-            if InCombatLockdown() then return end
+            if InCombatLockdown() or not addonLoaded("RXPGuides") then return end
             app.db.restedXPIntegration = not app.db.restedXPIntegration
             NS.RestedXP.Sync(app)
             UI.UpdateSettings(app)
@@ -599,25 +937,53 @@ function UI.Settings(app)
             self.listening = false
             self:EnableKeyboard(false)
             if key == "ESCAPE" or key == "UNKNOWN" or InCombatLockdown() then UI.UpdateSettings(app); return end
+            if key == "DELETE" or key == "BACKSPACE" then
+                setMasterBinding(nil)
+                UI.UpdateSettings(app)
+                return
+            end
             local modifier = (IsControlKeyDown() and "CTRL-" or "") .. (IsAltKeyDown() and "ALT-" or "") .. (IsShiftKeyDown() and "SHIFT-" or "")
             local binding = modifier .. key
-            local old = GetBindingKey("CLICK QuestTargetsMaster:LeftButton")
-            if SetBindingClick(binding, "QuestTargetsMaster", "LeftButton") then
-                if old and old ~= binding then SetBinding(old) end
-                SaveBindings(GetCurrentBindingSet())
+            setMasterBinding(binding)
+            UI.UpdateSettings(app)
+        end)
+        panel.focusHotkey = button(panel, "", 200, function(self)
+            if InCombatLockdown() then return end
+            self.listening = true
+            self:SetText(L("pressKey"))
+            self:EnableKeyboard(true)
+            self:SetPropagateKeyboardInput(false)
+        end)
+        panel.focusHotkey:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(L("focusHotkey"))
+            GameTooltip:AddLine(L("focusHotkeyTip"), 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        panel.focusHotkey:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        panel.focusHotkey:SetScript("OnKeyDown", function(self, key)
+            if not self.listening then return end
+            if key == "LSHIFT" or key == "RSHIFT" or key == "SHIFT"
+                or key == "LCTRL" or key == "RCTRL" or key == "CTRL"
+                or key == "LALT" or key == "RALT" or key == "ALT" then return end
+            self.listening = false
+            self:EnableKeyboard(false)
+            if key == "ESCAPE" or key == "UNKNOWN" or InCombatLockdown() then UI.UpdateSettings(app); return end
+            if key == "DELETE" or key == "BACKSPACE" then
+                setFocusBinding(app, nil)
+            else
+                local modifier = (IsControlKeyDown() and "CTRL-" or "")
+                    .. (IsAltKeyDown() and "ALT-" or "")
+                    .. (IsShiftKeyDown() and "SHIFT-" or "")
+                setFocusBinding(app, modifier .. key)
             end
             UI.UpdateSettings(app)
         end)
-        panel.hotkeyClear = button(panel, L("clear"), 90, function()
-            if InCombatLockdown() then return end
-            local old = GetBindingKey("CLICK QuestTargetsMaster:LeftButton")
-            if old then SetBinding(old); SaveBindings(GetCurrentBindingSet()) end
-            UI.UpdateSettings(app)
-        end)
-        panel.hotkeyClear:SetPoint("TOPLEFT", 225, -498)
         panel:SetScript("OnHide", function()
             panel.hotkey.listening = false
             panel.hotkey:EnableKeyboard(false)
+            panel.focusHotkey.listening = false
+            panel.focusHotkey:EnableKeyboard(false)
         end)
         panel.hotkeyNote = label(panel, 20, -532, 520)
         panel.hotkeyNote:SetText(L("hotkeyNote"))
@@ -749,10 +1115,16 @@ function UI.UpdateSettings(app)
     UI.settings.scaleControl:Refresh()
     UI.settings.tooltipToggle:SetChecked(app.db.showTooltips)
     UI.settings.minimapToggle:SetChecked(not app.db.minimapHidden)
-    UI.settings.questieTrackerToggle:SetChecked(app.db.questieTrackerButtons)
     UI.settings.restedXPToggle:SetChecked(app.db.restedXPIntegration)
+    local restedXPAvailable = addonLoaded("RXPGuides")
+    UI.settings.restedXPToggle:SetEnabled(restedXPAvailable)
+    UI.settings.restedXPToggle.caption:SetTextColor(restedXPAvailable and 1 or 0.5,
+        restedXPAvailable and 1 or 0.5, restedXPAvailable and 1 or 0.5)
     local key = GetBindingKey and GetBindingKey("CLICK QuestTargetsMaster:LeftButton")
     if not UI.settings.hotkey.listening then UI.settings.hotkey:SetText(key or L("unbound")) end
+    if not UI.settings.focusHotkey.listening then
+        UI.settings.focusHotkey:SetText(app.db.focusHotkeyKey or L("unbound"))
+    end
     UIDropDownMenu_SetSelectedID(UI.settings.languageDropdown, NS.Language())
     UIDropDownMenu_SetText(UI.settings.languageDropdown, NS.LANGUAGE_NAMES[NS.Language()])
     for index, choice in ipairs(UI.settings.icons) do choice:SetEnabled(index ~= app.db.markerIcon) end
@@ -774,6 +1146,7 @@ function UI.ApplyLanguage(app)
             for _, tab in ipairs(panel.tabs) do tab:SetText(L(tab.localeKey)) end
             for _, group in ipairs(panel.groups) do group.heading:SetText(L(group.localeKey)) end
             panel.hotkeyAction:SetText(L("masterDefault"))
+            panel.focusHotkeyAction:SetText(L("focusHotkey"))
             panel:ResizeTabs()
         end
         panel.toggle.caption:SetText(L("autoMark"))
@@ -783,10 +1156,8 @@ function UI.ApplyLanguage(app)
         panel.transparencyToggle.caption:SetText(L("transparencyMode"))
         panel.tooltipToggle.caption:SetText(L("showTooltips"))
         panel.minimapToggle.caption:SetText(L("showMinimap"))
-        panel.questieTrackerToggle.caption:SetText(L("questieTrackerButtons"))
         panel.restedXPToggle.caption:SetText(L("restedXPIntegration"))
         panel.hotkeyNote:SetText(L("hotkeyNote"))
-        panel.hotkeyClear:SetText(L("clear"))
         panel.hotkeysText:SetText(L("hotkeys"))
         panel.languageText:SetText(L("language"))
         panel.names = {strsplit(",", L("markers"))}
@@ -818,11 +1189,17 @@ function UI.RestorePosition(db)
 end
 
 function UI.StopMoving(db)
-    if not UI.moving then return end
-    -- Normally drag-stop runs out of combat; on combat entry do not mutate the panel.
-    if InCombatLockdown() then return end
+    if not UI.moving and not UI.movingPending then return end
+    -- Combat can interrupt OnDragStop. Release the refresh gate immediately,
+    -- then stop the protected frame and save its position after combat.
+    if InCombatLockdown() then
+        UI.moving = false
+        UI.movingPending = true
+        return
+    end
     UI.frame:StopMovingOrSizing()
     UI.moving = false
+    UI.movingPending = false
     local x, y = UI.frame:GetCenter()
     local px, py = UIParent:GetCenter()
     local scale = UI.frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
@@ -843,19 +1220,22 @@ function UI.Tooltip(row)
         GameTooltip:AddLine(L("tooltipNames"), 1, 0.82, 0, true)
         for _, name in ipairs(entry.nameList) do GameTooltip:AddLine(name, 1, 1, 1, true) end
     end
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine(L("focusTip"), 0.75, 0.75, 0.75, true)
     GameTooltip:Show()
 end
 
 function UI.OpenQuest(entry)
     local questID = entry and entry.questID
     if type(questID) ~= "number" or questID <= 0 then return end
+    local selectQuest = C_QuestLog and C_QuestLog["SetSelectedQuest"]
     if type(QuestMapFrame_OpenToQuestDetails) == "function" then
         QuestMapFrame_OpenToQuestDetails(questID)
     elseif QuestUtil and type(QuestUtil.OpenQuestDetails) == "function" then
         QuestUtil.OpenQuestDetails(questID)
-    elseif OpenQuestLog and C_QuestLog and C_QuestLog.SetSelectedQuest then
+    elseif OpenQuestLog and type(selectQuest) == "function" then
         OpenQuestLog()
-        C_QuestLog.SetSelectedQuest(questID)
+        selectQuest(questID)
     elseif GetNumQuestLogEntries and GetQuestLogTitle and QuestLog_SetSelection and ShowUIPanel and QuestLogFrame then
         for index = 1, GetNumQuestLogEntries() do
             if select(8, GetQuestLogTitle(index)) == questID then
@@ -872,7 +1252,7 @@ function UI.Render(app)
     assert(not InCombatLockdown(), "Quest Targets: protected update during combat")
     local scale = math.min(1, UIParent:GetHeight() / 410) * app.db.menuScale
     if UI.frame:GetScale() ~= scale then UI.frame:SetScale(scale) end
-    local entries = NS.Core.QuestEntries(app.entries)
+    local entries = NS.Core.QuestEntriesFor(app, false)
     app.questEntries = entries
     local maxOffset = math.max(0, #entries - UI.PAGE_SIZE)
     app.scrollOffset = math.max(0, math.min(maxOffset, app.scrollOffset or 0))
@@ -917,10 +1297,12 @@ function UI.RenderRows(app)
             row.pushedIcon:SetSize(20, 20)
             row.pushedIcon:SetPoint("LEFT", 2, -1)
             row.number:SetText((app.scrollOffset or 0) + index)
+            row.focusMark:SetShown(entry.questID == app.db.focusQuestID)
             local progress = entry.total > 0 and (entry.done .. "/" .. entry.total) or L("open")
             row.detail:SetText(string.format(L("detail"), progress, #entry.refs, #entry.nameList))
             row:Show()
         else
+            row.focusMark:Hide()
             row:Hide()
         end
     end

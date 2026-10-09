@@ -14,7 +14,20 @@ function methods:SetScript(event, callback)
     assert(not (self.secure and event == "OnClick"), "replaced secure click handler")
     self.scripts[event] = callback
 end
-function methods:SetParent(parent) self.parent = parent end
+function methods:HookScript(event, callback)
+    local original = self.scripts[event]
+    self.scripts[event] = function(...)
+        if original then original(...) end
+        callback(...)
+    end
+end
+function methods:SetParent(parent)
+    self.parent = parent
+    if self.secure then
+        local frame = parent
+        while frame and frame ~= UIParent do frame.protected = true; frame = frame.parent end
+    end
+end
 function methods:SetBackdrop(value) self.backdrop = value end
 function methods:SetBackdropColor(...) self.backdropColor = {...} end
 function methods:SetNormalFontObject(value) self.normalFont = value end
@@ -51,7 +64,8 @@ function methods:IsVisible()
 end
 function methods:GetHeight() return self.height or 1080 end
 function methods:GetWidth() return self.width or 140 end
-function methods:GetCenter() return 900, 500 end
+function methods:GetCenter() return self.centerX or 900, self.centerY or 500 end
+function methods:GetLeft() return self.left or 100 end
 function methods:GetScale() return self.scale or 1 end
 function methods:GetEffectiveScale() return self.scale or 1 end
 function methods:IsMouseOver() return self.mouseOver == true end
@@ -111,6 +125,7 @@ function methods:GetPushedTexture() return self.pushedTexture end
 function methods:GetTexture() return self.texture end
 function methods:GetAtlas() return self.atlas end
 function methods:SetTexCoord(...) self.texCoords = {...} end
+function methods:SetBlendMode(value) self.blendMode = value end
 function methods:GetTexCoord() return unpack(self.texCoords or {0, 0.625, 0, 0.6875}) end
 function methods:EnableKeyboard() end
 function methods:SetPropagateKeyboardInput() end
@@ -118,7 +133,8 @@ function methods:SetTexture(texture)
     assert(texture and (texture:match('^Interface\\TargetingFrame\\UI%-RaidTargetingIcon_[1-8]$')
         or texture:match('^Interface\\Buttons\\UI%-Panel%-Button%-')
         or texture:match('^Interface\\Common\\dark%-goldframe%-button')
-        or texture == 'Interface\\Minimap\\MiniMap-TrackingBorder'))
+        or texture == 'Interface\\Minimap\\MiniMap-TrackingBorder'
+        or texture == 'Interface\\WorldMap\\UI-QuestPoi-NumberIcons'))
     self.texture = texture
 end
 function methods:SetAtlas(atlas)
@@ -132,14 +148,16 @@ function methods:SetHighlightAtlas(atlas)
 end
 function methods:GetHighlightTexture() return self.highlight end
 function methods:RegisterForClicks(...) self.clicks = {...} end
-function methods:SetFrameStrata() guard(self) end
-function methods:SetFrameLevel() guard(self) end
+function methods:SetFrameStrata(value) guard(self); self.frameStrata=value end
+function methods:GetFrameStrata() return self.frameStrata or (self.parent and self.parent.GetFrameStrata and self.parent:GetFrameStrata()) or 'MEDIUM' end
+function methods:SetFrameLevel(value) guard(self); self.frameLevel=value end
+function methods:GetFrameLevel() return self.frameLevel or (self.parent and self.parent.GetFrameLevel and self.parent:GetFrameLevel()) or 0 end
 function methods:SetClampedToScreen() guard(self) end
 function methods:SetMovable() guard(self) end
 function methods:EnableMouse() guard(self) end
 function methods:RegisterForDrag() guard(self) end
 function methods:SetJustifyH() end
-function methods:SetTextColor() end
+function methods:SetTextColor(...) self.textColor = {...} end
 function methods:SetOwner() end
 function methods:ClearLines() self.lines = {}; self.text = nil end
 function methods:AddLine(value)
@@ -199,6 +217,14 @@ function CreateFrame(kind, name, parent, template)
     if name then _G[name] = f end
     frames[#frames + 1] = f
     return f
+end
+function hooksecurefunc(object, method, callback)
+    local original = object[method]
+    object[method] = function(...)
+        local result = {original(...)}
+        callback(...)
+        return unpack(result)
+    end
 end
 function InCombatLockdown() return combat end
 function issecretvalue(value) return value == SECRET end

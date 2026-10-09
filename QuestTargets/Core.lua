@@ -397,6 +397,18 @@ function Core.QuestEntries(entries)
     return result
 end
 
+function Core.QuestEntriesFor(app, all)
+    local source = (all and app.allEntries or app.entries) or {}
+    if all and source == app.entries then return Core.QuestEntriesFor(app, false) end
+    local valueKey = all and "allQuestEntries" or "questEntries"
+    local sourceKey = all and "allQuestEntriesSource" or "questEntriesSource"
+    if app[sourceKey] ~= source then
+        app[valueKey] = Core.QuestEntries(source)
+        app[sourceKey] = source
+    end
+    return app[valueKey]
+end
+
 function Core.ObjectiveKey(questID, index)
     return tostring(questID) .. ":" .. tostring(index)
 end

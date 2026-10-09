@@ -57,6 +57,20 @@ function Scanner.Available()
         and Enum.TooltipDataLineType.QuestObjective ~= nil
 end
 
+function Scanner.Prune(quests, learned)
+    local active = {}
+    for _, quest in ipairs(quests) do
+        for _, objective in ipairs(quest.objectives or {}) do
+            active[Core.ObjectiveKey(quest.id, objective.index)] = Core.Signature(objective)
+        end
+    end
+    for key, saved in pairs(learned) do
+        if type(saved) ~= "table" or saved.signature ~= active[key] then
+            learned[key] = nil
+        end
+    end
+end
+
 function Scanner.Unit(unit, quests, learned)
     if InCombatLockdown() or not Scanner.Available() or type(unit) ~= "string" then return false end
     local exists = UnitExists(unit)

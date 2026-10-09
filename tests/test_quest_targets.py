@@ -217,6 +217,325 @@ class QuestTargetsTests(unittest.TestCase):
             assert(panel.hotkey.text=='CTRL-F')
         ''')
 
+    def test_focus_quest_keeps_master_independent_and_toggles_on_right_icon_click(self):
+        self.lua.execute('''
+            boot()
+            local app, ui = NS.app, NS.UI
+            local row = ui.rows[1]
+            local masterMacro = ui.master.attributes.macrotext1
+            assert(not app.db.focusQuestID and app.db.focusMarkEnabled==nil)
+            row.icon.mouseOver = true
+            row.scripts.PreClick(row, 'RightButton', false)
+            row.scripts.PostClick(row, 'RightButton', false)
+            assert(app.db.focusQuestID == row.entry.questID)
+            assert(#openedQuestIDs == 0)
+            assert(ui.master.attributes.macrotext1 == masterMacro)
+            assert(ui.focusButton.attributes.macrotext1:find(row.entry.nameList[1], 1, true))
+            assert(row.focusMark:IsShown())
+            row.scripts.PreClick(row, 'RightButton', false)
+            row.scripts.PostClick(row, 'RightButton', false)
+            assert(not app.db.focusQuestID and not row.focusMark:IsShown())
+            row.icon.mouseOver = false
+            row.scripts.PreClick(row, 'LeftButton', false)
+            assert(row.attributes.macrotext1:find(row.entry.nameList[1], 1, true))
+        ''')
+
+    def test_focus_hotkey_is_always_available_when_assigned(self):
+        self.lua.execute('''
+            boot(); NS.UI.Settings(NS.app)
+            local app, ui = NS.app, NS.UI
+            assert(GetBindingKey('CLICK QuestTargetsFocused:LeftButton') == nil)
+            assert(ui.settings.focusHotkeyToggle == nil)
+            assert(ui.settings.focusHotkey.scripts.OnEnter)
+            ui.settings.focusHotkey.scripts.OnEnter(ui.settings.focusHotkey)
+            assert(GameTooltip.lines[1] == NS.L('focusHotkeyTip'))
+            ui.settings.focusHotkey.scripts.OnLeave(ui.settings.focusHotkey)
+            ui.settings.focusHotkey.scripts.OnClick(ui.settings.focusHotkey)
+            ui.settings.focusHotkey.scripts.OnKeyDown(ui.settings.focusHotkey, 'H')
+            assert(app.db.focusHotkeyKey == 'H')
+            assert(GetBindingKey('CLICK QuestTargetsFocused:LeftButton') == 'H')
+            ui.settings.focusHotkey.scripts.OnClick(ui.settings.focusHotkey)
+            ui.settings.focusHotkey.scripts.OnKeyDown(ui.settings.focusHotkey, 'DELETE')
+            assert(GetBindingKey('CLICK QuestTargetsFocused:LeftButton') == nil)
+            assert(GetBindingKey('CLICK QuestTargetsMaster:LeftButton') == nil)
+        ''')
+
+    def test_focus_clears_when_quest_leaves_log(self):
+        self.lua.execute('''
+            boot()
+            local app, ui = NS.app, NS.UI
+            ui.ToggleFocus(app, ui.rows[1].entry)
+            assert(app.db.focusQuestID == 1)
+            quests[1], quests[2] = quests[2], nil
+            app:Refresh()
+            assert(app.db.focusQuestID == nil)
+            assert(ui.focusButton.attributes.macrotext1 == '')
+        ''')
+
+    def test_master_tooltip_explains_right_button_drag_in_both_modes(self):
+        self.lua.execute('''
+            boot()
+            NS.app.db.showTooltips=true
+            GameTooltip:ClearLines()
+            NS.UI.master.scripts.OnEnter(NS.UI.master)
+            local function hasMoveTip()
+                for _,line in ipairs(GameTooltip.lines) do
+                    if line==NS.L('masterTip2') then return true end
+                end
+                return false
+            end
+            assert(hasMoveTip())
+            NS.RestedXP.active=true
+            GameTooltip:ClearLines()
+            NS.UI.master.scripts.OnEnter(NS.UI.master)
+            assert(hasMoveTip())
+        ''')
+
+    def test_combat_during_window_drag_releases_refresh_gate_and_saves_position_later(self):
+        self.lua.execute('''
+            boot()
+            local ui, app = NS.UI, NS.app
+            ui.drag.scripts.OnDragStart()
+            assert(ui.moving and ui.frame.moving)
+            combat=true
+            event('PLAYER_REGEN_DISABLED')
+            assert(not ui.moving and ui.movingPending and app.dirty)
+            ui.drag.scripts.OnDragStop()
+            assert(not ui.moving and ui.movingPending)
+            combat=false
+            event('PLAYER_REGEN_ENABLED')
+            assert(not ui.moving and not ui.movingPending and not ui.frame.moving)
+            assert(type(app.db.position)=='table' and not app.dirty)
+            event('QUEST_LOG_UPDATE'); flush()
+            assert(not app.dirty)
+        ''')
+
+    def test_all_flavors_use_native_compact_controls_and_keep_saved_values(self):
+        for flavor, interface in (('Forever', 16001), ('Retail', 120100),
+                                  ('Classic', 11509), ('TBC', 20506), ('Mists', 50504)):
+            with self.subTest(flavor=flavor):
+                self.setUp()
+                self.lua.globals().settingsTestInterface = interface
+                self._check_native_compact_settings()
+
+    def _check_native_compact_settings(self):
+        self.lua.execute('''
+            boot()
+            loadedAddons={Questie=false,RXPGuides=false}
+            C_AddOns={IsAddOnLoaded=function(name) return loadedAddons[name] end}
+            GetBuildInfo=function() return '', '', '', settingsTestInterface end
+            StaticPopupDialogs={}
+            StaticPopup_Show=function(key) shownPopup=key end
+            local categoryID=71
+            local layout={initializers={}}
+            function layout:AddInitializer(item) self.initializers[#self.initializers+1]=item end
+            local function initializer(data)
+                return {data=data, AddModifyPredicate=function(self, predicate)
+                    self.predicate=predicate
+                end, AddShownPredicate=function(self, predicate)
+                    self.shownPredicate=predicate
+                end}
+            end
+            CreateSettingsListSectionHeaderInitializer=function(name)
+                return initializer({name=name, kind='section'})
+            end
+            CreateSettingsButtonInitializer=function(name, text, callback, description)
+                return initializer({name=name, text=text, callback=callback,
+                    tooltip=description, kind='button'})
+            end
+            SettingsListElementMixin={
+                OnLoad=function() end,
+                Init=function(self,item) self.data=item.data end,
+                Release=function(self) self.data=nil end}
+            MinimalSliderWithSteppersMixin={Label={Right=1}}
+            SettingsPanel={RepairDisplay=function(self) self.repairs=(self.repairs or 0)+1 end}
+            Settings={VarType={Boolean='boolean', Number='number'},
+                CreateElementInitializer=function(template,data)
+                    local item=initializer(data)
+                    item.data.kind='editbox'; item.template=template
+                    return item
+                end,
+                RegisterVerticalLayoutCategory=function(name)
+                    local category={name=name, GetID=function() return categoryID end,
+                        SetName=function(self, value) self.name=value end}
+                    nativeCategory=category
+                    return category,layout
+                end,
+                RegisterProxySetting=function(category, variable, kind, name, default, get, set)
+                    local item={variable=variable,kind=kind,name=name,default=default,
+                        GetValue=get,SetValue=set}
+                    nativeSettings[variable]=item
+                    return item
+                end,
+                CreateCheckbox=function(category, value, description)
+                    local item=initializer({kind='checkbox',setting=value,
+                        description=description})
+                    layout:AddInitializer(item)
+                    return item
+                end,
+                CreateSliderOptions=function(minimum,maximum,step)
+                    return {min=minimum,max=maximum,step=step,
+                        SetLabelFormatter=function() end}
+                end,
+                CreateSlider=function(category,value,options)
+                    local item=initializer({kind='slider',setting=value,options=options})
+                    layout:AddInitializer(item)
+                    return item
+                end,
+                CreateDropdown=function(category,value,choices)
+                    layout:AddInitializer(initializer({kind='dropdown',setting=value,choices=choices}))
+                end,
+                CreateControlTextContainer=function()
+                    return {data={},Add=function(self,value,label)
+                        self.data[#self.data+1]={value=value,label=label}
+                    end,GetData=function(self) return self.data end}
+                end,
+                RegisterAddOnCategory=function(category) nativeRegistered=category end,
+                OpenToCategory=function(id) assert(id==categoryID); nativeOpened=id end}
+            nativeSettings={}
+            NS.UI.Settings(NS.app)
+            assert(nativeRegistered==nativeCategory and nativeOpened==categoryID)
+            assert(NS.UI.settings==nil and NS.UI.nativeCategory==nativeCategory)
+            local sections={}
+            local counts={section=0,checkbox=0,slider=0,dropdown=0,button=0,editbox=0}
+            for _,item in ipairs(layout.initializers) do
+                local kind=item.data.kind
+                counts[kind]=counts[kind]+1
+                if kind=='section' then sections[#sections+1]=item.data.name end
+            end
+            assert(table.concat(sections,'|')==table.concat({NS.L('display'),NS.L('window'),
+                NS.L('targetMarkers'),NS.L('master'),NS.L('hotkeys'),NS.L('language')},'|'))
+            assert(counts.section==6 and counts.checkbox==7 and counts.slider==4
+                and counts.dropdown==3 and counts.button==2 and counts.editbox==1)
+            assert(not nativeSettings.QUESTTARGETS_focusMarkEnabled)
+            local masterCheckbox
+            for _,item in ipairs(layout.initializers) do
+                if item.data.kind=='checkbox' and
+                    item.data.setting.variable=='QUESTTARGETS_showMaster' then masterCheckbox=item end
+            end
+            assert(masterCheckbox and masterCheckbox.data.description==NS.L('masterMoveTip'))
+            assert(not nativeSettings.QUESTTARGETS_focusHotkeyEnabled)
+            assert(not nativeSettings.QUESTTARGETS_questieTrackerButtons)
+            for _,item in ipairs(layout.initializers) do
+                assert(not (item.data.kind=='button' and item.data.name==NS.L('clear')))
+            end
+            local hotkeyButton
+            for _,item in ipairs(layout.initializers) do
+                if item.data.kind=='button' and item.data.name==NS.L('masterDefault') then hotkeyButton=item end
+            end
+            local capture=CreateFrame('Button',nil,UIParent)
+            hotkeyButton.data.callback(capture)
+            capture.scripts.OnKeyDown(capture,'G')
+            assert(GetBindingKey('CLICK QuestTargetsMaster:LeftButton')=='G')
+            hotkeyButton.data.callback(capture)
+            capture.scripts.OnKeyDown(capture,'DELETE')
+            assert(GetBindingKey('CLICK QuestTargetsMaster:LeftButton')==nil)
+            local focusButton
+            for _,item in ipairs(layout.initializers) do
+                if item.data.kind=='button' and item.data.name==NS.L('focusHotkey') then focusButton=item end
+            end
+            assert(focusButton)
+            assert(focusButton.data.tooltip==NS.L('focusHotkeyTip'))
+            focusButton.data.callback(capture)
+            capture.scripts.OnKeyDown(capture,'H')
+            assert(GetBindingKey('CLICK QuestTargetsFocused:LeftButton')=='H')
+            local captionRow
+            for _,item in ipairs(layout.initializers) do
+                if item.data.kind=='editbox' then captionRow=item end
+            end
+            assert(captionRow.template=='QuestTargetsCaptionSettingTemplate')
+            assert(captionRow.shownPredicate and captionRow.shownPredicate())
+            captionRow.data.set('  Quest-Mobs  ')
+            flush()
+            assert(NS.app.db.masterText=='Quest-Mobs' and NS.UI.master.text=='Quest-Mobs')
+            captionRow.data.set('')
+            flush()
+            assert(NS.app.db.masterText=='' and NS.UI.master.text=='')
+            local captionFrame=CreateFrame('Frame',nil,UIParent)
+            captionFrame.Text=captionFrame:CreateFontString(nil,'ARTWORK')
+            for key,value in pairs(QuestTargetsCaptionSettingMixin) do captionFrame[key]=value end
+            captionFrame:OnLoad()
+            captionFrame:Init(captionRow)
+            assert(captionFrame.EditBox:GetText()=='')
+            captionFrame.EditBox:SetText('  Ziele  ')
+            captionFrame.EditBox.scripts.OnEditFocusLost(captionFrame.EditBox)
+            flush()
+            assert(NS.app.db.masterText=='Ziele' and NS.UI.master.text=='Ziele')
+            captionFrame.EditBox:SetText('Discard')
+            captionFrame.EditBox.scripts.OnEscapePressed(captionFrame.EditBox)
+            assert(captionFrame.EditBox:GetText()=='Ziele')
+            captionFrame:Release()
+            for _,item in ipairs(layout.initializers) do
+                if item.data.kind=='checkbox' and
+                    item.data.setting.variable=='QUESTTARGETS_restedXPIntegration' then
+                    assert(item.predicate and not item.predicate())
+                end
+            end
+            nativeSettings.QUESTTARGETS_restedXPIntegration.SetValue(true)
+            assert(not NS.app.db.restedXPIntegration)
+            loadedAddons.Questie=true; loadedAddons.RXPGuides=true
+            assert(shownPopup~='QUESTTARGETS_QUESTIE_RELOAD' and not reloaded)
+            for _,item in ipairs(layout.initializers) do
+                if item.data.kind=='checkbox' and
+                    item.data.setting.variable=='QUESTTARGETS_restedXPIntegration' then
+                    assert(item.predicate())
+                end
+            end
+            nativeSettings.QUESTTARGETS_transparencyMode.SetValue(true)
+            assert(NS.app.db.transparencyMode)
+            nativeSettings.QUESTTARGETS_windowSize.SetValue(1.25)
+            assert(NS.app.db.menuScale==1.25)
+            nativeSettings.QUESTTARGETS_masterAppearance.SetValue(2)
+            assert(NS.app.db.masterAppearance=='modern')
+            for _,item in ipairs(layout.initializers) do
+                if item.data.kind=='slider' and item.data.setting.variable=='QUESTTARGETS_scaleFactor' then
+                    assert(item.shownPredicate and item.shownPredicate())
+                end
+                if item.data.kind=='slider' and item.data.setting.variable=='QUESTTARGETS_widthLabel' then
+                    assert(item.shownPredicate and not item.shownPredicate())
+                end
+            end
+            nativeSettings.QUESTTARGETS_targetMarkers.SetValue(4)
+            assert(NS.app.db.markerIcon==4)
+            nativeSettings.QUESTTARGETS_language.SetValue(2)
+            assert(NS.app.db.language=='deDE' and nativeCategory.name=='Quest Targets')
+            assert(focusButton.data.tooltip==NS.L('focusHotkeyTip'))
+            assert(captionRow.data.name==NS.L('caption'))
+            assert(layout.initializers[1].data.name==NS.L('display'))
+            assert(SettingsPanel.repairs and SettingsPanel.repairs>=2)
+            NS.UI.Settings(NS.app)
+            assert(nativeOpened==categoryID and nativeRegistered==nativeCategory)
+        ''')
+
+    def test_restedxp_option_is_disabled_without_addon_and_questie_has_no_toggle(self):
+        self.lua.execute('''
+            loadedAddons={Questie=false,RXPGuides=false}
+            C_AddOns={IsAddOnLoaded=function(name) return loadedAddons[name] end}
+            boot(); NS.UI.Settings(NS.app)
+            local panel=NS.UI.settings
+            assert(panel.questieTrackerToggle==nil)
+            assert(panel.restedXPToggle.enabled==false)
+            assert(panel.restedXPToggle.caption.textColor[1]==0.5)
+            panel.restedXPToggle.scripts.OnClick()
+            assert(not NS.app.db.restedXPIntegration)
+            loadedAddons.Questie=true
+            NS.UI.UpdateSettings(NS.app)
+            assert(panel.restedXPToggle.enabled==false)
+            loadedAddons.RXPGuides=true
+            NS.UI.UpdateSettings(NS.app)
+            assert(panel.restedXPToggle.enabled==true)
+        ''')
+
+    def test_questie_integration_has_no_reload_setting(self):
+        self.lua.execute('''
+            StaticPopupDialogs={}
+            StaticPopup_Show=function(key) shownPopup=key end
+            boot(); NS.UI.Settings(NS.app)
+            assert(NS.UI.settings.questieTrackerToggle==nil)
+            assert(StaticPopupDialogs.QUESTTARGETS_QUESTIE_RELOAD==nil)
+            assert(shownPopup~='QUESTTARGETS_QUESTIE_RELOAD' and not reloaded)
+        ''')
+
     def test_size_numeric_inputs_clamp_round_and_reject_invalid_values(self):
         self.lua.execute('''boot(); NS.UI.Settings(NS.app)
             local control=NS.UI.masterSettings.widthControl
@@ -302,6 +621,9 @@ class QuestTargetsTests(unittest.TestCase):
             end
             assert(NS.UI.settings.toggle:GetChecked())
             assert(NS.UI.settings.masterToggle:GetChecked())
+            NS.UI.settings.masterToggle.scripts.OnEnter(NS.UI.settings.masterToggle)
+            assert(GameTooltip.lines[1]==NS.L('masterMoveTip'))
+            NS.UI.settings.masterToggle.scripts.OnLeave(NS.UI.settings.masterToggle)
             assert(NS.UI.settings.menuToggle:GetChecked())
             assert(not NS.UI.settings.tooltipToggle:GetChecked())
             assert(NS.UI.settings.minimapToggle:GetChecked())
@@ -321,7 +643,7 @@ class QuestTargetsTests(unittest.TestCase):
             for _, line in ipairs(GameTooltip.lines) do
                 assert(line ~= 'Wölfe im Wald')
                 assert(not line:find('QuestieDB', 1, true))
-                assert(not line:find('Right click', 1, true))
+            assert(line ~= NS.L('questieReloadPrompt'))
             end
             NS.UI.settings.minimapToggle.scripts.OnClick()
             assert(not NS.UI.minimap.shown)
@@ -329,8 +651,73 @@ class QuestTargetsTests(unittest.TestCase):
             NS.UI.settings.hotkey.scripts.OnClick(NS.UI.settings.hotkey)
             NS.UI.settings.hotkey.scripts.OnKeyDown(NS.UI.settings.hotkey, 'G')
             assert(GetBindingKey('CLICK QuestTargetsMaster:LeftButton') == 'G')
-            NS.UI.settings.hotkeyClear.scripts.OnClick()
+            assert(NS.UI.settings.hotkeyClear==nil)
+            NS.UI.settings.hotkey.scripts.OnClick(NS.UI.settings.hotkey)
+            NS.UI.settings.hotkey.scripts.OnKeyDown(NS.UI.settings.hotkey,'DELETE')
             assert(GetBindingKey('CLICK QuestTargetsMaster:LeftButton') == nil)
+        ''')
+
+    def test_hotkey_replacement_and_delete_remove_both_previous_bindings(self):
+        self.lua.execute('''
+            boot(); NS.UI.Settings(NS.app)
+            local keys={'G','H'}
+            GetBindingKey=function() return unpack(keys) end
+            SetBinding=function(key)
+                for index=#keys,1,-1 do if keys[index]==key then table.remove(keys,index) end end
+                return true
+            end
+            SetBindingClick=function(key)
+                keys[#keys+1]=key
+                return true
+            end
+            local hotkey=NS.UI.settings.hotkey
+            hotkey.scripts.OnClick(hotkey)
+            hotkey.scripts.OnKeyDown(hotkey,'J')
+            assert(#keys==1 and keys[1]=='J')
+            keys={'J','K'}
+            hotkey.scripts.OnClick(hotkey)
+            hotkey.scripts.OnKeyDown(hotkey,'DELETE')
+            assert(#keys==0)
+        ''')
+
+    def test_questie_buttons_do_not_protect_tracker_and_recycled_line_is_resynced(self):
+        self.lua.execute('''
+            QuestTargetsDB={}
+            boot()
+            local line=CreateFrame('Frame',nil,UIParent)
+            line.expandQuest=CreateFrame('Button',nil,line)
+            line.mode='quest'; line.Quest={Id=1}
+            local pool={
+                GetHighestIndex=function() return 1 end,
+                GetLine=function() return line end,
+                ResetLinesForChange=function()
+                    line.mode=nil; line.Quest=nil
+                end,
+                HideUnusedLines=function() end,
+            }
+            Questie={db={profile={trackerEnabled=true}}}
+            QuestieLoader={ImportModule=function(_,name)
+                assert(name=='TrackerLinePool'); return pool
+            end}
+            NS.app.allEntries={
+                {name='Kobold',refs={{questID=1,key='a',title='First',done=0,total=1}}},
+                {name='Waldwolf',refs={{questID=2,key='b',title='Second',done=0,total=1}}},
+            }
+            NS.QuestieTracker.Sync(NS.app)
+            local button=NS.QuestieTracker.buttons[1]
+            assert(button and button.questID==1 and button.shown)
+            assert(button.parent==UIParent and not line.protected)
+            pool.ResetLinesForChange()
+            button.scripts.PreClick(button,'LeftButton',false)
+            assert(not button.shown and button.entry==nil)
+            line.mode='quest'; line.Quest={Id=2}
+            pool.HideUnusedLines()
+            NS.QuestieTracker.Sync(NS.app)
+            assert(button.shown and button.questID==2 and button.entry.questID==2)
+            assert(not line.protected)
+            line.Quest={Id=1}
+            button.scripts.PreClick(button,'LeftButton',false)
+            assert(not button.shown and button.entry==nil and button.attributes.macrotext1==nil)
         ''')
 
     def test_minimap_button_follows_map_edge_and_uses_compass_states(self):
@@ -1201,9 +1588,66 @@ class QuestTargetsTests(unittest.TestCase):
             local plate=plate('Waldwolf','Wölfe im Wald','0/4 Waldwolf')
             NS.app:Poll()
             assert(calls[1]==before)
+            for _=1,10 do
+                event('NAME_PLATE_UNIT_ADDED','nameplate1'); flush()
+            end
+            assert(calls[1]==before)
+            event('ZONE_CHANGED_NEW_AREA'); flush()
+            assert(calls[1]==before+expected)
             -- A full refresh deliberately drops the cache, including after DB data changes.
             NS.app:Refresh()
-            assert(calls[1]==before+expected)
+            assert(calls[1]==before+expected*2)
+        ''')
+
+    def test_idle_polls_reuse_quest_aggregation(self):
+        self.lua.execute('''
+            QuestTargetsDB={watchedOnly=true}
+            local calls=0
+            local original=NS.Core.QuestEntries
+            NS.Core.QuestEntries=function(entries)
+                calls=calls+1
+                return original(entries)
+            end
+            boot()
+            local before=calls
+            for _=1,10 do
+                NS.app:Poll()
+                NS.UI.Render(NS.app)
+                NS.UI.RenderMaster(NS.app)
+            end
+            assert(calls==before)
+            quests[1].objectives[1].text='Waldwolf: 1/4'
+            event('QUEST_LOG_UPDATE'); flush()
+            assert(calls>before)
+        ''')
+
+    def test_late_questiedb_load_invalidates_cached_unresolved_quests(self):
+        self.database()
+        self.lua.execute('''
+            local provider=LibQuestieDB
+            LibQuestieDB=nil
+            boot()
+            assert(NS.app.metadata.unresolved==1)
+            LibQuestieDB=provider
+            event('ADDON_LOADED','QuestieDB'); flush()
+            assert(NS.app.metadata.unresolved==0)
+            assert(NS.app.resolutionProvider==provider)
+        ''')
+
+    def test_observations_prune_completed_and_changed_objectives(self):
+        self.lua.execute('''
+            boot()
+            local saved=NS.app.learned
+            saved['1:1']={signature=NS.Core.Signature(NS.app.allQuests[1].objectives[1]),
+                names={Waldwolf=true}}
+            saved['2:1']={signature='old objective',names={Falsch=true}}
+            saved['999:1']={signature='monster:stale',names={Falsch=true}}
+            NS.app:Refresh()
+            assert(saved['1:1'] and saved['1:1'].names.Waldwolf)
+            assert(saved['2:1']==nil and saved['999:1']==nil)
+            table.remove(quests,1)
+            event('QUEST_LOG_UPDATE'); flush()
+            assert(saved['1:1']==nil)
         ''')
 
     def test_generic_source_item_resolver_has_no_quest_id_rules(self):
