@@ -135,7 +135,8 @@ local function appendNativeFallback(macro, base, settings)
     if not macro or not macro:find("/cleartarget", 1, true)
         or not base or not base.nameList or #base.nameList == 0 then return macro end
     local marker = Core.MarkerMacro(settings, true)
-    local index = Integration.nativeCursor or 1
+    -- Native targets can shrink while the active guide step stays unchanged.
+    local index = ((Integration.nativeCursor or 1) - 1) % #base.nameList + 1
     for _ = 1, #base.nameList do
         local name = base.nameList[index]
         local line = "\n/targetexact [noexists] " .. name .. "\n/cleartarget [dead]"

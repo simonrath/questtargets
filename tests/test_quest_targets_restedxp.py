@@ -6,6 +6,54 @@ import test_quest_targets as addon
 class RestedXPTests(unittest.TestCase):
     setUp = addon.QuestTargetsTests.setUp
 
+    def test_native_fallback_cursor_survives_shrinking_quest_target_list(self):
+        for use_master in (True, False):
+            for remaining in (11, 1, 0):
+                with self.subTest(master=use_master, remaining=remaining):
+                    self.setUp()
+                    self.lua.globals().fallbackTestMaster = use_master
+                    self.lua.globals().fallbackTestRemaining = remaining
+                    self.lua.execute('''
+                        quests={}
+                        for i=1,12 do
+                            local name=string.format('Native Mob %02d',i)
+                            quests[i]={questID=i,title='Quest '..i,watched=true,
+                                objectives={{type='monster',text=name..' getötet: 0/3',
+                                    numFulfilled=0,numRequired=3,finished=false}}}
+                        end
+                        local frame=CreateFrame('Frame','RXPTargetFrame',UIParent)
+                        local rxp={RXPFrame={activeSteps={{active=true,
+                            elements={{mobs={'Rabid Thistle Bear'}}}}}},
+                            targeting={activeTargetFrame=frame},
+                            settings={profile={enableTargetFrame=true}},
+                            GetCreatureName=function(id) return id end}
+                        LibStub=function(name) if name=='AceAddon-3.0' then
+                            return {GetAddon=function() return rxp end}
+                        end end
+                        QuestTargetsDB={restedXPIntegration=true,autoMark=false}
+                        boot()
+                        assert(#NS.UI.master.defaultEntry.nameList==12)
+                        local signature=NS.RestedXP.signature
+                        NS.RestedXP.nativeCursor=12
+                        for i=12,fallbackTestRemaining+1,-1 do table.remove(quests,i) end
+                        NS.app:Refresh()
+                        assert(NS.RestedXP.signature==signature)
+                        assert(#NS.UI.master.defaultEntry.nameList==fallbackTestRemaining)
+                        local button=fallbackTestMaster and NS.UI.master or NS.RestedXP.button
+                        button.scripts.PreClick(button,'LeftButton',false)
+                        local macro=button.attributes.macrotext1
+                        assert(macro:find('Rabid Thistle Bear',1,true))
+                        assert(#macro<=NS.Core.MACRO_BYTES)
+                        assert(not macro:find('Native Mob 12',1,true))
+                        if fallbackTestRemaining>0 then
+                            assert(macro:find('/targetexact [noexists] Native Mob 01',1,true))
+                            assert(NS.RestedXP.nativeCursor>=1
+                                and NS.RestedXP.nativeCursor<=fallbackTestRemaining)
+                        else
+                            assert(not macro:find('Native Mob',1,true))
+                        end
+                    ''')
+
     def test_target_button_does_not_protect_restedxp_scroll_frame(self):
         self.lua.execute('''
             local scroll=CreateFrame('ScrollFrame','RXPFrame_bottomFrameScrollFrame',UIParent)
