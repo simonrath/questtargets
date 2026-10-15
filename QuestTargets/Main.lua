@@ -272,6 +272,7 @@ SlashCmdList.QUESTTARGETS = function(input)
             cycle.candidates or 0, click.unit or NS.L("debugNone")))
         message(NS.L("debugResult"):format(boolText(click.selected)))
         if click.name then message(NS.L("debugName"):format(click.name)) end
+        NS.Diagnostics.Print(app)
     elseif command == "refresh" or command == "aktualisieren" then app:Refresh()
     elseif command == "settings" or command == "einstellungen" then
         if InCombatLockdown() then message(NS.L("settingsCombat")); return end

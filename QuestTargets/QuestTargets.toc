@@ -14,7 +14,7 @@
 ## IconTexture: Interface\AddOns\QuestTargets\Textures\QuestCompassUp
 ## Notes: Anklickbare Ziele für offene Quests.
 ## Author: jackNine
-## Version: 1.2.6
+## Version: 1.2.7
 ## OptionalDeps: QuestieDB, Questie, RXPGuides
 ## SavedVariablesPerCharacter: QuestTargetsDB
 
@@ -29,4 +29,5 @@ SettingsCaption.xml
 Master.lua
 QuestieTracker.lua
 RestedXP.lua
+Diagnostics.lua
 Main.lua

@@ -10,7 +10,7 @@ class QuestTargetsTests(unittest.TestCase):
     def setUp(self):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute((ROOT / 'tests/quest_targets_mock.lua').read_text(encoding='utf-8'))
-        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Master.lua', 'QuestieTracker.lua', 'RestedXP.lua', 'Main.lua'):
+        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Master.lua', 'QuestieTracker.lua', 'RestedXP.lua', 'Diagnostics.lua', 'Main.lua'):
             self.lua.execute('assert(loadstring(...))("QuestTargets", NS)',
                              (ROOT / 'QuestTargets' / name).read_text(encoding='utf-8'))
 
@@ -330,7 +330,9 @@ class QuestTargetsTests(unittest.TestCase):
             local layout={initializers={}}
             function layout:AddInitializer(item) self.initializers[#self.initializers+1]=item end
             local function initializer(data)
-                return {data=data, AddModifyPredicate=function(self, predicate)
+                return {data=data, GetName=function(self)
+                    return self.data.setting and self.data.setting:GetName() or self.data.name
+                end, AddModifyPredicate=function(self, predicate)
                     self.predicate=predicate
                 end, AddShownPredicate=function(self, predicate)
                     self.shownPredicate=predicate
@@ -362,8 +364,11 @@ class QuestTargetsTests(unittest.TestCase):
                     return category,layout
                 end,
                 RegisterProxySetting=function(category, variable, kind, name, default, get, set)
+                    -- Forever validates a function-valued name without securecallfunction
+                    -- before registering it in the map read by ActionBar clicks.
+                    assert(type(name)=='string', 'Proxy setting name must be resolved before registration')
                     local item={variable=variable,kind=kind,name=name,default=default,
-                        GetValue=get,SetValue=set}
+                        GetValue=get,SetValue=set,GetName=function() return name end}
                     nativeSettings[variable]=item
                     return item
                 end,
@@ -383,7 +388,9 @@ class QuestTargetsTests(unittest.TestCase):
                     return item
                 end,
                 CreateDropdown=function(category,value,choices)
-                    layout:AddInitializer(initializer({kind='dropdown',setting=value,choices=choices}))
+                    local item=initializer({kind='dropdown',setting=value,choices=choices})
+                    layout:AddInitializer(item)
+                    return item
                 end,
                 CreateControlTextContainer=function()
                     return {data={},Add=function(self,value,label)
@@ -481,6 +488,26 @@ class QuestTargetsTests(unittest.TestCase):
                     assert(item.predicate())
                 end
             end
+            local rxpFrame=CreateFrame('Frame',nil,UIParent)
+            local rxp={RXPFrame={activeSteps={{active=true,elements={{targets={'Guide NPC'}}}}}},
+                targeting={activeTargetFrame=rxpFrame},
+                settings={profile={enableTargetFrame=true}},
+                GetCreatureName=function(id) return id end}
+            LibStub=function(name) if name=='AceAddon-3.0' then
+                return {GetAddon=function() return rxp end}
+            end end
+            local master=NS.UI.master
+            for i=1,3 do
+                nativeSettings.QUESTTARGETS_restedXPIntegration.SetValue(true)
+                assert(NS.app.db.restedXPIntegration and NS.RestedXP.active)
+                assert(master.attributes.macrotext1:find('Guide NPC',1,true))
+                assert(NS.RestedXP.button:IsShown())
+                nativeSettings.QUESTTARGETS_restedXPIntegration.SetValue(false)
+                assert(not NS.app.db.restedXPIntegration and not NS.RestedXP.active)
+                assert(master.entry==master.defaultEntry)
+                assert(not NS.RestedXP.button:IsShown())
+            end
+            assert(not reloaded)
             nativeSettings.QUESTTARGETS_transparencyMode.SetValue(true)
             assert(NS.app.db.transparencyMode)
             nativeSettings.QUESTTARGETS_windowSize.SetValue(1.25)
@@ -502,6 +529,12 @@ class QuestTargetsTests(unittest.TestCase):
             assert(focusButton.data.tooltip==NS.L('focusHotkeyTip'))
             assert(captionRow.data.name==NS.L('caption'))
             assert(layout.initializers[1].data.name==NS.L('display'))
+            for _,item in ipairs(layout.initializers) do
+                if item.data.setting then
+                    local key=item.data.setting.variable:gsub('^QUESTTARGETS_', '')
+                    assert(item:GetName()==NS.L(key), 'Setting label did not follow language change: '..key)
+                end
+            end
             assert(SettingsPanel.repairs and SettingsPanel.repairs>=2)
             NS.UI.Settings(NS.app)
             assert(nativeOpened==categoryID and nativeRegistered==nativeCategory)

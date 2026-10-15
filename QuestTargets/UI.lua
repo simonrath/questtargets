@@ -630,12 +630,19 @@ local function nativeSettings(app)
         UI.nativeHeaders[#UI.nativeHeaders + 1] = {initializer=initializer, key=key}
     end
     local function setting(key, kind, default, get, set)
+        -- Forever validates name callbacks outside securecallfunction before
+        -- inserting the setting into the registry also read by ActionBar clicks.
+        -- Keep registration data plain; localize only our displayed row below.
         return Settings.RegisterProxySetting(category, "QUESTTARGETS_" .. key,
-            Settings.VarType[kind], function() return L(key) end, default, get, set)
+            Settings.VarType[kind], L(key), default, get, set)
+    end
+    local function localizedRow(initializer, key)
+        initializer.GetName = function() return L(key) end
+        return initializer
     end
     local function checkboxSetting(key, default, get, set, descriptionKey)
-        return Settings.CreateCheckbox(category, setting(key, "Boolean", default, get, set),
-            descriptionKey and L(descriptionKey) or nil)
+        return localizedRow(Settings.CreateCheckbox(category, setting(key, "Boolean", default, get, set),
+            descriptionKey and L(descriptionKey) or nil), key)
     end
     local function sliderSetting(key, savedKey, minimum, maximum, step)
         local value = setting(key, "Number", 1,
@@ -647,15 +654,16 @@ local function nativeSettings(app)
         local options = Settings.CreateSliderOptions(minimum, maximum, step)
         options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right,
             function(number) return string.format("%d%%", math.floor(number * 100 + 0.5)) end)
-        return Settings.CreateSlider(category, value, options)
+        return localizedRow(Settings.CreateSlider(category, value, options), key)
     end
     local function dropdownSetting(key, default, get, set, choices)
         local value = setting(key, "Number", default, get, set)
-        Settings.CreateDropdown(category, value, function()
+        local initializer = Settings.CreateDropdown(category, value, function()
             local options = Settings.CreateControlTextContainer()
             for index, text in ipairs(choices()) do options:Add(index, text) end
             return options:GetData()
         end)
+        localizedRow(initializer, key)
         return value
     end
     local function settingsButton(key, text, callback, descriptionKey)
