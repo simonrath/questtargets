@@ -9,13 +9,13 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CACHE = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.5'
-PRODUCER_COMMIT = b'e0a6eaa86f181ac99262e34126bcd2ed1a1712d6'
+CACHE = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.6'
+PRODUCER_COMMIT = b'36ca1ca86f6c1838de479c7c7452eb0a57d5c135'
 HASHES = {
-    'Classic': ('Vanilla', '9b84a8ab028a84d4df92460ce1e9f80d2b3594cd066772fff61411466d213111'),
-    'TBC': ('TBC', '5c4ad573c57f53a28e83b7b8fcd324191dcd241a916d1639826a7aeccde16705'),
-    'Mists': ('Mists', '87106b580cc2e4dd2468379abba6518ba12fe7826a1997d470b05003e02b165c'),
-    'Forever': ('Forever', '993680e91b8bcc1f5454af94478b1f70e0bf02bc4bd596001c8136b440939712'),
+    'Classic': ('Vanilla', '7bbed71d6387e2865e94cc821366cc05fbd7474f32f8640f682f6bc720b0f504'),
+    'TBC': ('TBC', 'f62fcc72b9f5f786b2298bdec09c4db16990a405b7aca07433e67bc31ba0f0cf'),
+    'Mists': ('Mists', '6e688a122401342cedfcb5879940b70be9b293b3b03678c1ec0feb5b86067a13'),
+    'Forever': ('Forever', 'd78b066c362eaf28258d9e2d041c0a7b03d6943a2dfc741dec70c6bfd8e1fc27'),
 }
 POWERSHELL = shutil.which('powershell') or shutil.which('pwsh')
 
@@ -75,8 +75,8 @@ class PackageTests(unittest.TestCase):
                 package_path = ROOT / 'dist' / f'QuestTargets-{self.version}-{label}.zip'
                 with zipfile.ZipFile(upstream_path) as upstream, zipfile.ZipFile(package_path) as package:
                     toc = upstream.read(f'QuestieDB/QuestieDB_{flavor}.toc')
-                    self.assertIn(b'## Version: 1.0.5', toc)
-                    self.assertIn(b'## X-Contract-Version: 3', toc)
+                    self.assertIn(b'## Version: 1.0.6', toc)
+                    self.assertIn(b'## X-Contract-Version: 4', toc)
                     self.assertIn(b'## X-BUILD-COMMIT: ' + PRODUCER_COMMIT, toc)
                     provider_names = {n for n in package.namelist() if n.startswith('QuestieDB/')}
                     source_names = {n for n in upstream.namelist() if not n.endswith('/')}
@@ -92,11 +92,11 @@ class PackageTests(unittest.TestCase):
                                      if label == 'Forever' else {f'QuestieDB/QuestieDB_{flavor}.toc'})
                     self.assertEqual(tocs, expected_tocs)
 
-    def test_forever_archive_contains_v105_base_data(self):
+    def test_forever_archive_contains_v106_base_data(self):
         require_provider_cache()
         with zipfile.ZipFile(CACHE / 'QuestieDB-Forever.zip') as upstream:
             toc = upstream.read('QuestieDB/QuestieDB_Forever.toc')
-        self.assertIn(b'## Version: 1.0.5', toc)
+        self.assertIn(b'## Version: 1.0.6', toc)
         self.assertGreater(sum(line.startswith(b'## X-Npc-') for line in toc.splitlines()), 28000)
         self.assertGreater(sum(line.startswith(b'## X-Quest-') for line in toc.splitlines()), 29000)
 
@@ -109,7 +109,7 @@ class PackageTests(unittest.TestCase):
             self.assertFalse(any(name.endswith('.md') for name in package.namelist()))
             self.assertIn(b'120100', package.read('QuestTargets/QuestTargets.toc'))
 
-    def test_both_official_providers_satisfy_the_addon_contract(self):
+    def test_all_official_providers_satisfy_quest_targets_and_questie_contracts(self):
         require_provider_cache()
         from tests.questiedb_harness import load_release
         for label, (flavor, expected_hash) in HASHES.items():
@@ -125,6 +125,11 @@ class PackageTests(unittest.TestCase):
                 lua.execute(f'''assert(NS.Database.Provider() == LibQuestieDB)
                     assert(LibQuestieDB.flavor.name == "{flavor}")
                     assert(LibQuestieDB.RequireContract(1))''')
+                self.assertIs(lua.eval('(LibQuestieDB.RequireContract(4))'), True,
+                              'Questie 12.1.0 requires provider contract 4')
+                lua.execute('''assert(type(LibQuestieDB.Enum.raceMaskById) == "table")
+                    assert(type(LibQuestieDB.Enum.factionRaceMasks.Alliance) == "number")
+                    assert(type(LibQuestieDB.Enum.factionRaceMasks.Horde) == "number")''')
 
     def test_minimal_package_still_excludes_database_and_documents(self):
         self.build('Minimal', '-CurseForge')
