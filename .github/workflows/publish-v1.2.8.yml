@@ -12,8 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      TEMP: ${{ runner.temp }}
-      GH_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: simonrath/questtargets
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -22,6 +21,8 @@ jobs:
           persist-credentials: false
       - name: Build and test the reviewed release
         shell: bash
+        env:
+          TEMP: ${{ runner.temp }}
         run: |
           set -euo pipefail
           test "$(gh release view v1.2.8 --json targetCommitish --jq .targetCommitish)" = 4eebbb22316d33b8d7f8e5275b6e95176a445b27
