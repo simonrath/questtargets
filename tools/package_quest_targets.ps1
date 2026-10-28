@@ -11,17 +11,17 @@ $taskDist = Join-Path $taskRoot 'dist'
 $taskVersion = (Select-String -LiteralPath (Join-Path $taskAddon 'QuestTargets.toc') -Pattern '^## Version: (.+)$').Matches[0].Groups[1].Value
 $taskRuntimeFiles = @('QuestTargets.toc','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','SettingsCaption.xml','Master.lua','QuestieTracker.lua','RestedXP.lua','Diagnostics.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga','Textures/TransparencyEye.tga')
 if ($AddonOnly -or $CurseForge) { $Flavor = 'Minimal' }
-if (-not $ProviderCache) { $ProviderCache = Join-Path $env:TEMP 'quest-targets-questiedb-v1.0.6' }
+if (-not $ProviderCache) { $ProviderCache = Join-Path $env:TEMP 'quest-targets-questiedb-v1.0.9' }
 New-Item -ItemType Directory -Path $taskDist -Force | Out-Null
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 Add-Type -AssemblyName System.IO.Compression
 
-# Pinned to QuestieDB v1.0.6 release.json. Do not use a moving release URL.
+# Pinned to QuestieDB v1.0.9 release.json. Do not use a moving release URL.
 $taskProviders = @{
-    Classic = @{ Artifact = 'Vanilla'; Sha256 = '7bbed71d6387e2865e94cc821366cc05fbd7474f32f8640f682f6bc720b0f504'; Toc = 'QuestieDB_Vanilla.toc' }
-    TBC = @{ Artifact = 'TBC'; Sha256 = 'f62fcc72b9f5f786b2298bdec09c4db16990a405b7aca07433e67bc31ba0f0cf'; Toc = 'QuestieDB_TBC.toc' }
-    Mists = @{ Artifact = 'Mists'; Sha256 = '6e688a122401342cedfcb5879940b70be9b293b3b03678c1ec0feb5b86067a13'; Toc = 'QuestieDB_Mists.toc' }
-    Forever = @{ Artifact = 'Forever'; Sha256 = 'd78b066c362eaf28258d9e2d041c0a7b03d6943a2dfc741dec70c6bfd8e1fc27'; Toc = 'QuestieDB_Forever.toc' }
+    Classic = @{ Artifact = 'Vanilla'; Sha256 = '72b0353075df53d09d540dbd016c84b37ccce7ea08394421d7558fbd28121f9c'; Toc = 'QuestieDB_Vanilla.toc' }
+    TBC = @{ Artifact = 'TBC'; Sha256 = '6bcd8c1aff2ee55e6ec878f9b4f4e9323d645eb56125a56deab2bb7fa3735460'; Toc = 'QuestieDB_TBC.toc' }
+    Mists = @{ Artifact = 'Mists'; Sha256 = '5eb1315a52287c8c664b6aac747fa2e9d6071416c613903e678984d5d6aaf7b6'; Toc = 'QuestieDB_Mists.toc' }
+    Forever = @{ Artifact = 'Forever'; Sha256 = '9c180a2ecfa22328c6c7fa7d4e8154a178229d8e2339fce0b480f80916653edb'; Toc = 'QuestieDB_Forever.toc' }
 }
 
 function Add-FileEntry($archive, [string]$sourcePath, [string]$entryName) {
@@ -72,7 +72,7 @@ foreach ($taskFlavor in $taskFlavors) {
         New-Item -ItemType Directory -Path $ProviderCache -Force | Out-Null
         $providerZip = Join-Path $ProviderCache ('QuestieDB-' + $provider.Artifact + '.zip')
         if (-not (Test-Path -LiteralPath $providerZip)) {
-            $url = 'https://github.com/Questie/QuestieDB/releases/download/v1.0.6/QuestieDB-' + $provider.Artifact + '.zip'
+            $url = 'https://github.com/Questie/QuestieDB/releases/download/v1.0.9/QuestieDB-' + $provider.Artifact + '.zip'
             Invoke-WebRequest $url -OutFile $providerZip
         }
         $hashStream = [IO.File]::OpenRead($providerZip)

@@ -24,7 +24,7 @@ from readable quest text and visible nameplates. Item sources and turn-in NPCs
 without names in the quest text are not inferred on Retail.
 The combined packages include the matching QuestieDB release; see the
 [QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md) for its provenance.
-They bundle QuestieDB 1.0.6, which supports both Quest Targets and Questie 12.1.0.
+They bundle QuestieDB 1.0.9, which supports both Quest Targets and Questie 12.1.0.
 QuestieDB supplies data only; keep the full Questie addon installed and enabled
 to use its tracker.
 
@@ -59,10 +59,10 @@ See [the detailed documentation](QuestTargets/README.md) for behavior and limita
 
 Install Python dependencies with `python -m pip install -r tests/requirements.txt`.
 Run `python -m unittest discover -s tests -p "test_quest_targets*.py"`.
-Database integration tests use the pinned QuestieDB v1.0.6 Vanilla archive in
+Database integration tests use the pinned QuestieDB v1.0.9 Vanilla archive in
 the system temporary directory at
-`quest-targets-questiedb-v1.0.6/QuestieDB-Vanilla.zip`. Package tests use
-the official v1.0.6 Vanilla, TBC, Mists, and Forever artifacts; the packaging script
+`quest-targets-questiedb-v1.0.9/QuestieDB-Vanilla.zip`. Package tests use
+the official v1.0.9 Vanilla, TBC, Mists, and Forever artifacts; the packaging script
 downloads missing artifacts and verifies their SHA-256 hashes.
 
 Build all five local packages with PowerShell:
@@ -92,4 +92,4 @@ for source hashes and the unresolved redistribution terms.
 
 Questie is listed on [CurseForge](https://www.curseforge.com/wow/addons/questie) under the GNU General Public License version 3 (GPLv3). Quest Targets includes an unmodified copy of QuestieDB, the database used by Questie. Quest Targets is a separate addon that accesses QuestieDB through its public API; we have not changed QuestieDB’s code or data.
 
-Credit for QuestieDB belongs to the QuestieDB team and its contributors. Local combined packages use the [official QuestieDB v1.0.6 release](https://github.com/Questie/QuestieDB/releases/tag/v1.0.6). Its source is available in the [QuestieDB repository](https://github.com/Questie/QuestieDB). Redistribution terms remain unresolved; see the [QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md) before publishing combined packages.
+Credit for QuestieDB belongs to the QuestieDB team and its contributors. Local combined packages use the [official QuestieDB v1.0.9 release](https://github.com/Questie/QuestieDB/releases/tag/v1.0.9). Its source is available in the [QuestieDB repository](https://github.com/Questie/QuestieDB). Redistribution terms remain unresolved; see the [QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md) before publishing combined packages.

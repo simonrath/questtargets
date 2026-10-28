@@ -1,4 +1,4 @@
-# Quest Targets — 1.2.8
+# Quest Targets — 1.2.9
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever Beta 1.60.1, Build 70170 (16001)** und **Retail 12.1 (120100)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -12,11 +12,11 @@ für Classic Era, `QuestTargets-<Version>-TBC.zip` für Burning Crusade,
 `QuestTargets-<Version>-Forever.zip` für Forever und
 `QuestTargets-<Version>-Retail.zip` für Retail. Die Nicht-Retail-Pakete
 enthalten auf oberster Ebene `QuestTargets/` und die passende, unveränderte
-offizielle `QuestieDB/` v1.0.6. Vor einem Update das Spiel schließen und einen
+offizielle `QuestieDB/` v1.0.9. Vor einem Update das Spiel schließen und einen
 bereits vorhandenen Ordner `Interface/AddOns/QuestieDB` entfernen. Danach beide
 Ordner aus dem zum Client passenden ZIP nach `Interface/AddOns` entpacken und
 das Spiel neu starten. So bleiben keine alten TOC-Dateien zurück.
-QuestieDB 1.0.6 unterstützt sowohl Quest Targets als auch Questie 12.1.0.
+QuestieDB 1.0.9 unterstützt sowohl Quest Targets als auch Questie 12.1.0.
 Es liefert nur Daten; für den Questie-Tracker muss das vollständige Addon
 `Questie/` zusätzlich installiert und aktiviert bleiben.
 

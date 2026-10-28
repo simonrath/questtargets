@@ -21,8 +21,8 @@ except ModuleNotFoundError:
         sys.path.insert(0, str(TEST_DEPS))
     import cbor2
 
-PIN_SHA256 = '7bbed71d6387e2865e94cc821366cc05fbd7474f32f8640f682f6bc720b0f504'
-DEFAULT_ZIP = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.6/QuestieDB-Vanilla.zip'
+PIN_SHA256 = '72b0353075df53d09d540dbd016c84b37ccce7ea08394421d7558fbd28121f9c'
+DEFAULT_ZIP = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.9/QuestieDB-Vanilla.zip'
 
 
 def load_release(path=DEFAULT_ZIP, flavor='Vanilla', expected_hash=PIN_SHA256):
