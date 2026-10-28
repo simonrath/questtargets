@@ -5,4 +5,10 @@
             <OnLoad method="OnLoad"/>
         </Scripts>
     </Frame>
+    <Frame name="QuestTargetsMoveSettingTemplate" inherits="SettingsListElementTemplate" mixin="QuestTargetsMoveSettingMixin" virtual="true">
+        <Size x="280" y="86"/>
+        <Scripts>
+            <OnLoad method="OnLoad"/>
+        </Scripts>
+    </Frame>
 </Ui>

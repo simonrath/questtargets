@@ -45,6 +45,13 @@ to use its tracker.
 - In-game feedback button linking to [the public feedback form](https://feedback.jacknine.org); no GitHub account needed.
 
 Use `/qt` to open the quest window and `/qt settings` to open settings.
+To position the master button, open **Settings → Master button → Move master button**.
+Outside combat, drag the handle with the left mouse button; the native move cursor
+shows where you can drag. Choose **Done** to save, **Cancel** or Escape to restore
+the previous position, or **Reset position** to preview the default position.
+Holding the right mouse button and dragging the master button still works directly.
+If combat starts during editing, editing ends and the last released position is
+saved after combat. The positioning controls are available even with tooltips off.
 Targeting is subject to the client's protected-action and combat restrictions.
 See [the detailed documentation](QuestTargets/README.md) for behavior and limitations.
 

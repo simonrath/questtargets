@@ -354,7 +354,8 @@ class QuestTargetsTests(unittest.TestCase):
             Settings={VarType={Boolean='boolean', Number='number'},
                 CreateElementInitializer=function(template,data)
                     local item=initializer(data)
-                    item.data.kind='editbox'; item.template=template
+                    item.data.kind=template=='QuestTargetsMoveSettingTemplate' and 'move' or 'editbox'
+                    item.template=template
                     return item
                 end,
                 RegisterVerticalLayoutCategory=function(name)
@@ -404,7 +405,7 @@ class QuestTargetsTests(unittest.TestCase):
             assert(nativeRegistered==nativeCategory and nativeOpened==categoryID)
             assert(NS.UI.settings==nil and NS.UI.nativeCategory==nativeCategory)
             local sections={}
-            local counts={section=0,checkbox=0,slider=0,dropdown=0,button=0,editbox=0}
+            local counts={section=0,checkbox=0,slider=0,dropdown=0,button=0,editbox=0,move=0}
             for _,item in ipairs(layout.initializers) do
                 local kind=item.data.kind
                 counts[kind]=counts[kind]+1
@@ -414,6 +415,13 @@ class QuestTargetsTests(unittest.TestCase):
                 NS.L('targetMarkers'),NS.L('master'),NS.L('hotkeys'),NS.L('language')},'|'))
             assert(counts.section==6 and counts.checkbox==7 and counts.slider==4
                 and counts.dropdown==3 and counts.button==2 and counts.editbox==1)
+            assert(counts.move==1, 'native move option missing')
+            local moveRow=NS.UI.nativeMove
+            assert(moveRow and moveRow.template=='QuestTargetsMoveSettingTemplate')
+            assert(moveRow.data.help==NS.L('masterMoveHelp'))
+            moveRow.data.callback()
+            assert(NS.UI.masterMoveActive)
+            NS.UI.EndMasterMove(NS.app,false)
             assert(not nativeSettings.QUESTTARGETS_focusMarkEnabled)
             local masterCheckbox
             for _,item in ipairs(layout.initializers) do
@@ -528,6 +536,7 @@ class QuestTargetsTests(unittest.TestCase):
             assert(NS.app.db.language=='deDE' and nativeCategory.name=='Quest Targets')
             assert(focusButton.data.tooltip==NS.L('focusHotkeyTip'))
             assert(captionRow.data.name==NS.L('caption'))
+            assert(moveRow.data.name==NS.L('masterMove') and moveRow.data.help==NS.L('masterMoveHelp'))
             assert(layout.initializers[1].data.name==NS.L('display'))
             for _,item in ipairs(layout.initializers) do
                 if item.data.setting then

@@ -62,6 +62,14 @@ Herkunft und Prüfsummen der kombinierten Pakete stehen im
   Feedbackformular anzeigen. Eine GitHub-Anmeldung ist nicht erforderlich.
 - Titelleiste ziehen: Questfenster verschieben. Den Masterbutton mit gedrückter
   rechter Maustaste verschieben.
+- Alternativ **Einstellungen → Masterbutton → Masterbutton verschieben** starten.
+  Außerhalb des Kampfes den Griff mit gedrückter linker Maustaste ziehen;
+  der native Verschiebezeiger zeigt den bedienbaren Bereich an.
+  „Fertig“ speichert, „Abbrechen“ oder Escape stellt die vorige Position wieder
+  her und „Position zurücksetzen“ zeigt die Standardposition als Vorschau.
+  Rechtsziehen bleibt zusätzlich verfügbar. Beim Kampfstart endet der Modus;
+  die zuletzt losgelassene Position wird nach dem Kampf gespeichert.
+  Diese Optionen und ihre Hinweise sind auch bei ausgeschalteten Tooltips sichtbar.
 - Minikarten-Button: Linksklick öffnet das Questfenster, Rechtsklick die
   Einstellungen. Mit der linken Maustaste am Minikartenrand verschieben.
 - Wenn Questie mit aktivem Tracker installiert ist, steht links neben jeder

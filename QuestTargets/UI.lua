@@ -455,7 +455,7 @@ function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "master", "hotkeys"}
-    local heights = {590, 340, 538, 210}
+    local heights = {590, 340, 710, 210}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -503,8 +503,10 @@ function UI.LayoutSettings(app)
     local appearance = settingsBox(master, "masterAppearance", -32, 84)
     local dimensions = settingsBox(master, "buttonSize", -150, 220)
     local caption = settingsBox(master, "caption", -404, 112)
+    local position = settingsBox(master, "masterMove", -550, 132)
+    master.positionGroup = position
     local bindings = settingsBox(hotkeys, "hotkeys", -32, 160)
-    panel.groups = {display, window, language, marking, appearance, dimensions, caption, bindings}
+    panel.groups = {display, window, language, marking, appearance, dimensions, caption, position, bindings}
     panel.displayText:Hide()
     panel.languageText:Hide()
     panel.hotkeysText:Hide()
@@ -537,6 +539,9 @@ function UI.LayoutSettings(app)
     place(master.textEdit, caption, 22, -41)
     master.textEdit:SetPoint("TOPRIGHT", caption, "TOPRIGHT", -22, -41)
     place(master.emptyCaption, caption, 18, -78)
+    place(master.moveButton, position, 18, -32)
+    place(master.moveHelp, position, 18, -68)
+    master.moveHelp:SetPoint("TOPRIGHT", position, "TOPRIGHT", -18, -68)
     panel.hotkeyAction = label(bindings, 18, -43, 210, "GameFontHighlight")
     panel.hotkeyAction:SetText(L("masterDefault"))
     place(panel.hotkey, bindings, 235, -38)
@@ -612,6 +617,34 @@ end
 
 function QuestTargetsCaptionSettingMixin:Release()
     self.EditBox:ClearFocus()
+    SettingsListElementMixin.Release(self)
+end
+
+QuestTargetsMoveSettingMixin = {}
+
+function QuestTargetsMoveSettingMixin:OnLoad()
+    SettingsListElementMixin.OnLoad(self)
+    self.MoveButton = button(self, "", 150, function()
+        if self.data then self.data.callback() end
+    end)
+    self.MoveButton:SetPoint("TOPRIGHT", self, "TOPRIGHT", -12, -4)
+    self.Help = label(self, 16, -32, 420)
+    self.Help:SetPoint("TOPRIGHT", self, "TOPRIGHT", -16, -32)
+    self.Help:SetHeight(48)
+end
+
+function QuestTargetsMoveSettingMixin:Init(initializer)
+    SettingsListElementMixin.Init(self, initializer)
+    self.Text:ClearAllPoints()
+    self.Text:SetPoint("TOPLEFT", self, "TOPLEFT", 16, -4)
+    self.Text:SetPoint("TOPRIGHT", self.MoveButton, "TOPLEFT", -8, 0)
+    self.Text:SetHeight(22)
+    self.Text:SetText(initializer.data.name)
+    self.MoveButton:SetText(initializer.data.buttonText)
+    self.Help:SetText(initializer.data.help)
+end
+
+function QuestTargetsMoveSettingMixin:Release()
     SettingsListElementMixin.Release(self)
 end
 
@@ -748,6 +781,12 @@ local function nativeSettings(app)
     layout:AddInitializer(caption)
     UI.nativeCaption = caption
     caption:AddShownPredicate(function() return app.db.masterAppearance ~= "modern" end)
+
+    UI.nativeMove = Settings.CreateElementInitializer("QuestTargetsMoveSettingTemplate", {
+        name = L("masterMove"), buttonText = L("masterMoveStart"), help = L("masterMoveHelp"),
+        callback = function() UI.BeginMasterMove(app) end,
+    })
+    layout:AddInitializer(UI.nativeMove)
 
     section("hotkeys")
     settingsButton("masterDefault", function()
@@ -1081,6 +1120,10 @@ function UI.CreateMasterSettings(app, category)
     end)
     panel.emptyCaption = label(panel, 20, -314, 540)
     panel.emptyCaption:SetText(L("emptyCaption"))
+    panel.moveButton = button(panel, L("masterMove"), 260, function() UI.BeginMasterMove(app) end)
+    panel.moveHelp = label(panel, 20, -390, 500)
+    panel.moveHelp:SetHeight(54)
+    panel.moveHelp:SetText(L("masterMoveHelp"))
     UI.UpdateMasterSettings(app)
 end
 
@@ -1097,7 +1140,11 @@ function UI.UpdateMasterSettings(app)
     if panel.captionGroup then panel.captionGroup:SetShown(not modern) end
     if panel.dimensionsGroup then
         panel.dimensionsGroup:SetHeight(modern and 130 or 220)
-        panel:SetHeight(modern and 300 or 538)
+        panel.positionGroup:ClearAllPoints()
+        local y = modern and -314 or -550
+        panel.positionGroup:SetPoint("TOPLEFT", 8, y)
+        panel.positionGroup:SetPoint("TOPRIGHT", -8, y)
+        panel:SetHeight(modern and 474 or 710)
     end
     panel.textEdit:SetShown(not modern)
     panel.emptyCaption:SetShown(not modern)
@@ -1181,8 +1228,16 @@ function UI.ApplyLanguage(app)
         UI.masterSettings.sizeNote:SetText(L("sizeNote"))
         UI.masterSettings.captionText:SetText(L("caption"))
         UI.masterSettings.emptyCaption:SetText(L("emptyCaption"))
+        UI.masterSettings.moveButton:SetText(L("masterMove"))
+        UI.masterSettings.moveHelp:SetText(L("masterMoveHelp"))
         UI.UpdateMasterSettings(app)
     end
+    if UI.nativeMove then
+        UI.nativeMove.data.name = L("masterMove")
+        UI.nativeMove.data.buttonText = L("masterMoveStart")
+        UI.nativeMove.data.help = L("masterMoveHelp")
+    end
+    UI.UpdateMasterMove(app)
     if UI.frame then app:Refresh() end
 end
 
