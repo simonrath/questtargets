@@ -221,6 +221,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         app.db.focusHotkeyEnabled = nil -- removed setting; an assigned key always works
         if type(app.db.focusQuestID) ~= "number" then app.db.focusQuestID = nil end
         if type(app.db.focusHotkeyKey) ~= "string" then app.db.focusHotkeyKey = nil end
+        if type(app.db.focusHotkeyKey2) ~= "string" then app.db.focusHotkeyKey2 = nil end
         local scale = app.db.menuScale
         app.db.menuScale = type(scale) == "number" and scale == scale and math.max(0.5, math.min(1.5, scale)) or 1
         app.db.autoMark = app.db.autoMark ~= false

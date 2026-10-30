@@ -14,6 +14,7 @@ function methods:SetScript(event, callback)
     assert(not (self.secure and event == "OnClick"), "replaced secure click handler")
     self.scripts[event] = callback
 end
+function methods:GetScript(event) return self.scripts[event] end
 function methods:HookScript(event, callback)
     local original = self.scripts[event]
     self.scripts[event] = function(...)
@@ -181,9 +182,21 @@ Settings = {RegisterCanvasLayoutCategory = function(panel, name) return {ID=42, 
         assert(type(category) == 'number', 'Settings.OpenToCategory requires a numeric category ID')
         _G.openCategory = category
     end}
-function GetBindingKey(action) return _G.bindings and _G.bindings[action] end
-function SetBinding(key) for action, bound in pairs(_G.bindings or {}) do if bound == key then _G.bindings[action] = nil end end; return true end
-function SetBindingClick(key, button, mouse) _G.bindings = _G.bindings or {}; _G.bindings['CLICK '..button..':'..mouse] = key; return true end
+function GetBindingKey(action) return unpack((_G.bindings or {})[action] or {}) end
+function SetBinding(key)
+    for _, keys in pairs(_G.bindings or {}) do
+        for i=#keys,1,-1 do if keys[i]==key then table.remove(keys,i) end end
+    end
+    return true
+end
+function SetBindingClick(key, button, mouse)
+    SetBinding(key)
+    _G.bindings = _G.bindings or {}
+    local action='CLICK '..button..':'..mouse
+    _G.bindings[action]=_G.bindings[action] or {}
+    table.insert(_G.bindings[action],key)
+    return true
+end
 function SaveBindings() return true end
 function GetCurrentBindingSet() return 1 end
 ctrlDown, altDown, shiftDown = false, false, false
@@ -212,7 +225,7 @@ function CreateFrame(kind, name, parent, template)
             self.parent:SetVerticalScroll(value)
         end
     else
-        assert(template == nil or template == "UIPanelButtonTemplate" or template == "UIPanelCloseButtonNoScripts" or template == "UICheckButtonTemplate" or template == "InputBoxTemplate" or template == "UIDropDownMenuTemplate" or template == "UIPanelScrollBarTemplate" or template == "OptionsSliderTemplate" or template == "BackdropTemplate" or template == "UIPanelScrollFrameTemplate", template)
+        assert(template == nil or template == "UIPanelButtonTemplate" or template == "UIMenuButtonStretchTemplate" or template == "UIPanelCloseButtonNoScripts" or template == "UICheckButtonTemplate" or template == "InputBoxTemplate" or template == "UIDropDownMenuTemplate" or template == "UIPanelScrollBarTemplate" or template == "OptionsSliderTemplate" or template == "BackdropTemplate" or template == "UIPanelScrollFrameTemplate", template)
     end
     if name then _G[name] = f end
     frames[#frames + 1] = f

@@ -1,4 +1,10 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Frame name="QuestTargetsBindingSettingTemplate" inherits="SettingsListElementTemplate" mixin="QuestTargetsBindingSettingMixin" virtual="true">
+        <Size x="560" y="26"/>
+        <Scripts>
+            <OnLoad method="OnLoad"/>
+        </Scripts>
+    </Frame>
     <Frame name="QuestTargetsCaptionSettingTemplate" inherits="SettingsListElementTemplate" mixin="QuestTargetsCaptionSettingMixin" virtual="true">
         <Size x="280" y="26"/>
         <Scripts>

@@ -14,32 +14,105 @@ end
 
 local MASTER_BINDING = "CLICK QuestTargetsMaster:LeftButton"
 local FOCUS_BINDING = "CLICK QuestTargetsFocused:LeftButton"
-local function setMasterBinding(binding)
-    local first, second = GetBindingKey(MASTER_BINDING)
-    if binding and not SetBindingClick(binding, "QuestTargetsMaster", "LeftButton") then return false end
-    if first and first ~= binding then SetBinding(first) end
-    if second and second ~= first and second ~= binding then SetBinding(second) end
-    if binding or first or second then SaveBindings(GetCurrentBindingSet()) end
+local function bindingText(key)
+    if not key then return L("unbound") end
+    return GetBindingText and GetBindingText(key) or key
+end
+local function setGamePadCapture(button, enabled)
+    -- Older clients do not expose gamepad frame input. Keep their keyboard path.
+    if not button.EnableGamePadButton then return end
+    button:EnableGamePadButton(enabled)
+    button:SetScript("OnGamePadButtonDown", enabled and button:GetScript("OnKeyDown") or nil)
+end
+
+local function replaceBindingPair(command, target, first, second)
+    local oldFirst, oldSecond = GetBindingKey(command)
+    if oldFirst then SetBinding(oldFirst) end
+    if oldSecond and oldSecond ~= oldFirst then SetBinding(oldSecond) end
+    local keys = {first, second}
+    for slot = 1, 2 do
+        local key = keys[slot]
+        if key and not SetBindingClick(key, target, "LeftButton") then
+            if first then SetBinding(first) end
+            if second then SetBinding(second) end
+            if oldFirst then SetBindingClick(oldFirst, target, "LeftButton") end
+            if oldSecond then SetBindingClick(oldSecond, target, "LeftButton") end
+            return false
+        end
+    end
     return true
 end
 
-local function setFocusBinding(app, binding)
-    local first, second = GetBindingKey(FOCUS_BINDING)
-    if first then SetBinding(first) end
-    if second and second ~= first then SetBinding(second) end
-    if binding then
-        if not SetBindingClick(binding, "QuestTargetsFocused", "LeftButton") then return false end
+local function setBindingSlot(app, focused, binding, slot)
+    if InCombatLockdown() then return false end
+    local command = focused and FOCUS_BINDING or MASTER_BINDING
+    local target = focused and "QuestTargetsFocused" or "QuestTargetsMaster"
+    local first, second = GetBindingKey(command)
+    if slot == 2 then
+        second = binding
+        if binding and first == binding then first = nil end
+    else
+        first = binding
+        if binding and second == binding then second = nil end
     end
-    app.db.focusHotkeyKey = binding
-    if binding or first or second then SaveBindings(GetCurrentBindingSet()) end
+    if not replaceBindingPair(command, target, first, second) then return false end
+    -- A master binding can take a key from Focus. Keep its saved pair in sync
+    -- so the next refresh does not steal that key back.
+    app.db.focusHotkeyKey, app.db.focusHotkeyKey2 = GetBindingKey(FOCUS_BINDING)
+    SaveBindings(GetCurrentBindingSet())
     return true
 end
 
 function UI.SyncFocusBinding(app)
     if InCombatLockdown() then return end
-    local binding = app.db.focusHotkeyKey
-    local first = GetBindingKey(FOCUS_BINDING)
-    if first ~= binding then setFocusBinding(app, binding) end
+    local first, second = GetBindingKey(FOCUS_BINDING)
+    if first ~= app.db.focusHotkeyKey or second ~= app.db.focusHotkeyKey2 then
+        replaceBindingPair(FOCUS_BINDING, "QuestTargetsFocused",
+            app.db.focusHotkeyKey, app.db.focusHotkeyKey2)
+    end
+end
+
+local function stopBindingCapture()
+    local capture = UI.bindingCapture
+    if not capture then return end
+    UI.bindingCapture = nil
+    capture.button.listening = false
+    capture.button:EnableKeyboard(false)
+    setGamePadCapture(capture.button, false)
+    capture.button:SetScript("OnKeyDown", nil)
+    capture.refresh()
+end
+
+local function beginBindingCapture(button, app, focused, slot, refresh)
+    if InCombatLockdown() then return end
+    stopBindingCapture()
+    UI.bindingCapture = {button=button, refresh=refresh}
+    button.listening = true
+    button:SetText(L("pressKey"))
+    button:EnableKeyboard(true)
+    button:SetPropagateKeyboardInput(false)
+    button:SetScript("OnKeyDown", function(self, key)
+        if key == "LSHIFT" or key == "RSHIFT" or key == "SHIFT"
+            or key == "LCTRL" or key == "RCTRL" or key == "CTRL"
+            or key == "LALT" or key == "RALT" or key == "ALT" then return end
+        if not InCombatLockdown() and key ~= "ESCAPE" and key ~= "UNKNOWN" then
+            local binding
+            if key ~= "DELETE" and key ~= "BACKSPACE" then
+                binding = (IsControlKeyDown() and "CTRL-" or "")
+                    .. (IsAltKeyDown() and "ALT-" or "")
+                    .. (IsShiftKeyDown() and "SHIFT-" or "") .. key
+            end
+            setBindingSlot(app, focused, binding, slot)
+        end
+        stopBindingCapture()
+    end)
+    setGamePadCapture(button, true)
+    if not button.questTargetsHideHook then
+        button.questTargetsHideHook = true
+        button:HookScript("OnHide", function(self)
+            if UI.bindingCapture and UI.bindingCapture.button == self then stopBindingCapture() end
+        end)
+    end
 end
 
 function UI.ToggleFocus(app, entry)
@@ -438,10 +511,7 @@ end
 function UI.SelectSettingsTab(index)
     local panel = UI.settings
     if not panel or not panel.pages[index] then return end
-    panel.hotkey.listening = false
-    panel.hotkey:EnableKeyboard(false)
-    panel.focusHotkey.listening = false
-    panel.focusHotkey:EnableKeyboard(false)
+    stopBindingCapture()
     UI.UpdateSettings(NS.app)
     panel.selectedTab = index
     for i, page in ipairs(panel.pages) do
@@ -505,7 +575,7 @@ function UI.LayoutSettings(app)
     local caption = settingsBox(master, "caption", -404, 112)
     local position = settingsBox(master, "masterMove", -550, 132)
     master.positionGroup = position
-    local bindings = settingsBox(hotkeys, "hotkeys", -32, 160)
+    local bindings = settingsBox(hotkeys, "hotkeys", -32, 195)
     panel.groups = {display, window, language, marking, appearance, dimensions, caption, position, bindings}
     panel.displayText:Hide()
     panel.languageText:Hide()
@@ -542,29 +612,37 @@ function UI.LayoutSettings(app)
     place(master.moveButton, position, 18, -32)
     place(master.moveHelp, position, 18, -68)
     master.moveHelp:SetPoint("TOPRIGHT", position, "TOPRIGHT", -18, -68)
-    panel.hotkeyAction = label(bindings, 18, -43, 210, "GameFontHighlight")
+    panel.bindingHeaders = {}
+    for slot = 1, 2 do
+        local header = label(bindings, 0, 0, 160, "GameFontNormalSmall")
+        header:ClearAllPoints()
+        panel.bindingHeaders[slot] = header
+    end
+    for index, row in ipairs({{panel.hotkey, panel.hotkey2}, {panel.focusHotkey, panel.focusHotkey2}}) do
+        local y = -58 - (index - 1) * 38
+        for _, control in ipairs(row) do
+            control:SetParent(bindings)
+            control:ClearAllPoints()
+            control:SetWidth(160)
+        end
+        row[2]:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, y)
+        row[1]:SetPoint("TOPRIGHT", row[2], "TOPLEFT", 0, 0)
+    end
+    for slot, header in ipairs(panel.bindingHeaders) do
+        header:SetPoint("BOTTOMLEFT", slot == 1 and panel.hotkey or panel.hotkey2, "TOPLEFT", 4, 5)
+        header:SetText(L(slot == 1 and "bindingKey1" or "bindingKey2"))
+    end
+    panel.hotkeyAction = label(bindings, 18, -63, 210, "GameFontHighlight")
     panel.hotkeyAction:SetText(L("masterDefault"))
-    place(panel.hotkey, bindings, 235, -38)
-    panel.hotkey:SetWidth(200)
-    panel.hotkey:SetNormalFontObject("GameFontNormalSmall")
-    panel.hotkey:ClearAllPoints()
-    panel.hotkey:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -38)
     panel.hotkeyAction:SetPoint("TOPRIGHT", panel.hotkey, "TOPLEFT", -12, -5)
-    panel.focusHotkeyAction = label(bindings, 18, -81, 210, "GameFontHighlight")
+    panel.focusHotkeyAction = label(bindings, 18, -101, 210, "GameFontHighlight")
     panel.focusHotkeyAction:SetText(L("focusHotkey"))
-    place(panel.focusHotkey, bindings, 235, -76)
-    panel.focusHotkey:SetWidth(200)
-    panel.focusHotkey:ClearAllPoints()
-    panel.focusHotkey:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -76)
     panel.focusHotkeyAction:SetPoint("TOPRIGHT", panel.focusHotkey, "TOPLEFT", -12, -5)
-    place(panel.hotkeyNote, bindings, 18, -119)
+    place(panel.hotkeyNote, bindings, 18, -138)
     panel.hotkeyNote:SetWidth(450)
-    panel.hotkeyNote:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -90)
+    panel.hotkeyNote:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -138)
     panel.pages[4].scroll:SetScript("OnHide", function()
-        panel.hotkey.listening = false
-        panel.hotkey:EnableKeyboard(false)
-        panel.focusHotkey.listening = false
-        panel.focusHotkey:EnableKeyboard(false)
+        stopBindingCapture()
         UI.UpdateSettings(app)
     end)
     local function resize(self)
@@ -648,6 +726,62 @@ function QuestTargetsMoveSettingMixin:Release()
     SettingsListElementMixin.Release(self)
 end
 
+QuestTargetsBindingSettingMixin = {}
+
+function QuestTargetsBindingSettingMixin:OnLoad()
+    SettingsListElementMixin.OnLoad(self)
+    self.Buttons = {}
+    for slot = 1, 2 do
+        local index = slot
+        local control = CreateFrame("Button", nil, self, "UIMenuButtonStretchTemplate")
+        control:SetSize(160, 22)
+        control:SetNormalFontObject("GameFontHighlightSmall")
+        control:SetScript("OnClick", function(button)
+            if self.data then self.data.callback(button, index) end
+        end)
+        control:HookScript("OnEnter", function(button)
+            if self.data and self.data.tooltip then
+                GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
+                GameTooltip:SetText(self.data.name)
+                GameTooltip:AddLine(self.data.tooltip, 1, 1, 1, true)
+                GameTooltip:Show()
+            end
+        end)
+        control:HookScript("OnLeave", function() GameTooltip:Hide() end)
+        self.Buttons[slot] = control
+    end
+    self.Buttons[2]:SetPoint("RIGHT", self, "RIGHT", -12, 0)
+    self.Buttons[1]:SetPoint("RIGHT", self.Buttons[2], "LEFT", 0, 0)
+end
+
+function QuestTargetsBindingSettingMixin:RefreshBindings()
+    if not self.data then return end
+    self.Text:SetText(self.data.name)
+    for slot, control in ipairs(self.Buttons) do
+        if not control.listening then control:SetText(self.data.text(slot)) end
+    end
+end
+
+function QuestTargetsBindingSettingMixin:Init(initializer)
+    SettingsListElementMixin.Init(self, initializer)
+    self.Text:ClearAllPoints()
+    self.Text:SetPoint("LEFT", self, "LEFT", 37, 0)
+    self.Text:SetPoint("RIGHT", self.Buttons[1], "LEFT", -8, 0)
+    self.initializer = initializer
+    initializer.row = self
+    self:RefreshBindings()
+end
+
+function QuestTargetsBindingSettingMixin:Release()
+    local capture = UI.bindingCapture
+    if capture and (capture.button == self.Buttons[1] or capture.button == self.Buttons[2]) then
+        stopBindingCapture()
+    end
+    if self.initializer then self.initializer.row = nil end
+    self.initializer = nil
+    SettingsListElementMixin.Release(self)
+end
+
 local function nativeSettings(app)
     if UI.nativeCategory then
         Settings.OpenToCategory(UI.nativeCategory:GetID())
@@ -699,15 +833,11 @@ local function nativeSettings(app)
         localizedRow(initializer, key)
         return value
     end
-    local function settingsButton(key, text, callback, descriptionKey)
-        local initializer = CreateSettingsButtonInitializer(L(key), text, callback,
-            descriptionKey and L(descriptionKey) or nil, true)
-        layout:AddInitializer(initializer)
-        UI.nativeButtons[#UI.nativeButtons + 1] = {
-            initializer=initializer, key=key, descriptionKey=descriptionKey}
-        return initializer
-    end
     local function refresh()
+        for _, entry in ipairs(UI.nativeButtons) do
+            local row = entry.initializer.row
+            if row then row:RefreshBindings() end
+        end
         if SettingsPanel and SettingsPanel.RepairDisplay then SettingsPanel:RepairDisplay() end
     end
 
@@ -789,73 +919,30 @@ local function nativeSettings(app)
     layout:AddInitializer(UI.nativeMove)
 
     section("hotkeys")
-    settingsButton("masterDefault", function()
-        return GetBindingKey(MASTER_BINDING) or L("unbound")
-    end, function(button)
-        if InCombatLockdown() then return end
-        button:SetText(L("pressKey"))
-        button:EnableKeyboard(true)
-        button:SetPropagateKeyboardInput(false)
-        button:SetScript("OnKeyDown", function(self, key)
-            if key == "LSHIFT" or key == "RSHIFT" or key == "SHIFT"
-                or key == "LCTRL" or key == "RCTRL" or key == "CTRL"
-                or key == "LALT" or key == "RALT" or key == "ALT" then return end
-            self:EnableKeyboard(false)
-            self:SetScript("OnKeyDown", nil)
-            if (key == "DELETE" or key == "BACKSPACE") and not InCombatLockdown() then
-                setMasterBinding(nil)
-            elseif key ~= "ESCAPE" and key ~= "UNKNOWN" and not InCombatLockdown() then
-                local modifier = (IsControlKeyDown() and "CTRL-" or "")
-                    .. (IsAltKeyDown() and "ALT-" or "")
-                    .. (IsShiftKeyDown() and "SHIFT-" or "")
-                local binding = modifier .. key
-                setMasterBinding(binding)
-            end
-            self:SetText(GetBindingKey(MASTER_BINDING) or L("unbound"))
-            refresh()
-        end)
-        if not button.questTargetsHideHook then
-            button.questTargetsHideHook = true
-            button:HookScript("OnHide", function(self)
-                self:EnableKeyboard(false)
-                self:SetScript("OnKeyDown", nil)
-            end)
+    local function bindingRow(key, focused, descriptionKey)
+        local command = focused and FOCUS_BINDING or MASTER_BINDING
+        local initializer
+        local function text(slot)
+            local first, second = GetBindingKey(command)
+            if slot == 2 then return bindingText(second) end
+            return bindingText(first)
         end
-    end)
-    settingsButton("focusHotkey", function()
-        return app.db.focusHotkeyKey or L("unbound")
-    end, function(button)
-        if InCombatLockdown() then return end
-        button:SetText(L("pressKey"))
-        button:EnableKeyboard(true)
-        button:SetPropagateKeyboardInput(false)
-        button:SetScript("OnKeyDown", function(self, key)
-            if key == "LSHIFT" or key == "RSHIFT" or key == "SHIFT"
-                or key == "LCTRL" or key == "RCTRL" or key == "CTRL"
-                or key == "LALT" or key == "RALT" or key == "ALT" then return end
-            self:EnableKeyboard(false)
-            self:SetScript("OnKeyDown", nil)
-            if not InCombatLockdown() then
-                if key == "DELETE" or key == "BACKSPACE" then
-                    setFocusBinding(app, nil)
-                elseif key ~= "ESCAPE" and key ~= "UNKNOWN" then
-                    local modifier = (IsControlKeyDown() and "CTRL-" or "")
-                        .. (IsAltKeyDown() and "ALT-" or "")
-                        .. (IsShiftKeyDown() and "SHIFT-" or "")
-                    setFocusBinding(app, modifier .. key)
-                end
-            end
-            self:SetText(app.db.focusHotkeyKey or L("unbound"))
-            refresh()
-        end)
-        if not button.questTargetsHideHook then
-            button.questTargetsHideHook = true
-            button:HookScript("OnHide", function(self)
-                self:EnableKeyboard(false)
-                self:SetScript("OnKeyDown", nil)
-            end)
-        end
-    end, "focusHotkeyTip")
+        initializer = Settings.CreateElementInitializer("QuestTargetsBindingSettingTemplate", {
+            name=L(key), text=text,
+            tooltip=descriptionKey and L(descriptionKey) or nil,
+            callback=function(control, slot)
+                beginBindingCapture(control, app, focused, slot or 1, function()
+                    control:SetText(text(slot))
+                    refresh()
+                end)
+            end,
+        })
+        layout:AddInitializer(initializer)
+        UI.nativeButtons[#UI.nativeButtons + 1] = {
+            initializer=initializer, key=key, descriptionKey=descriptionKey}
+    end
+    bindingRow("masterDefault", false)
+    bindingRow("focusHotkey", true, "focusHotkeyTip")
     section("language")
     dropdownSetting("language", NS.Language(), NS.Language, function(value)
         if InCombatLockdown() or value == NS.Language() then return end
@@ -966,72 +1053,29 @@ function UI.Settings(app)
         end)
         panel.hotkeysText = label(panel, 20, -472, 330, "GameFontNormal")
         panel.hotkeysText:SetText(L("hotkeys"))
-        panel.hotkey = button(panel, "", 200, function(self)
-            if InCombatLockdown() then return end
-            self.listening = true
-            self:SetText(L("pressKey"))
-            self:EnableKeyboard(true)
-            self:SetPropagateKeyboardInput(false)
-        end)
-        panel.hotkey:SetPoint("TOPLEFT", 20, -498)
-        panel.hotkey:SetScript("OnKeyDown", function(self, key)
-            if not self.listening then return end
-            -- Modifier keys arrive as separate key-down events. Keep listening
-            -- until a non-modifier key completes the combination.
-            if key == "LSHIFT" or key == "RSHIFT" or key == "SHIFT"
-                or key == "LCTRL" or key == "RCTRL" or key == "CTRL"
-                or key == "LALT" or key == "RALT" or key == "ALT" then return end
-            self.listening = false
-            self:EnableKeyboard(false)
-            if key == "ESCAPE" or key == "UNKNOWN" or InCombatLockdown() then UI.UpdateSettings(app); return end
-            if key == "DELETE" or key == "BACKSPACE" then
-                setMasterBinding(nil)
-                UI.UpdateSettings(app)
-                return
+        local function bindingButton(focused, slot)
+            local control = CreateFrame("Button", nil, panel, "UIMenuButtonStretchTemplate")
+            control:SetSize(160, 22)
+            control:SetNormalFontObject("GameFontHighlightSmall")
+            control:SetScript("OnClick", function(self)
+                beginBindingCapture(self, app, focused, slot, function() UI.UpdateSettings(app) end)
+            end)
+            if focused then
+                control:HookScript("OnEnter", function(self)
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetText(L("focusHotkey"))
+                    GameTooltip:AddLine(L("focusHotkeyTip"), 1, 1, 1, true)
+                    GameTooltip:Show()
+                end)
+                control:HookScript("OnLeave", function() GameTooltip:Hide() end)
             end
-            local modifier = (IsControlKeyDown() and "CTRL-" or "") .. (IsAltKeyDown() and "ALT-" or "") .. (IsShiftKeyDown() and "SHIFT-" or "")
-            local binding = modifier .. key
-            setMasterBinding(binding)
-            UI.UpdateSettings(app)
-        end)
-        panel.focusHotkey = button(panel, "", 200, function(self)
-            if InCombatLockdown() then return end
-            self.listening = true
-            self:SetText(L("pressKey"))
-            self:EnableKeyboard(true)
-            self:SetPropagateKeyboardInput(false)
-        end)
-        panel.focusHotkey:SetScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText(L("focusHotkey"))
-            GameTooltip:AddLine(L("focusHotkeyTip"), 1, 1, 1, true)
-            GameTooltip:Show()
-        end)
-        panel.focusHotkey:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        panel.focusHotkey:SetScript("OnKeyDown", function(self, key)
-            if not self.listening then return end
-            if key == "LSHIFT" or key == "RSHIFT" or key == "SHIFT"
-                or key == "LCTRL" or key == "RCTRL" or key == "CTRL"
-                or key == "LALT" or key == "RALT" or key == "ALT" then return end
-            self.listening = false
-            self:EnableKeyboard(false)
-            if key == "ESCAPE" or key == "UNKNOWN" or InCombatLockdown() then UI.UpdateSettings(app); return end
-            if key == "DELETE" or key == "BACKSPACE" then
-                setFocusBinding(app, nil)
-            else
-                local modifier = (IsControlKeyDown() and "CTRL-" or "")
-                    .. (IsAltKeyDown() and "ALT-" or "")
-                    .. (IsShiftKeyDown() and "SHIFT-" or "")
-                setFocusBinding(app, modifier .. key)
-            end
-            UI.UpdateSettings(app)
-        end)
-        panel:SetScript("OnHide", function()
-            panel.hotkey.listening = false
-            panel.hotkey:EnableKeyboard(false)
-            panel.focusHotkey.listening = false
-            panel.focusHotkey:EnableKeyboard(false)
-        end)
+            return control
+        end
+        panel.hotkey = bindingButton(false, 1)
+        panel.hotkey2 = bindingButton(false, 2)
+        panel.focusHotkey = bindingButton(true, 1)
+        panel.focusHotkey2 = bindingButton(true, 2)
+        panel:SetScript("OnHide", stopBindingCapture)
         panel.hotkeyNote = label(panel, 20, -532, 520)
         panel.hotkeyNote:SetText(L("hotkeyNote"))
         panel.languageText = label(panel, 20, -578, 330, "GameFontNormal")
@@ -1175,11 +1219,12 @@ function UI.UpdateSettings(app)
     UI.settings.restedXPToggle:SetEnabled(restedXPAvailable)
     UI.settings.restedXPToggle.caption:SetTextColor(restedXPAvailable and 1 or 0.5,
         restedXPAvailable and 1 or 0.5, restedXPAvailable and 1 or 0.5)
-    local key = GetBindingKey and GetBindingKey("CLICK QuestTargetsMaster:LeftButton")
-    if not UI.settings.hotkey.listening then UI.settings.hotkey:SetText(key or L("unbound")) end
-    if not UI.settings.focusHotkey.listening then
-        UI.settings.focusHotkey:SetText(app.db.focusHotkeyKey or L("unbound"))
-    end
+    local first, second = GetBindingKey(MASTER_BINDING)
+    if not UI.settings.hotkey.listening then UI.settings.hotkey:SetText(bindingText(first)) end
+    if not UI.settings.hotkey2.listening then UI.settings.hotkey2:SetText(bindingText(second)) end
+    first, second = GetBindingKey(FOCUS_BINDING)
+    if not UI.settings.focusHotkey.listening then UI.settings.focusHotkey:SetText(bindingText(first)) end
+    if not UI.settings.focusHotkey2.listening then UI.settings.focusHotkey2:SetText(bindingText(second)) end
     UIDropDownMenu_SetSelectedID(UI.settings.languageDropdown, NS.Language())
     UIDropDownMenu_SetText(UI.settings.languageDropdown, NS.LANGUAGE_NAMES[NS.Language()])
     for index, choice in ipairs(UI.settings.icons) do choice:SetEnabled(index ~= app.db.markerIcon) end
@@ -1202,6 +1247,9 @@ function UI.ApplyLanguage(app)
             for _, group in ipairs(panel.groups) do group.heading:SetText(L(group.localeKey)) end
             panel.hotkeyAction:SetText(L("masterDefault"))
             panel.focusHotkeyAction:SetText(L("focusHotkey"))
+            for slot, header in ipairs(panel.bindingHeaders) do
+                header:SetText(L(slot == 1 and "bindingKey1" or "bindingKey2"))
+            end
             panel:ResizeTabs()
         end
         panel.toggle.caption:SetText(L("autoMark"))

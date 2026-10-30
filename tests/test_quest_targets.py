@@ -240,6 +240,103 @@ class QuestTargetsTests(unittest.TestCase):
             assert(row.attributes.macrotext1:find(row.entry.nameList[1], 1, true))
         ''')
 
+    def test_controller_capture_binds_both_actions_and_releases_input(self):
+        self.lua.execute('''
+            boot(); NS.UI.Settings(NS.app)
+            local panel=NS.UI.settings
+            local actions={
+                {panel.hotkey, 'PAD1', 'CLICK QuestTargetsMaster:LeftButton', 'CTRL-PAD1'},
+                {panel.focusHotkey, 'PAD2', 'CLICK QuestTargetsFocused:LeftButton', 'PAD2'},
+            }
+            for _,action in ipairs(actions) do
+                local capture,key,command,expected=unpack(action)
+                capture.EnableGamePadButton=function(self,enabled) self.gamepadEnabled=enabled end
+                capture.scripts.OnClick(capture)
+                assert(capture.scripts.OnGamePadButtonDown, 'controller input was not registered')
+                assert(capture.gamepadEnabled)
+                IsControlKeyDown=function() return capture==panel.hotkey end
+                capture.scripts.OnGamePadButtonDown(capture,key)
+                IsControlKeyDown=function() return false end
+                assert(GetBindingKey(command)==expected, 'controller button was not bound')
+                assert(not capture.gamepadEnabled and not capture.scripts.OnGamePadButtonDown)
+                capture.scripts.OnClick(capture)
+                capture.scripts.OnKeyDown(capture,'ESCAPE')
+                assert(GetBindingKey(command)==expected)
+                assert(not capture.gamepadEnabled and not capture.scripts.OnGamePadButtonDown)
+                capture.scripts.OnClick(capture)
+                panel.pages[4].scroll.scripts.OnHide()
+                assert(not capture.gamepadEnabled and not capture.scripts.OnGamePadButtonDown)
+                capture.scripts.OnClick(capture)
+                combat=true
+                capture.scripts.OnGamePadButtonDown(capture,'PAD3')
+                assert(GetBindingKey(command)==expected, 'binding changed during combat')
+                assert(not capture.gamepadEnabled)
+                combat=false
+            end
+            assert(NS.app.db.focusHotkeyKey=='PAD2')
+        ''')
+
+    def test_primary_and_secondary_bindings_preserve_each_other_and_focus_reload(self):
+        self.lua.execute('''
+            boot(); NS.UI.Settings(NS.app)
+            local panel=NS.UI.settings
+            assert(panel.hotkey2 and panel.focusHotkey2, 'second binding controls missing')
+            local function bind(control,key)
+                control.scripts.OnClick(control)
+                control.scripts.OnKeyDown(control,key)
+            end
+            bind(panel.hotkey,'F'); bind(panel.hotkey2,'PAD1')
+            bind(panel.focusHotkey,'H'); bind(panel.focusHotkey2,'PAD2')
+            local first,second=GetBindingKey('CLICK QuestTargetsMaster:LeftButton')
+            assert(first=='F' and second=='PAD1')
+            assert(panel.hotkey.text=='F' and panel.hotkey2.text=='PAD1')
+            assert(NS.app.db.focusHotkeyKey=='H' and NS.app.db.focusHotkeyKey2=='PAD2')
+            SetBinding('H'); SetBinding('PAD2')
+            NS.UI.SyncFocusBinding(NS.app)
+            first,second=GetBindingKey('CLICK QuestTargetsFocused:LeftButton')
+            assert(first=='H' and second=='PAD2', 'second focus binding was lost on refresh')
+            bind(panel.hotkey,'J')
+            first,second=GetBindingKey('CLICK QuestTargetsMaster:LeftButton')
+            assert(first=='J' and second=='PAD1', 'editing primary erased secondary')
+            bind(panel.hotkey2,'DELETE')
+            first,second=GetBindingKey('CLICK QuestTargetsMaster:LeftButton')
+            assert(first=='J' and second==nil)
+            bind(panel.focusHotkey,'DELETE')
+            first,second=GetBindingKey('CLICK QuestTargetsFocused:LeftButton')
+            assert(first=='PAD2' and second==nil, 'remaining binding should move to first slot')
+            assert(NS.app.db.focusHotkeyKey=='PAD2' and NS.app.db.focusHotkeyKey2==nil)
+            bind(panel.hotkey2,'J')
+            first,second=GetBindingKey('CLICK QuestTargetsMaster:LeftButton')
+            assert(first=='J' and second==nil, 'duplicate binding must not occupy both slots')
+            panel.hotkey.scripts.OnClick(panel.hotkey)
+            panel.focusHotkey2.scripts.OnClick(panel.focusHotkey2)
+            assert(not panel.hotkey.listening and panel.focusHotkey2.listening)
+            NS.UI.SelectSettingsTab(1)
+            assert(not panel.focusHotkey2.listening)
+            bind(panel.hotkey2,'PAD2')
+            NS.UI.SyncFocusBinding(NS.app)
+            first,second=GetBindingKey('CLICK QuestTargetsMaster:LeftButton')
+            assert(first=='J' and second=='PAD2', 'focus refresh reclaimed a reassigned key')
+            assert(NS.app.db.focusHotkeyKey==nil and NS.app.db.focusHotkeyKey2==nil)
+        ''')
+
+    def test_failed_binding_assignment_preserves_both_slots_and_saved_focus(self):
+        self.lua.execute('''
+            QuestTargetsDB={focusHotkeyKey='H',focusHotkeyKey2='PAD2'}
+            boot(); NS.UI.Settings(NS.app)
+            local bind=SetBindingClick
+            SetBindingClick=function(key,...)
+                if key=='INVALID' then return false end
+                return bind(key,...)
+            end
+            local control=NS.UI.settings.focusHotkey2
+            control.scripts.OnClick(control)
+            control.scripts.OnKeyDown(control,'INVALID')
+            local first,second=GetBindingKey('CLICK QuestTargetsFocused:LeftButton')
+            assert(first=='H' and second=='PAD2')
+            assert(NS.app.db.focusHotkeyKey=='H' and NS.app.db.focusHotkeyKey2=='PAD2')
+        ''')
+
     def test_focus_hotkey_is_always_available_when_assigned(self):
         self.lua.execute('''
             boot(); NS.UI.Settings(NS.app)
@@ -347,14 +444,21 @@ class QuestTargetsTests(unittest.TestCase):
             end
             SettingsListElementMixin={
                 OnLoad=function() end,
-                Init=function(self,item) self.data=item.data end,
+                Init=function(self,item)
+                    self.data=item.data
+                    if self.Text then
+                        self.Text:SetPoint('LEFT',37,0)
+                        self.Text:SetPoint('RIGHT',self,'CENTER',-85,0)
+                    end
+                end,
                 Release=function(self) self.data=nil end}
             MinimalSliderWithSteppersMixin={Label={Right=1}}
             SettingsPanel={RepairDisplay=function(self) self.repairs=(self.repairs or 0)+1 end}
             Settings={VarType={Boolean='boolean', Number='number'},
                 CreateElementInitializer=function(template,data)
                     local item=initializer(data)
-                    item.data.kind=template=='QuestTargetsMoveSettingTemplate' and 'move' or 'editbox'
+                    item.data.kind=template=='QuestTargetsMoveSettingTemplate' and 'move'
+                        or template=='QuestTargetsBindingSettingTemplate' and 'button' or 'editbox'
                     item.template=template
                     return item
                 end,
@@ -454,6 +558,62 @@ class QuestTargetsTests(unittest.TestCase):
             focusButton.data.callback(capture)
             capture.scripts.OnKeyDown(capture,'H')
             assert(GetBindingKey('CLICK QuestTargetsFocused:LeftButton')=='H')
+            capture.EnableGamePadButton=function(self,enabled) self.gamepadEnabled=enabled end
+            for _,action in ipairs({
+                {hotkeyButton, 'PAD1', 'CLICK QuestTargetsMaster:LeftButton'},
+                {focusButton, 'PAD2', 'CLICK QuestTargetsFocused:LeftButton'},
+            }) do
+                local initializer,key,command=unpack(action)
+                initializer.data.callback(capture)
+                assert(capture.scripts.OnGamePadButtonDown, 'native controller input was not registered')
+                capture.scripts.OnGamePadButtonDown(capture,key)
+                assert(GetBindingKey(command)==key)
+                assert(not capture.gamepadEnabled and not capture.scripts.OnGamePadButtonDown)
+                initializer.data.callback(capture)
+                capture.scripts.OnHide(capture)
+                assert(not capture.gamepadEnabled and not capture.scripts.OnGamePadButtonDown)
+            end
+            for _,action in ipairs({
+                {hotkeyButton, 'PAD3', 'CLICK QuestTargetsMaster:LeftButton', 'PAD1'},
+                {focusButton, 'PAD4', 'CLICK QuestTargetsFocused:LeftButton', 'PAD2'},
+            }) do
+                local initializer,key,command,primary=unpack(action)
+                assert(initializer.template=='QuestTargetsBindingSettingTemplate')
+                local row=CreateFrame('Frame',nil,UIParent)
+                row.Text=row:CreateFontString()
+                for name,value in pairs(QuestTargetsBindingSettingMixin) do row[name]=value end
+                row:OnLoad(); row:Init(initializer)
+                assert(#row.Buttons==2)
+                assert(row.Buttons[1].template=='UIMenuButtonStretchTemplate')
+                assert(row.Buttons[1].text==primary)
+                local secondary=row.Buttons[2]
+                secondary.EnableGamePadButton=function(self,enabled) self.gamepadEnabled=enabled end
+                secondary.scripts.OnClick(secondary)
+                secondary.scripts.OnGamePadButtonDown(secondary,key)
+                local first,second=GetBindingKey(command)
+                assert(first==primary and second==key)
+                assert(row.Buttons[1].text==primary and secondary.text==key)
+                secondary.scripts.OnClick(secondary)
+                row:Release()
+                assert(not secondary.listening and not secondary.gamepadEnabled)
+                assert(not secondary.scripts.OnGamePadButtonDown)
+            end
+            assert(NS.app.db.focusHotkeyKey=='PAD2' and NS.app.db.focusHotkeyKey2=='PAD4')
+            local rows={}
+            for _,initializer in ipairs({hotkeyButton,focusButton}) do
+                local row=CreateFrame('Frame',nil,UIParent)
+                row.Text=row:CreateFontString()
+                for name,value in pairs(QuestTargetsBindingSettingMixin) do row[name]=value end
+                row:OnLoad(); row:Init(initializer)
+                assert(row.Text.point[2]==row.Buttons[1], 'base Init overwrote binding row anchors')
+                rows[#rows+1]=row
+            end
+            local secondary=rows[1].Buttons[2]
+            secondary.scripts.OnClick(secondary)
+            secondary.scripts.OnKeyDown(secondary,'PAD2')
+            assert(rows[2].Buttons[1].text=='PAD4', 'other row kept a reassigned key on screen')
+            assert(rows[2].Buttons[2].text==NS.L('unbound'))
+            for _,row in ipairs(rows) do row:Release() end
             local captionRow
             for _,item in ipairs(layout.initializers) do
                 if item.data.kind=='editbox' then captionRow=item end
@@ -699,7 +859,7 @@ class QuestTargetsTests(unittest.TestCase):
             assert(GetBindingKey('CLICK QuestTargetsMaster:LeftButton') == nil)
         ''')
 
-    def test_hotkey_replacement_and_delete_remove_both_previous_bindings(self):
+    def test_hotkey_replacement_and_delete_preserve_the_other_binding(self):
         self.lua.execute('''
             boot(); NS.UI.Settings(NS.app)
             local keys={'G','H'}
@@ -715,11 +875,11 @@ class QuestTargetsTests(unittest.TestCase):
             local hotkey=NS.UI.settings.hotkey
             hotkey.scripts.OnClick(hotkey)
             hotkey.scripts.OnKeyDown(hotkey,'J')
-            assert(#keys==1 and keys[1]=='J')
+            assert(#keys==2 and keys[1]=='J' and keys[2]=='H')
             keys={'J','K'}
             hotkey.scripts.OnClick(hotkey)
             hotkey.scripts.OnKeyDown(hotkey,'DELETE')
-            assert(#keys==0)
+            assert(#keys==1 and keys[1]=='K')
         ''')
 
     def test_questie_buttons_do_not_protect_tracker_and_recycled_line_is_resynced(self):

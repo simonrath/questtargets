@@ -45,6 +45,13 @@ to use its tracker.
 - In-game feedback button linking to [the public feedback form](https://feedback.jacknine.org); no GitHub account needed.
 
 Use `/qt` to open the quest window and `/qt settings` to open settings.
+Under **Hotkeys**, Master and Focus each have two binding buttons side by side,
+like WoW's native keybinding rows. Click either slot and press a keyboard key or
+an Xbox/controller button. Changing or clearing one slot keeps the other binding;
+when the first slot is cleared, the remaining binding moves into it. The controller must already be recognized by WoW
+and native gamepad input must be enabled (`/console GamePadEnable 1` on clients
+that support it). Escape cancels assignment; Delete or Backspace clears the selected slot.
+Clients without the gamepad frame API retain keyboard binding support.
 To position the master button, open **Settings → Master button → Move master button**.
 Outside combat, drag the handle with the left mouse button; the native move cursor
 shows where you can drag. Choose **Done** to save, **Cancel** or Escape to restore
