@@ -14,8 +14,6 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: simonrath/questtargets
-      TEMP: ${{ runner.temp }}
-      TMPDIR: ${{ runner.temp }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -23,6 +21,9 @@ jobs:
           persist-credentials: false
       - name: Build and test the reviewed release
         shell: bash
+        env:
+          TEMP: ${{ runner.temp }}
+          TMPDIR: ${{ runner.temp }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = 692cb6c051c287e51745134c7d28fa795b43548d
