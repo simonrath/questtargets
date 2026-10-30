@@ -1,0 +1,43 @@
+name: Publish Quest Targets 1.4.0
+
+on:
+  push:
+    branches: [codex/publish-v1.4.0]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: simonrath/questtargets
+      TEMP: ${{ runner.temp }}
+      TMPDIR: ${{ runner.temp }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 692cb6c051c287e51745134c7d28fa795b43548d
+          persist-credentials: false
+      - name: Build and test the reviewed release
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 692cb6c051c287e51745134c7d28fa795b43548d
+          test "$(gh api repos/simonrath/questtargets/releases/429049417 --jq .tag_name)" = v1.4.0
+          test "$(gh api repos/simonrath/questtargets/releases/429049417 --jq .draft)" = true
+          pwsh -NoProfile -File tools/package_quest_targets.ps1
+          pwsh -NoProfile -File tools/package_quest_targets.ps1 -CurseForge
+          python3 -m venv "$RUNNER_TEMP/release-tests"
+          "$RUNNER_TEMP/release-tests/bin/python" -m pip install -r tests/requirements.txt
+          "$RUNNER_TEMP/release-tests/bin/python" -m unittest discover -s tests -p 'test_quest_targets*.py'
+          (cd dist && sha256sum QuestTargets-1.4.0*.zip > SHA256SUMS.txt)
+      - name: Upload verified packages and publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload v1.4.0 dist/QuestTargets-1.4.0*.zip dist/SHA256SUMS.txt
+          test "$(gh release view v1.4.0 --json assets --jq '.assets | length')" = 7
+          gh release edit v1.4.0 --draft=false --latest
