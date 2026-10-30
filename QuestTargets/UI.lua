@@ -27,6 +27,13 @@ end
 
 local function replaceBindingPair(command, target, first, second)
     local oldFirst, oldSecond = GetBindingKey(command)
+    local displaced = {}
+    for _, key in pairs({first, second}) do
+        local owner = GetBindingAction and GetBindingAction(key)
+        if owner and owner ~= "" and owner ~= command then
+            displaced[owner] = {GetBindingKey(owner)}
+        end
+    end
     if oldFirst then SetBinding(oldFirst) end
     if oldSecond and oldSecond ~= oldFirst then SetBinding(oldSecond) end
     local keys = {first, second}
@@ -37,6 +44,14 @@ local function replaceBindingPair(command, target, first, second)
             if second then SetBinding(second) end
             if oldFirst then SetBindingClick(oldFirst, target, "LeftButton") end
             if oldSecond then SetBindingClick(oldSecond, target, "LeftButton") end
+            for owner, original in pairs(displaced) do
+                local currentFirst, currentSecond = GetBindingKey(owner)
+                if currentFirst then SetBinding(currentFirst) end
+                if currentSecond then SetBinding(currentSecond) end
+                for index = 1, 2 do
+                    if original[index] then SetBinding(original[index], owner) end
+                end
+            end
             return false
         end
     end
@@ -72,7 +87,16 @@ function UI.SyncFocusBinding(app)
     end
 end
 
+local BINDING_CONFIRMATION = "QUESTTARGETS_BINDING_CONFLICT"
+
+local function cancelBindingConfirmation()
+    if not UI.bindingConfirmation then return end
+    UI.bindingConfirmation = nil
+    if StaticPopup_Hide then StaticPopup_Hide(BINDING_CONFIRMATION) end
+end
+
 local function stopBindingCapture()
+    cancelBindingConfirmation()
     local capture = UI.bindingCapture
     if not capture then return end
     UI.bindingCapture = nil
@@ -81,6 +105,60 @@ local function stopBindingCapture()
     setGamePadCapture(capture.button, false)
     capture.button:SetScript("OnKeyDown", nil)
     capture.refresh()
+end
+
+UI.CancelBindingAssignment = stopBindingCapture
+
+local function bindingActionName(command)
+    if command == MASTER_BINDING then return L("masterDefault") end
+    if command == FOCUS_BINDING then return L("focusHotkey") end
+    return GetBindingName and GetBindingName(command) or command
+end
+
+local function requestBindingSlot(button, app, focused, binding, slot, refresh)
+    local command = focused and FOCUS_BINDING or MASTER_BINDING
+    local oldAction = binding and GetBindingAction and GetBindingAction(binding)
+    if not oldAction or oldAction == "" or oldAction == command then
+        setBindingSlot(app, focused, binding, slot)
+        refresh()
+        return
+    end
+    -- Fail closed if a client cannot display its native confirmation dialog.
+    if not StaticPopupDialogs or not StaticPopup_Show then return end
+    local first, second = GetBindingKey(command)
+    local pending = {button=button, app=app, focused=focused, slot=slot,
+        binding=binding, oldAction=oldAction, command=command,
+        first=first, second=second, refresh=refresh}
+    UI.bindingConfirmation = pending
+    local message = string.format(L("bindingConflict"), bindingText(binding),
+        bindingActionName(oldAction), bindingActionName(command))
+    StaticPopupDialogs[BINDING_CONFIRMATION] = {
+        text="%s",
+        button1=L("bindingReplace"), button2=CANCEL or L("masterMoveCancel"),
+        timeout=0, whileDead=true, hideOnEscape=true,
+        OnAccept=function(self, data)
+            data = data or self.data
+            if not data or UI.bindingConfirmation ~= data then return end
+            UI.bindingConfirmation = nil
+            local currentFirst, currentSecond = GetBindingKey(data.command)
+            if InCombatLockdown() or GetBindingAction(data.binding) ~= data.oldAction
+                or currentFirst ~= data.first or currentSecond ~= data.second then
+                print("|cffffd100Quest Targets:|r " .. L("bindingConflictChanged"))
+            else
+                setBindingSlot(data.app, data.focused, data.binding, data.slot)
+            end
+            data.refresh()
+        end,
+        OnCancel=function()
+            if UI.bindingConfirmation == pending then UI.bindingConfirmation = nil end
+        end,
+        OnHide=function()
+            if UI.bindingConfirmation == pending then UI.bindingConfirmation = nil end
+        end,
+    }
+    if not StaticPopup_Show(BINDING_CONFIRMATION, message, nil, pending) then
+        UI.bindingConfirmation = nil
+    end
 end
 
 local function beginBindingCapture(button, app, focused, slot, refresh)
@@ -95,22 +173,24 @@ local function beginBindingCapture(button, app, focused, slot, refresh)
         if key == "LSHIFT" or key == "RSHIFT" or key == "SHIFT"
             or key == "LCTRL" or key == "RCTRL" or key == "CTRL"
             or key == "LALT" or key == "RALT" or key == "ALT" then return end
-        if not InCombatLockdown() and key ~= "ESCAPE" and key ~= "UNKNOWN" then
-            local binding
+        local assign = not InCombatLockdown() and key ~= "ESCAPE" and key ~= "UNKNOWN"
+        local binding
+        if assign then
             if key ~= "DELETE" and key ~= "BACKSPACE" then
                 binding = (IsControlKeyDown() and "CTRL-" or "")
                     .. (IsAltKeyDown() and "ALT-" or "")
                     .. (IsShiftKeyDown() and "SHIFT-" or "") .. key
             end
-            setBindingSlot(app, focused, binding, slot)
         end
         stopBindingCapture()
+        if assign then requestBindingSlot(self, app, focused, binding, slot, refresh) end
     end)
     setGamePadCapture(button, true)
     if not button.questTargetsHideHook then
         button.questTargetsHideHook = true
         button:HookScript("OnHide", function(self)
             if UI.bindingCapture and UI.bindingCapture.button == self then stopBindingCapture() end
+            if UI.bindingConfirmation and UI.bindingConfirmation.button == self then cancelBindingConfirmation() end
         end)
     end
 end
@@ -773,6 +853,10 @@ function QuestTargetsBindingSettingMixin:Init(initializer)
 end
 
 function QuestTargetsBindingSettingMixin:Release()
+    local pending = UI.bindingConfirmation
+    if pending and (pending.button == self.Buttons[1] or pending.button == self.Buttons[2]) then
+        cancelBindingConfirmation()
+    end
     local capture = UI.bindingCapture
     if capture and (capture.button == self.Buttons[1] or capture.button == self.Buttons[2]) then
         stopBindingCapture()

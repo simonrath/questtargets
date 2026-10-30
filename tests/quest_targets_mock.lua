@@ -183,9 +183,44 @@ Settings = {RegisterCanvasLayoutCategory = function(panel, name) return {ID=42, 
         _G.openCategory = category
     end}
 function GetBindingKey(action) return unpack((_G.bindings or {})[action] or {}) end
-function SetBinding(key)
+function GetBindingAction(key)
+    for action, keys in pairs(_G.bindings or {}) do
+        for _, bound in ipairs(keys) do if key==bound then return action end end
+    end
+    return ''
+end
+function GetBindingName(action) return _G['BINDING_NAME_'..action] or action end
+function prepareBindingPopups()
+    StaticPopupDialogs = {}
+    bindingPopup = nil
+    StaticPopup_Show = function(which, text1, text2, data)
+        bindingPopup = {which=which, data=data, shown=true,
+            text=string.format(StaticPopupDialogs[which].text,text1,text2)}
+        return bindingPopup
+    end
+    StaticPopup_Hide = function(which)
+        local popup = bindingPopup
+        if popup and popup.which == which and popup.shown then
+            popup.shown = false
+            local definition = StaticPopupDialogs[which]
+            if definition.OnHide then definition.OnHide(popup) end
+        end
+    end
+end
+function acceptBindingPopup()
+    local popup = bindingPopup
+    assert(popup and popup.shown, 'no binding confirmation to accept')
+    StaticPopupDialogs[popup.which].OnAccept(popup, popup.data)
+    StaticPopup_Hide(popup.which)
+end
+function SetBinding(key, command)
     for _, keys in pairs(_G.bindings or {}) do
         for i=#keys,1,-1 do if keys[i]==key then table.remove(keys,i) end end
+    end
+    if command then
+        _G.bindings = _G.bindings or {}
+        _G.bindings[command] = _G.bindings[command] or {}
+        table.insert(_G.bindings[command],key)
     end
     return true
 end

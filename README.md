@@ -51,6 +51,11 @@ an Xbox/controller button. Changing or clearing one slot keeps the other binding
 when the first slot is cleared, the remaining binding moves into it. The controller must already be recognized by WoW
 and native gamepad input must be enabled (`/console GamePadEnable 1` on clients
 that support it). Escape cancels assignment; Delete or Backspace clears the selected slot.
+If a key is already assigned to another action, WoW's native confirmation dialog
+names that action before anything changes. Choose **Rebind** to replace it or
+**Cancel** / Escape to keep both existing bindings. Closing settings, starting
+combat, or changing the selected key or target bindings while the dialog is open
+cancels the pending assignment.
 Clients without the gamepad frame API retain keyboard binding support.
 To position the master button, open **Settings → Master button → Move master button**.
 Outside combat, drag the handle with the left mouse button; the native move cursor

@@ -313,7 +313,10 @@ class QuestTargetsTests(unittest.TestCase):
             assert(not panel.hotkey.listening and panel.focusHotkey2.listening)
             NS.UI.SelectSettingsTab(1)
             assert(not panel.focusHotkey2.listening)
+            prepareBindingPopups()
             bind(panel.hotkey2,'PAD2')
+            assert(GetBindingAction('PAD2')=='CLICK QuestTargetsFocused:LeftButton')
+            acceptBindingPopup()
             NS.UI.SyncFocusBinding(NS.app)
             first,second=GetBindingKey('CLICK QuestTargetsMaster:LeftButton')
             assert(first=='J' and second=='PAD2', 'focus refresh reclaimed a reassigned key')
@@ -609,11 +612,22 @@ class QuestTargetsTests(unittest.TestCase):
                 rows[#rows+1]=row
             end
             local secondary=rows[1].Buttons[2]
+            prepareBindingPopups()
             secondary.scripts.OnClick(secondary)
             secondary.scripts.OnKeyDown(secondary,'PAD2')
+            assert(rows[2].Buttons[1].text=='PAD2', 'binding changed before confirmation')
+            acceptBindingPopup()
             assert(rows[2].Buttons[1].text=='PAD4', 'other row kept a reassigned key on screen')
             assert(rows[2].Buttons[2].text==NS.L('unbound'))
+            bindings.JUMP={'SPACE'}
+            local focusSecondary=rows[2].Buttons[2]
+            focusSecondary.scripts.OnClick(focusSecondary)
+            focusSecondary.scripts.OnKeyDown(focusSecondary,'SPACE')
+            local pendingPopup=bindingPopup
+            assert(pendingPopup.shown)
             for _,row in ipairs(rows) do row:Release() end
+            StaticPopupDialogs[pendingPopup.which].OnAccept(pendingPopup,pendingPopup.data)
+            assert(GetBindingAction('SPACE')=='JUMP', 'released row applied an obsolete confirmation')
             local captionRow
             for _,item in ipairs(layout.initializers) do
                 if item.data.kind=='editbox' then captionRow=item end

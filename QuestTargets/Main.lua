@@ -235,6 +235,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         -- writing any protected attributes from the event handler.
         Core.ConfirmSearchResult()
     elseif event == "PLAYER_REGEN_DISABLED" then
+        UI.CancelBindingAssignment()
         UI.EndMasterMove(app, true)
         UI.StopMoving(app.db)
         app.dirty = true
