@@ -30,6 +30,8 @@ to use its tracker.
 
 ## Features
 
+Release maintainers: [Set up automatic CurseForge publishing](docs/curseforge-publishing.md).
+
 Quest Targets also appears under **Options → Keybindings → Quest Targets**.
 Both target actions support the native primary and secondary binding slots.
 Native changes, including clearing a focused-quest binding, are kept across

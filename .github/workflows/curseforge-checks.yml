@@ -1,0 +1,19 @@
+name: Check CurseForge publisher
+
+on:
+  push:
+    paths: ['tools/publish_curseforge.py', 'tools/curseforge.json', 'tests/test_curseforge_publish.py', '.github/workflows/curseforge-*.yml']
+  pull_request:
+    paths: ['tools/publish_curseforge.py', 'tools/curseforge.json', 'tests/test_curseforge_publish.py', '.github/workflows/curseforge-*.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p 'test_curseforge_publish.py'

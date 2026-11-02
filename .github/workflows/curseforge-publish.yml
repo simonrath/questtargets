@@ -1,0 +1,55 @@
+name: Publish GitHub release to CurseForge
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing stable GitHub release tag (for example v1.4.1)
+        required: true
+        type: string
+      dry_run:
+        description: Validate and preview only; do not upload
+        type: boolean
+        default: true
+      flavor:
+        description: All flavors, or one flavor when continuing a partial upload
+        type: choice
+        default: All
+        options: [All, Classic, TBC, Mists, Forever, Retail]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: curseforge-${{ inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.repository == 'simonrath/questtargets' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (vars.CURSEFORGE_ENABLED == 'true' && !github.event.release.prerelease && !github.event.release.draft))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # Atomic per-release/per-flavor upload reservation refs.
+    steps:
+      - name: Check out publisher and player changelogs
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Test publisher without external uploads
+        run: python3 -m unittest discover -s tests -p 'test_curseforge_publish.py'
+      - name: Validate or publish existing release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CURSEFORGE_ENABLED: ${{ vars.CURSEFORGE_ENABLED }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+          FLAVOR: ${{ inputs.flavor || 'All' }}
+          MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '--publish' }}
+        run: python3 tools/publish_curseforge.py --tag "$RELEASE_TAG" --flavor "$FLAVOR" "$MODE"
