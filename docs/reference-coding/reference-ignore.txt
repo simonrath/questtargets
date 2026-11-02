@@ -1,0 +1,13 @@
+Questie/Database/
+RXPGuides/Guides/
+RXPGuides/lang/
+*.blp
+*.tga
+*.png
+*.jpg
+*.ogg
+*.mp3
+RXPGuides/locale/
+RXPGuides/DB/
+Questie/ExternalScripts(DONOTINCLUDEINRELEASE)/
+*.7z

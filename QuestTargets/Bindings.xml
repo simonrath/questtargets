@@ -1,0 +1,4 @@
+<Bindings>
+    <Binding name="CLICK QuestTargetsMaster:LeftButton" header="QUESTTARGETS" category="Quest Targets" />
+    <Binding name="CLICK QuestTargetsFocused:LeftButton" category="Quest Targets" />
+</Bindings>

@@ -31,6 +31,39 @@ class ProximityTests(unittest.TestCase):
             end
         ''')
 
+    def test_serialized_maps_are_parsed_without_executing_lua(self):
+        self.spatial()
+        self.lua.execute("""
+            local p=NS.Proximity
+            loadstring=function() error('Database text must never execute') end
+            LibQuestieDB.Support.Get=function() return {private={
+                areaIdToUiMapId='return { [215] = 1, -- native zone\\n [99]=999; }',
+                areaIdToUiMapIdOverride='return {[215]=1412}'}} end
+            p.Register(LibQuestieDB,10,'Waldwolf'); p.Sample()
+            assert(p.Distance('Waldwolf')==100)
+            assert(p.maps[215]==1412 and p.maps[99]==999)
+        """)
+
+    def test_invalid_maps_fail_closed_and_table_maps_still_work(self):
+        for value in ('return {[215]=1412}; injected=true',
+                      'return {[215]=1412, [99]=unknown()}',
+                      'return {[215]=1412 [99]=999}',
+                      'return {[215]=-1}',
+                      'return {[215]=0/0}'):
+            with self.subTest(value=value):
+                self.setUp()
+                self.spatial()
+                self.lua.globals().mapSource=value
+                self.lua.execute("""
+                    LibQuestieDB.Support.Get=function() return {private={
+                        areaIdToUiMapId=mapSource,
+                        areaIdToUiMapIdOverride={[99]=999}}} end
+                    NS.Proximity.Register(LibQuestieDB,10,'Waldwolf')
+                    NS.Proximity.Sample(); NS.Proximity.Distance('Waldwolf')
+                    assert(NS.Proximity.maps[215]==nil, 'Accepted malformed map')
+                    assert(NS.Proximity.maps[99]==999 and not injected)
+                """)
+
     def test_classic_era_keeps_native_spawn_coordinates(self):
         self.spatial()
         self.lua.execute('''

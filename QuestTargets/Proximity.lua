@@ -37,13 +37,27 @@ end
 
 local function mapTable(value)
     if type(value) == "table" then return value end
-    -- QuestieDB's documented support contract publishes these maps as Lua strings.
-    if type(value) ~= "string" or not loadstring then return {} end
-    local chunk = loadstring(value)
-    if not chunk then return {} end
-    if setfenv then setfenv(chunk, {}) end
-    local ok, result = pcall(chunk)
-    return ok and type(result) == "table" and result or {}
+    -- QuestieDB publishes numeric maps as "return { [area] = map, -- comment }".
+    -- Read only that data grammar; never compile or execute provider text.
+    if type(value) ~= "string" then return {} end
+    local text = value:gsub("%-%-[^\r\n]*", "")
+    local body = text:match("^%s*return%s*{(.-)}%s*$")
+    if not body then return {} end
+    local result = {}
+    while not body:match("^%s*$") do
+        local area, uiMap, nextIndex = body:match("^%s*%[%s*(%d+)%s*%]%s*=%s*(%d+)%s*()")
+        area, uiMap = tonumber(area), tonumber(uiMap)
+        -- Zero entries are intentional QuestieDB sentinels, including overrides.
+        if not area or not uiMap
+            or not number(area) or not number(uiMap) then return {} end
+        result[area] = uiMap
+        body = body:sub(nextIndex)
+        if body ~= "" then
+            if not body:match("^[,;]") then return {} end
+            body = body:sub(2)
+        end
+    end
+    return result
 end
 
 local function maps()

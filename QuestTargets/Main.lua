@@ -155,6 +155,7 @@ end
 local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_LOGIN")
+events:RegisterEvent("UPDATE_BINDINGS")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("PLAYER_TARGET_CHANGED")
 events:RegisterEvent("QUEST_LOG_UPDATE")
@@ -173,6 +174,7 @@ events:RegisterEvent("ZONE_CHANGED_INDOORS")
 events:SetScript("OnEvent", function(_, event, loadedName)
     if event == "ADDON_LOADED" then
         if loadedName ~= addonName then
+            if app.loggedIn then UI.RegisterSettings(app) end
             if loadedName == "QuestieDB" and app.db then app:Schedule() end
             return
         end
@@ -227,7 +229,15 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         app.db.autoMark = app.db.autoMark ~= false
         local icon = app.db.markerIcon
         if type(icon) ~= "number" or icon < 1 or icon > 8 or icon % 1 ~= 0 then app.db.markerIcon = 8 end
+        NS.UpdateBindingLabels()
+    elseif event == "UPDATE_BINDINGS" then
+        if app.db and app.focusBindingsInitialized then
+            app.db.focusHotkeyKey, app.db.focusHotkeyKey2 = GetBindingKey("CLICK QuestTargetsFocused:LeftButton")
+            app:Schedule()
+        end
     elseif event == "PLAYER_LOGIN" then
+        app.loggedIn = true
+        UI.RegisterSettings(app)
         showMissingDatabase()
         app:Schedule()
     elseif event == "PLAYER_TARGET_CHANGED" then
@@ -235,11 +245,13 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         -- writing any protected attributes from the event handler.
         Core.ConfirmSearchResult()
     elseif event == "PLAYER_REGEN_DISABLED" then
+        UI.CancelBindingAssignment()
         UI.EndMasterMove(app, true)
         UI.StopMoving(app.db)
         app.dirty = true
         UI.UpdateStatus(app)
     elseif event == "PLAYER_REGEN_ENABLED" then
+        UI.RegisterSettings(app)
         UI.StopMoving(app.db)
         app:Refresh(false)
     else

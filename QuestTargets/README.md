@@ -1,6 +1,6 @@
-# Quest Targets — 1.3.0
+# Quest Targets — 1.4.1
 
-Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever Beta 1.60.1, Build 70170 (16001)** und **Retail 12.1 (120100)**. Quest Targets bietet einen
+Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever 1.60.1, Build 70707 (16001)** und **Retail 12.1.5 (120105)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
 und Abgabe-NPCs.
 

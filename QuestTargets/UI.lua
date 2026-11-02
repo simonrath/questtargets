@@ -27,6 +27,13 @@ end
 
 local function replaceBindingPair(command, target, first, second)
     local oldFirst, oldSecond = GetBindingKey(command)
+    local displaced = {}
+    for _, key in pairs({first, second}) do
+        local owner = GetBindingAction and GetBindingAction(key)
+        if owner and owner ~= "" and owner ~= command then
+            displaced[owner] = {GetBindingKey(owner)}
+        end
+    end
     if oldFirst then SetBinding(oldFirst) end
     if oldSecond and oldSecond ~= oldFirst then SetBinding(oldSecond) end
     local keys = {first, second}
@@ -37,6 +44,14 @@ local function replaceBindingPair(command, target, first, second)
             if second then SetBinding(second) end
             if oldFirst then SetBindingClick(oldFirst, target, "LeftButton") end
             if oldSecond then SetBindingClick(oldSecond, target, "LeftButton") end
+            for owner, original in pairs(displaced) do
+                local currentFirst, currentSecond = GetBindingKey(owner)
+                if currentFirst then SetBinding(currentFirst) end
+                if currentSecond then SetBinding(currentSecond) end
+                for index = 1, 2 do
+                    if original[index] then SetBinding(original[index], owner) end
+                end
+            end
             return false
         end
     end
@@ -66,13 +81,29 @@ end
 function UI.SyncFocusBinding(app)
     if InCombatLockdown() then return end
     local first, second = GetBindingKey(FOCUS_BINDING)
-    if first ~= app.db.focusHotkeyKey or second ~= app.db.focusHotkeyKey2 then
-        replaceBindingPair(FOCUS_BINDING, "QuestTargetsFocused",
-            app.db.focusHotkeyKey, app.db.focusHotkeyKey2)
+    if not app.focusBindingsInitialized then
+        app.focusBindingsInitialized = true
+        -- Migrate legacy saved bindings once. Afterwards WoW's binding set is
+        -- authoritative, including an intentionally cleared native assignment.
+        if not app.db.focusBindingsNative and not first and not second then
+            replaceBindingPair(FOCUS_BINDING, "QuestTargetsFocused",
+                app.db.focusHotkeyKey, app.db.focusHotkeyKey2)
+        end
+        app.db.focusBindingsNative = true
     end
+    app.db.focusHotkeyKey, app.db.focusHotkeyKey2 = GetBindingKey(FOCUS_BINDING)
+end
+
+local BINDING_CONFIRMATION = "QUESTTARGETS_BINDING_CONFLICT"
+
+local function cancelBindingConfirmation()
+    if not UI.bindingConfirmation then return end
+    UI.bindingConfirmation = nil
+    if StaticPopup_Hide then StaticPopup_Hide(BINDING_CONFIRMATION) end
 end
 
 local function stopBindingCapture()
+    cancelBindingConfirmation()
     local capture = UI.bindingCapture
     if not capture then return end
     UI.bindingCapture = nil
@@ -81,6 +112,60 @@ local function stopBindingCapture()
     setGamePadCapture(capture.button, false)
     capture.button:SetScript("OnKeyDown", nil)
     capture.refresh()
+end
+
+UI.CancelBindingAssignment = stopBindingCapture
+
+local function bindingActionName(command)
+    if command == MASTER_BINDING then return L("masterDefault") end
+    if command == FOCUS_BINDING then return L("focusHotkey") end
+    return GetBindingName and GetBindingName(command) or command
+end
+
+local function requestBindingSlot(button, app, focused, binding, slot, refresh)
+    local command = focused and FOCUS_BINDING or MASTER_BINDING
+    local oldAction = binding and GetBindingAction and GetBindingAction(binding)
+    if not oldAction or oldAction == "" or oldAction == command then
+        setBindingSlot(app, focused, binding, slot)
+        refresh()
+        return
+    end
+    -- Fail closed if a client cannot display its native confirmation dialog.
+    if not StaticPopupDialogs or not StaticPopup_Show then return end
+    local first, second = GetBindingKey(command)
+    local pending = {button=button, app=app, focused=focused, slot=slot,
+        binding=binding, oldAction=oldAction, command=command,
+        first=first, second=second, refresh=refresh}
+    UI.bindingConfirmation = pending
+    local message = string.format(L("bindingConflict"), bindingText(binding),
+        bindingActionName(oldAction), bindingActionName(command))
+    StaticPopupDialogs[BINDING_CONFIRMATION] = {
+        text="%s",
+        button1=L("bindingReplace"), button2=CANCEL or L("masterMoveCancel"),
+        timeout=0, whileDead=true, hideOnEscape=true,
+        OnAccept=function(self, data)
+            data = data or self.data
+            if not data or UI.bindingConfirmation ~= data then return end
+            UI.bindingConfirmation = nil
+            local currentFirst, currentSecond = GetBindingKey(data.command)
+            if InCombatLockdown() or GetBindingAction(data.binding) ~= data.oldAction
+                or currentFirst ~= data.first or currentSecond ~= data.second then
+                print("|cffffd100Quest Targets:|r " .. L("bindingConflictChanged"))
+            else
+                setBindingSlot(data.app, data.focused, data.binding, data.slot)
+            end
+            data.refresh()
+        end,
+        OnCancel=function()
+            if UI.bindingConfirmation == pending then UI.bindingConfirmation = nil end
+        end,
+        OnHide=function()
+            if UI.bindingConfirmation == pending then UI.bindingConfirmation = nil end
+        end,
+    }
+    if not StaticPopup_Show(BINDING_CONFIRMATION, message, nil, pending) then
+        UI.bindingConfirmation = nil
+    end
 end
 
 local function beginBindingCapture(button, app, focused, slot, refresh)
@@ -95,22 +180,24 @@ local function beginBindingCapture(button, app, focused, slot, refresh)
         if key == "LSHIFT" or key == "RSHIFT" or key == "SHIFT"
             or key == "LCTRL" or key == "RCTRL" or key == "CTRL"
             or key == "LALT" or key == "RALT" or key == "ALT" then return end
-        if not InCombatLockdown() and key ~= "ESCAPE" and key ~= "UNKNOWN" then
-            local binding
+        local assign = not InCombatLockdown() and key ~= "ESCAPE" and key ~= "UNKNOWN"
+        local binding
+        if assign then
             if key ~= "DELETE" and key ~= "BACKSPACE" then
                 binding = (IsControlKeyDown() and "CTRL-" or "")
                     .. (IsAltKeyDown() and "ALT-" or "")
                     .. (IsShiftKeyDown() and "SHIFT-" or "") .. key
             end
-            setBindingSlot(app, focused, binding, slot)
         end
         stopBindingCapture()
+        if assign then requestBindingSlot(self, app, focused, binding, slot, refresh) end
     end)
     setGamePadCapture(button, true)
     if not button.questTargetsHideHook then
         button.questTargetsHideHook = true
         button:HookScript("OnHide", function(self)
             if UI.bindingCapture and UI.bindingCapture.button == self then stopBindingCapture() end
+            if UI.bindingConfirmation and UI.bindingConfirmation.button == self then cancelBindingConfirmation() end
         end)
     end
 end
@@ -681,6 +768,10 @@ function QuestTargetsCaptionSettingMixin:OnLoad()
     end)
     edit:SetScript("OnEditFocusLost", function(input)
         if not self.data then return end
+        if self.data.enabled and not self.data.enabled() then
+            input:SetText(self.data.get())
+            return
+        end
         local value = NS.Core.Clean(input:GetText())
         if value ~= self.data.get() then self.data.set(value) end
         input:SetText(self.data.get())
@@ -691,6 +782,13 @@ function QuestTargetsCaptionSettingMixin:Init(initializer)
     SettingsListElementMixin.Init(self, initializer)
     self.Text:SetText(initializer.data.name)
     self.EditBox:SetText(initializer.data.get())
+    self:EvaluateState()
+end
+
+function QuestTargetsCaptionSettingMixin:EvaluateState()
+    local enabled = not self.data.enabled or self.data.enabled()
+    self.EditBox:SetEnabled(enabled)
+    self.Text:SetAlpha(enabled and 1 or 0.5)
 end
 
 function QuestTargetsCaptionSettingMixin:Release()
@@ -773,6 +871,10 @@ function QuestTargetsBindingSettingMixin:Init(initializer)
 end
 
 function QuestTargetsBindingSettingMixin:Release()
+    local pending = UI.bindingConfirmation
+    if pending and (pending.button == self.Buttons[1] or pending.button == self.Buttons[2]) then
+        cancelBindingConfirmation()
+    end
     local capture = UI.bindingCapture
     if capture and (capture.button == self.Buttons[1] or capture.button == self.Buttons[2]) then
         stopBindingCapture()
@@ -783,10 +885,7 @@ function QuestTargetsBindingSettingMixin:Release()
 end
 
 local function nativeSettings(app)
-    if UI.nativeCategory then
-        Settings.OpenToCategory(UI.nativeCategory:GetID())
-        return
-    end
+    if UI.nativeCategory then return end
 
     local category, layout = Settings.RegisterVerticalLayoutCategory(L("title"))
     UI.nativeHeaders = {}
@@ -831,14 +930,15 @@ local function nativeSettings(app)
             return options:GetData()
         end)
         localizedRow(initializer, key)
-        return value
+        return value, initializer
     end
     local function refresh()
         for _, entry in ipairs(UI.nativeButtons) do
             local row = entry.initializer.row
             if row then row:RefreshBindings() end
         end
-        if SettingsPanel and SettingsPanel.RepairDisplay then SettingsPanel:RepairDisplay() end
+        -- Use the native attribute delegate, never the shared panel's method.
+        if SettingsInbound and SettingsInbound.RepairDisplay then SettingsInbound.RepairDisplay() end
     end
 
     section("display")
@@ -885,7 +985,7 @@ local function nativeSettings(app)
         function() return {strsplit(",", L("markers"))} end)
 
     section("master")
-    dropdownSetting("masterAppearance", 1,
+    local _, appearance = dropdownSetting("masterAppearance", 1,
         function() return app.db.masterAppearance == "modern" and 2 or 1 end,
         function(value)
             app.db.masterAppearance = value == 2 and "modern" or "classic"
@@ -896,12 +996,18 @@ local function nativeSettings(app)
     local width = sliderSetting("widthLabel", "masterScaleX", 0.3, 2, 0.01)
     local height = sliderSetting("heightLabel", "masterScaleY", 0.3, 2, 0.01)
     local modernScale = sliderSetting("scaleFactor", "masterModernScale", 0.3, 2, 0.01)
-    width:AddShownPredicate(function() return app.db.masterAppearance ~= "modern" end)
-    height:AddShownPredicate(function() return app.db.masterAppearance ~= "modern" end)
-    modernScale:AddShownPredicate(function() return app.db.masterAppearance == "modern" end)
+    width:SetParentInitializer(appearance)
+    height:SetParentInitializer(appearance)
+    modernScale:SetParentInitializer(appearance)
+    -- Shown predicates also run in Blizzard's unwrapped global Settings search.
+    -- Modify predicates only disable controls during the secure row setup.
+    width:AddModifyPredicate(function() return app.db.masterAppearance ~= "modern" end)
+    height:AddModifyPredicate(function() return app.db.masterAppearance ~= "modern" end)
+    modernScale:AddModifyPredicate(function() return app.db.masterAppearance == "modern" end)
 
     local caption = Settings.CreateElementInitializer("QuestTargetsCaptionSettingTemplate", {
         name = L("caption"),
+        enabled = function() return app.db.masterAppearance ~= "modern" end,
         get = function() return app.db.masterText or "" end,
         set = function(value)
             app.db.masterText = NS.Core.Clean(value)
@@ -910,7 +1016,7 @@ local function nativeSettings(app)
     })
     layout:AddInitializer(caption)
     UI.nativeCaption = caption
-    caption:AddShownPredicate(function() return app.db.masterAppearance ~= "modern" end)
+    caption:SetParentInitializer(appearance)
 
     UI.nativeMove = Settings.CreateElementInitializer("QuestTargetsMoveSettingTemplate", {
         name = L("masterMove"), buttonText = L("masterMoveStart"), help = L("masterMoveHelp"),
@@ -964,17 +1070,20 @@ local function nativeSettings(app)
 
     Settings.RegisterAddOnCategory(category)
     UI.nativeCategory = category
-    Settings.OpenToCategory(category:GetID())
 end
 
-function UI.Settings(app)
+-- Register at login so Blizzard can list us before our own Options shortcut is used.
+-- Registration must never navigate to or show the native Options window.
+function UI.RegisterSettings(app)
     if not app.db or InCombatLockdown() then return end
     if Settings and Settings.RegisterVerticalLayoutCategory then
         nativeSettings(app)
         return
     end
+    if not (Settings and Settings.RegisterCanvasLayoutCategory) and not InterfaceOptions_AddCategory then return end
     if not UI.settings then
         local panel = CreateFrame("Frame", "QuestTargetsSettings")
+        panel:Hide()
         UI.settings = panel
         panel:SetSize(600, 690)
         panel.titleText = label(panel, 20, -18, 540, "GameFontNormalLarge")
@@ -1111,6 +1220,15 @@ function UI.Settings(app)
             InterfaceOptions_AddCategory(panel)
         end
     end
+end
+
+function UI.Settings(app)
+    if not app.db or InCombatLockdown() then return end
+    UI.RegisterSettings(app)
+    if UI.nativeCategory then
+        Settings.OpenToCategory(UI.nativeCategory:GetID())
+        return
+    end
     UI.UpdateSettings(app)
     if Settings and Settings.OpenToCategory and UI.settingsCategoryID then Settings.OpenToCategory(UI.settingsCategoryID)
     elseif InterfaceOptionsFrame_OpenToCategory then InterfaceOptionsFrame_OpenToCategory(UI.settings) end
@@ -1231,6 +1349,7 @@ function UI.UpdateSettings(app)
 end
 
 function UI.ApplyLanguage(app)
+    NS.UpdateBindingLabels()
     -- Forever may not preserve newly written SavedVariables across /reload.
     -- Refresh existing native controls immediately instead of reloading the UI.
     if InCombatLockdown() then return end
@@ -1337,6 +1456,8 @@ function UI.Tooltip(row)
 end
 
 function UI.OpenQuest(entry)
+    -- Native helpers can change quest/map UI before reaching ShowUIPanel's guard.
+    if InCombatLockdown() then return end
     local questID = entry and entry.questID
     if type(questID) ~= "number" or questID <= 0 then return end
     local selectQuest = C_QuestLog and C_QuestLog["SetSelectedQuest"]

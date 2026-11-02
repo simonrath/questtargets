@@ -291,7 +291,8 @@ class QuestTargetsTests(unittest.TestCase):
             assert(first=='F' and second=='PAD1')
             assert(panel.hotkey.text=='F' and panel.hotkey2.text=='PAD1')
             assert(NS.app.db.focusHotkeyKey=='H' and NS.app.db.focusHotkeyKey2=='PAD2')
-            SetBinding('H'); SetBinding('PAD2')
+            -- WoW retains its binding set across reload; reset only addon state.
+            NS.app.focusBindingsInitialized=nil
             NS.UI.SyncFocusBinding(NS.app)
             first,second=GetBindingKey('CLICK QuestTargetsFocused:LeftButton')
             assert(first=='H' and second=='PAD2', 'second focus binding was lost on refresh')
@@ -313,7 +314,10 @@ class QuestTargetsTests(unittest.TestCase):
             assert(not panel.hotkey.listening and panel.focusHotkey2.listening)
             NS.UI.SelectSettingsTab(1)
             assert(not panel.focusHotkey2.listening)
+            prepareBindingPopups()
             bind(panel.hotkey2,'PAD2')
+            assert(GetBindingAction('PAD2')=='CLICK QuestTargetsFocused:LeftButton')
+            acceptBindingPopup()
             NS.UI.SyncFocusBinding(NS.app)
             first,second=GetBindingKey('CLICK QuestTargetsMaster:LeftButton')
             assert(first=='J' and second=='PAD2', 'focus refresh reclaimed a reassigned key')
@@ -417,7 +421,6 @@ class QuestTargetsTests(unittest.TestCase):
 
     def _check_native_compact_settings(self):
         self.lua.execute('''
-            boot()
             loadedAddons={Questie=false,RXPGuides=false}
             C_AddOns={IsAddOnLoaded=function(name) return loadedAddons[name] end}
             GetBuildInfo=function() return '', '', '', settingsTestInterface end
@@ -431,6 +434,8 @@ class QuestTargetsTests(unittest.TestCase):
                     return self.data.setting and self.data.setting:GetName() or self.data.name
                 end, AddModifyPredicate=function(self, predicate)
                     self.predicate=predicate
+                end, SetParentInitializer=function(self, parent)
+                    self.parentInitializer=parent
                 end, AddShownPredicate=function(self, predicate)
                     self.shownPredicate=predicate
                 end}
@@ -453,7 +458,8 @@ class QuestTargetsTests(unittest.TestCase):
                 end,
                 Release=function(self) self.data=nil end}
             MinimalSliderWithSteppersMixin={Label={Right=1}}
-            SettingsPanel={RepairDisplay=function(self) self.repairs=(self.repairs or 0)+1 end}
+            SettingsPanel={RepairDisplay=function() error('Direct native panel refresh') end}
+            SettingsInbound={RepairDisplay=function() nativeRepairs=(nativeRepairs or 0)+1 end}
             Settings={VarType={Boolean='boolean', Number='number'},
                 CreateElementInitializer=function(template,data)
                     local item=initializer(data)
@@ -502,9 +508,14 @@ class QuestTargetsTests(unittest.TestCase):
                         self.data[#self.data+1]={value=value,label=label}
                     end,GetData=function(self) return self.data end}
                 end,
-                RegisterAddOnCategory=function(category) nativeRegistered=category end,
+                RegisterAddOnCategory=function(category) nativeRegistered=category; nativeRegistrations=(nativeRegistrations or 0)+1 end,
                 OpenToCategory=function(id) assert(id==categoryID); nativeOpened=id end}
             nativeSettings={}
+            boot()
+            assert(nativeCategory and nativeRegistered==nativeCategory, 'Category missing at login')
+            assert(nativeOpened==nil, 'Login must not open Options')
+            event('PLAYER_LOGIN'); event('ADDON_LOADED','Blizzard_Settings')
+            assert(nativeRegistrations==1, 'Duplicate category registration')
             NS.UI.Settings(NS.app)
             assert(nativeRegistered==nativeCategory and nativeOpened==categoryID)
             assert(NS.UI.settings==nil and NS.UI.nativeCategory==nativeCategory)
@@ -609,17 +620,28 @@ class QuestTargetsTests(unittest.TestCase):
                 rows[#rows+1]=row
             end
             local secondary=rows[1].Buttons[2]
+            prepareBindingPopups()
             secondary.scripts.OnClick(secondary)
             secondary.scripts.OnKeyDown(secondary,'PAD2')
+            assert(rows[2].Buttons[1].text=='PAD2', 'binding changed before confirmation')
+            acceptBindingPopup()
             assert(rows[2].Buttons[1].text=='PAD4', 'other row kept a reassigned key on screen')
             assert(rows[2].Buttons[2].text==NS.L('unbound'))
+            bindings.JUMP={'SPACE'}
+            local focusSecondary=rows[2].Buttons[2]
+            focusSecondary.scripts.OnClick(focusSecondary)
+            focusSecondary.scripts.OnKeyDown(focusSecondary,'SPACE')
+            local pendingPopup=bindingPopup
+            assert(pendingPopup.shown)
             for _,row in ipairs(rows) do row:Release() end
+            StaticPopupDialogs[pendingPopup.which].OnAccept(pendingPopup,pendingPopup.data)
+            assert(GetBindingAction('SPACE')=='JUMP', 'released row applied an obsolete confirmation')
             local captionRow
             for _,item in ipairs(layout.initializers) do
                 if item.data.kind=='editbox' then captionRow=item end
             end
             assert(captionRow.template=='QuestTargetsCaptionSettingTemplate')
-            assert(captionRow.shownPredicate and captionRow.shownPredicate())
+            assert(not captionRow.shownPredicate and captionRow.data.enabled())
             captionRow.data.set('  Quest-Mobs  ')
             flush()
             assert(NS.app.db.masterText=='Quest-Mobs' and NS.UI.master.text=='Quest-Mobs')
@@ -639,7 +661,6 @@ class QuestTargetsTests(unittest.TestCase):
             captionFrame.EditBox:SetText('Discard')
             captionFrame.EditBox.scripts.OnEscapePressed(captionFrame.EditBox)
             assert(captionFrame.EditBox:GetText()=='Ziele')
-            captionFrame:Release()
             for _,item in ipairs(layout.initializers) do
                 if item.data.kind=='checkbox' and
                     item.data.setting.variable=='QUESTTARGETS_restedXPIntegration' then
@@ -682,12 +703,21 @@ class QuestTargetsTests(unittest.TestCase):
             assert(NS.app.db.menuScale==1.25)
             nativeSettings.QUESTTARGETS_masterAppearance.SetValue(2)
             assert(NS.app.db.masterAppearance=='modern')
+            assert(captionRow.parentInitializer.data.setting.variable=='QUESTTARGETS_masterAppearance')
+            captionFrame:EvaluateState()
+            assert(captionFrame.EditBox.enabled==false)
+            captionFrame.EditBox:SetText('Must not overwrite caption')
+            captionFrame.EditBox.scripts.OnEditFocusLost(captionFrame.EditBox)
+            assert(NS.app.db.masterText=='Ziele')
+            captionFrame:Release()
             for _,item in ipairs(layout.initializers) do
                 if item.data.kind=='slider' and item.data.setting.variable=='QUESTTARGETS_scaleFactor' then
-                    assert(item.shownPredicate and item.shownPredicate())
+                    assert(not item.shownPredicate and item.predicate())
+                    assert(item.parentInitializer==captionRow.parentInitializer)
                 end
                 if item.data.kind=='slider' and item.data.setting.variable=='QUESTTARGETS_widthLabel' then
-                    assert(item.shownPredicate and not item.shownPredicate())
+                    assert(not item.shownPredicate and not item.predicate())
+                    assert(item.parentInitializer==captionRow.parentInitializer)
                 end
             end
             nativeSettings.QUESTTARGETS_targetMarkers.SetValue(4)
@@ -704,7 +734,7 @@ class QuestTargetsTests(unittest.TestCase):
                     assert(item:GetName()==NS.L(key), 'Setting label did not follow language change: '..key)
                 end
             end
-            assert(SettingsPanel.repairs and SettingsPanel.repairs>=2)
+            assert(nativeRepairs and nativeRepairs>=2)
             NS.UI.Settings(NS.app)
             assert(nativeOpened==categoryID and nativeRegistered==nativeCategory)
         ''')
@@ -793,6 +823,20 @@ class QuestTargetsTests(unittest.TestCase):
             assert(frame.point[4] == 137 and frame.point[5] == -42)
         ''')
 
+    def test_questlog_helpers_are_never_entered_in_combat(self):
+        self.lua.execute("""boot()
+            local row=QuestTargetsTarget1
+            local before=row.attributes.macrotext1
+            combat=true
+            row.scripts.PostClick(row, 'RightButton', false)
+            NS.UI.OpenQuest(row.entry)
+            assert(#openedQuestIDs==0, 'Native questlog helper entered during combat')
+            assert(row.attributes.macrotext1==before)
+            combat=false
+            row.scripts.PostClick(row, 'RightButton', false)
+            assert(#openedQuestIDs==1 and openedQuestIDs[1]==row.entry.questID)
+        """)
+
     def test_right_click_opens_exact_quest_in_native_log_without_targeting(self):
         self.lua.execute('''boot()
             local row = QuestTargetsTarget1
@@ -807,6 +851,31 @@ class QuestTargetsTests(unittest.TestCase):
             NS.UI.OpenQuest({questID=0})
             assert(#openedQuestIDs == 1)
         ''')
+
+    def test_canvas_settings_register_at_login_without_opening(self):
+        self.lua.execute("""boot()
+            assert(NS.UI.settingsCategoryID==42, 'Canvas category missing at login')
+            assert(openCategory==nil, 'Startup opened Options')
+            assert(not NS.UI.settings:IsShown())
+            NS.UI.Settings(NS.app)
+            assert(openCategory==42)
+        """)
+
+    def test_settings_registration_retries_after_combat_or_late_settings_load(self):
+        self.lua.execute("""
+            combat=true; boot()
+            assert(NS.UI.settingsCategoryID==nil and openCategory==nil)
+            combat=false; event('PLAYER_REGEN_ENABLED')
+            assert(NS.UI.settingsCategoryID==42 and openCategory==nil)
+        """)
+        self.setUp()
+        self.lua.execute("""
+            local native=Settings
+            Settings=nil; boot()
+            assert(NS.UI.settings==nil)
+            Settings=native; event('ADDON_LOADED','Blizzard_Settings')
+            assert(NS.UI.settingsCategoryID==42 and openCategory==nil)
+        """)
 
     def test_native_settings_tooltips_minimap_and_hotkey(self):
         self.lua.execute('''boot()

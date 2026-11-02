@@ -1,6 +1,6 @@
 # Quest Targets
 
-Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever Beta (16001)**, and **Retail 12.1 (120100)**.
+Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever 1.60.1 (16001)**, and **Retail 12.1.5 (120105)**.
 
 **[Download the latest release](https://github.com/simonrath/questtargets/releases/latest)**
 
@@ -29,6 +29,12 @@ QuestieDB supplies data only; keep the full Questie addon installed and enabled
 to use its tracker.
 
 ## Features
+
+Quest Targets also appears under **Options → Keybindings → Quest Targets**.
+Both target actions support the native primary and secondary binding slots.
+Native changes, including clearing a focused-quest binding, are kept across
+refreshes and reloads. In the addon's own Hotkeys section, assigning an occupied
+keyboard/controller key requires confirmation before replacing its old action.
 
 - One target button per quest and a master button for active objectives.
 - Prioritizes quest mobs, then NPCs for quests ready to turn in.

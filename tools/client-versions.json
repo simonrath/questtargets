@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-31",
+  "region": "eu",
+  "flavors": {
+    "Retail": {"product": "wow", "version": "12.1.5.70688", "build": 70688, "interface": 120105, "source": "https://eu.version.battle.net/wow/versions"},
+    "Classic": {"product": "wow_classic_era", "version": "1.15.9.70576", "build": 70576, "interface": 11509, "source": "https://eu.version.battle.net/wow_classic_era/versions"},
+    "TBC": {"product": "wow_anniversary", "version": "2.5.6.70577", "build": 70577, "interface": 20506, "source": "https://eu.version.battle.net/wow_anniversary/versions"},
+    "Mists": {"product": "wow_classic", "version": "5.5.4.70631", "build": 70631, "interface": 50504, "source": "https://eu.version.battle.net/wow_classic/versions"},
+    "Forever": {"product": "wowf", "version": "1.60.1.70707", "build": 70707, "interface": 16001, "source": "https://eu.version.battle.net/wowf/versions"}
+  },
+  "questieDB": {"version": "1.0.9", "source": "https://github.com/Questie/QuestieDB/releases/tag/v1.0.9"}
+}

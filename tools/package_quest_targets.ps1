@@ -9,7 +9,14 @@ $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskAddon = Join-Path $taskRoot 'QuestTargets'
 $taskDist = Join-Path $taskRoot 'dist'
 $taskVersion = (Select-String -LiteralPath (Join-Path $taskAddon 'QuestTargets.toc') -Pattern '^## Version: (.+)$').Matches[0].Groups[1].Value
-$taskRuntimeFiles = @('QuestTargets.toc','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','SettingsCaption.xml','Master.lua','QuestieTracker.lua','RestedXP.lua','Diagnostics.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga','Textures/TransparencyEye.tga')
+$taskClientPins = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'client-versions.json') -Raw | ConvertFrom-Json
+$taskInterfaces = (Select-String -LiteralPath (Join-Path $taskAddon 'QuestTargets.toc') -Pattern '^## Interface: (.+)$').Matches[0].Groups[1].Value -split ',\s*'
+foreach ($taskClientPin in $taskClientPins.flavors.PSObject.Properties) {
+    if ([string]$taskClientPin.Value.interface -notin $taskInterfaces) {
+        throw "TOC interface differs from pinned $($taskClientPin.Name) client"
+    }
+}
+$taskRuntimeFiles = @('QuestTargets.toc','Bindings.xml','Core.lua','Locale.lua','Database.lua','Proximity.lua','Resolvers.lua','Scanner.lua','UI.lua','SettingsCaption.xml','Master.lua','QuestieTracker.lua','RestedXP.lua','Diagnostics.lua','Main.lua','Textures/QuestCompassUp.tga','Textures/QuestCompassDown.tga','Textures/TransparencyEye.tga')
 if ($AddonOnly -or $CurseForge) { $Flavor = 'Minimal' }
 if (-not $ProviderCache) { $ProviderCache = Join-Path $env:TEMP 'quest-targets-questiedb-v1.0.9' }
 New-Item -ItemType Directory -Path $taskDist -Force | Out-Null

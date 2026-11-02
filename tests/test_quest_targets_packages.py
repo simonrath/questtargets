@@ -1,5 +1,6 @@
 """Verify the distributable package shapes and unchanged upstream payloads."""
 import hashlib
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -31,6 +32,21 @@ def require_provider_cache():
 
 
 class PackageTests(unittest.TestCase):
+    def test_client_pins_match_declared_interfaces(self):
+        pins = json.loads((ROOT / 'tools/client-versions.json').read_text(encoding='utf-8'))
+        self.assertEqual(set(pins['flavors']), {'Retail', 'Classic', 'TBC', 'Mists', 'Forever'})
+        toc = (ROOT / 'QuestTargets/QuestTargets.toc').read_text(encoding='utf-8')
+        declared = next(line.partition(': ')[2] for line in toc.splitlines()
+                        if line.startswith('## Interface: '))
+        self.assertEqual(set(declared.split(', ')),
+                         {str(pin['interface']) for pin in pins['flavors'].values()})
+        self.assertEqual(pins['flavors']['Retail']['interface'], 120105)
+        for pin in pins['flavors'].values():
+            self.assertTrue(pin['source'].startswith('https://eu.version.battle.net/'))
+            self.assertTrue(pin['version'].endswith('.' + str(pin['build'])))
+            major, minor, patch, _ = map(int, pin['version'].split('.'))
+            self.assertEqual(pin['interface'], major * 10000 + minor * 100 + patch)
+
     def test_addon_category_and_client_interfaces(self):
         toc = (ROOT / 'QuestTargets/QuestTargets.toc').read_text(encoding='utf-8')
         self.assertIn('## Category: Quests', toc)
@@ -107,7 +123,7 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(package.testzip(), None)
             self.assertTrue(all(name.startswith('QuestTargets/') for name in package.namelist()))
             self.assertFalse(any(name.endswith('.md') for name in package.namelist()))
-            self.assertIn(b'120100', package.read('QuestTargets/QuestTargets.toc'))
+            self.assertIn(b'120105', package.read('QuestTargets/QuestTargets.toc'))
 
     def test_all_official_providers_satisfy_quest_targets_and_questie_contracts(self):
         require_provider_cache()
@@ -116,7 +132,7 @@ class PackageTests(unittest.TestCase):
             with self.subTest(label=label):
                 lua = load_release(CACHE / f'QuestieDB-{flavor}.zip', flavor, expected_hash)
                 lua.execute('NS={}')
-                for source in ('Core.lua', 'Locale.lua', 'Database.lua'):
+                for source in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua'):
                     lua.execute('assert(loadstring(...))("QuestTargets",NS)',
                                 (ROOT / 'QuestTargets' / source).read_bytes())
                 if label in ('TBC', 'Mists'):
@@ -130,6 +146,27 @@ class PackageTests(unittest.TestCase):
                 lua.execute('''assert(type(LibQuestieDB.Enum.raceMaskById) == "table")
                     assert(type(LibQuestieDB.Enum.factionRaceMasks.Alliance) == "number")
                     assert(type(LibQuestieDB.Enum.factionRaceMasks.Horde) == "number")''')
+                lua.execute('''
+                    -- Compare the non-executing parser with the pinned provider's
+                    -- actual map data. Compiling the trusted fixture is test-only.
+                    local data=LibQuestieDB.Support.Get("ZoneDB").private
+                    local expected={}
+                    for _,key in ipairs({"areaIdToUiMapId", "areaIdToUiMapIdOverride"}) do
+                        local value=data[key]
+                        local map=type(value)=="string" and assert(loadstring(value))() or value or {}
+                        for area,id in pairs(map) do expected[area]=id end
+                    end
+                    assert(next(expected), "Provider map fixture is empty")
+                    local p=NS.Proximity
+                    p.Register(LibQuestieDB,1,"Probe")
+                    p.position={continent=1,x=0,y=0}
+                    local compile=loadstring
+                    loadstring=function() error("Runtime map compilation") end
+                    p.Distance("Probe")
+                    loadstring=compile
+                    for area,id in pairs(expected) do assert(p.maps[area]==id, "Missing map: "..area) end
+                    for area,id in pairs(p.maps) do assert(expected[area]==id, "Unexpected map: "..area) end
+                ''')
 
     def test_minimal_package_still_excludes_database_and_documents(self):
         self.build('Minimal', '-CurseForge')
