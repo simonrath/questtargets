@@ -77,6 +77,7 @@ end
 
 function Integration.Sync(app)
     if not app.db or InCombatLockdown() then return end
+    if app.db.questieTrackerButtons == false then hideFrom(1); return end
     local pool = trackerPool()
     if not pool then hideFrom(1); return end
     local byID = {}
@@ -106,7 +107,7 @@ function Integration.Sync(app)
                 local level = math.max(line:GetFrameLevel(), line.expandQuest:GetFrameLevel()) + 1
                 if button:GetFrameLevel() ~= level then button:SetFrameLevel(level) end
                 local scale = line.expandQuest:GetEffectiveScale() / UIParent:GetEffectiveScale()
-                local x, y = (anchorX - 1) * scale, anchorY * scale
+                local x, y = (anchorX - 1 - (app.db.questieTrackerOffset or 35)) * scale, anchorY * scale
                 if button.positionX ~= x or button.positionY ~= y then
                     button:ClearAllPoints()
                     button:SetPoint("RIGHT", UIParent, "BOTTOMLEFT", x, y)

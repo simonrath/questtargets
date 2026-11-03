@@ -30,6 +30,18 @@ def require_provider_cache():
 
 
 class PackageTests(unittest.TestCase):
+    def test_embedded_minimap_libraries_and_licenses_ship_in_universal_zip(self):
+        self.build('All')
+        version=next(line.split(': ',1)[1] for line in (ROOT/'QuestTargets/QuestTargets.toc').read_text(encoding='utf-8').splitlines() if line.startswith('## Version: '))
+        with zipfile.ZipFile(ROOT/'dist'/f'QuestTargets-{version}.zip') as archive:
+            for source in (ROOT/'QuestTargets/Libs').rglob('*'):
+                if source.is_file():
+                    entry='QuestTargets/'+source.relative_to(ROOT/'QuestTargets').as_posix()
+                    self.assertEqual(archive.read(entry),source.read_bytes())
+        toc=(ROOT/'QuestTargets/QuestTargets.toc').read_text(encoding='utf-8')
+        self.assertLess(toc.index('Libs/LibStub/LibStub.lua'),toc.index('Libs/LibDBIcon-1.0/LibDBIcon-1.0.lua'))
+        self.assertLess(toc.index('Libs/LibDBIcon-1.0/LibDBIcon-1.0.lua'),toc.index('Core.lua'))
+
     def test_client_pins_match_declared_interfaces(self):
         pins = json.loads((ROOT / 'tools/client-versions.json').read_text(encoding='utf-8'))
         self.assertEqual(set(pins['flavors']), {'Retail', 'Classic', 'TBC', 'Mists', 'Forever'})
@@ -81,7 +93,8 @@ class PackageTests(unittest.TestCase):
 
     def test_all_flavors_contain_only_quest_targets(self):
         self.build('All')
-        self.assertFalse(list((ROOT / 'dist').glob(f'QuestTargets-{self.version}-*.zip')))
+        for flavor in ('Classic', 'TBC', 'Mists', 'Forever', 'Retail'):
+            self.assertFalse((ROOT / 'dist' / f'QuestTargets-{self.version}-{flavor}.zip').exists())
         for flavor in ('Retail', *HASHES):
             with self.subTest(flavor=flavor):
                 path = ROOT / 'dist' / f'QuestTargets-{self.version}.zip'

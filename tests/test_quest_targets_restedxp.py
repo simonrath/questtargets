@@ -27,9 +27,10 @@ class RestedXPTests(unittest.TestCase):
                             targeting={activeTargetFrame=frame},
                             settings={profile={enableTargetFrame=true}},
                             GetCreatureName=function(id) return id end}
-                        LibStub=function(name) if name=='AceAddon-3.0' then
+                        local standardLibStub=LibStub
+            LibStub=function(name) if name=='AceAddon-3.0' then
                             return {GetAddon=function() return rxp end}
-                        end end
+                        else return standardLibStub(name) end end
                         QuestTargetsDB={restedXPIntegration=true,autoMark=false}
                         boot()
                         assert(#NS.UI.master.defaultEntry.nameList==12)
@@ -64,9 +65,10 @@ class RestedXPTests(unittest.TestCase):
                 targeting={activeTargetFrame=frame},
                 settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function(id) return id end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             QuestTargetsDB={restedXPIntegration=true}
             boot()
             local button=NS.RestedXP.button
@@ -93,9 +95,10 @@ class RestedXPTests(unittest.TestCase):
                     GetCurrentTargets=function() return friendly,mobs,scans,{'Rare'} end},
                 settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function(id) return id end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             QuestTargetsDB={restedXPIntegration=true}
             boot()
             assert(table.concat(NS.RestedXP.targets,'|')=='Alter Klippeneber|Gryth Thurden')
@@ -119,9 +122,10 @@ class RestedXPTests(unittest.TestCase):
             }},targeting={activeTargetFrame=frame},
                 settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function(id) return id end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             QuestTargetsDB={restedXPIntegration=true}
             boot()
             assert(NS.UI.master.entry.name=='Monty')
@@ -149,9 +153,10 @@ class RestedXPTests(unittest.TestCase):
             }},targeting={activeTargetFrame=frame},
                 settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function(id) return id end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             QuestTargetsDB={restedXPIntegration=true}
             boot()
             assert(#NS.RestedXP.targets==1)
@@ -176,9 +181,10 @@ class RestedXPTests(unittest.TestCase):
                     if id=='Elder Crag Boar' then return 'Alter Klippeneber' end
                     return id
                 end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             QuestTargetsDB={restedXPIntegration=true}
             boot()
             assert(NS.UI.master.entry.name=='Alter Klippeneber')
@@ -196,9 +202,10 @@ class RestedXPTests(unittest.TestCase):
             }},targeting={activeTargetFrame=frame},
                 settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function(id) return id end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             QuestTargetsDB={restedXPIntegration=true}
             boot()
             local button=NS.RestedXP.button
@@ -230,9 +237,10 @@ class RestedXPTests(unittest.TestCase):
             }},targeting={activeTargetFrame=frame},
                 settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function(id) return id end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             QuestTargetsDB={restedXPIntegration=true}
             boot()
             NS.RestedXP.fallbackOnce=true
@@ -255,9 +263,10 @@ class RestedXPTests(unittest.TestCase):
             }},targeting={activeTargetFrame=frame},
                 settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function(id) return id end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             QuestTargetsDB={restedXPIntegration=true}
             boot()
             units.target={name='Waldwolf',guid='Wolf'}
@@ -280,9 +289,10 @@ class RestedXPTests(unittest.TestCase):
                 targeting={activeTargetFrame=frame},settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function(id) return ({[10]='Nicht im Questlog',
                     [11]='Waldwolf',[12]='Spinne'})[id] end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function(_,addonName) if addonName=='RXPGuides' then return rxp end end}
-            end end
+            else return standardLibStub(name) end end
             boot(); NS.UI.Settings(NS.app)
             assert(NS.UI.settings.restedXPToggle:GetChecked()==false)
             assert(NS.UI.master.entry.nameList[1]=='Spinne' or NS.UI.master.entry.nameList[1]=='Waldwolf')
@@ -333,9 +343,10 @@ class RestedXPTests(unittest.TestCase):
             local rxp={RXPFrame={activeSteps={{active=false,elements={{mobs={77}}}}}},
                 targeting={activeTargetFrame=frame},settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function() return 'Nicht im Questlog' end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             NS.RestedXP.Sync(NS.app)
             assert(NS.UI.master.entry==NS.UI.master.defaultEntry)
             assert(NS.UI.master.entry.name=='Waldwolf')
@@ -352,9 +363,10 @@ class RestedXPTests(unittest.TestCase):
             }},targeting={activeTargetFrame=frame},
                 settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function(id) return id end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             QuestTargetsDB={restedXPIntegration=true}
             boot()
             local button=NS.RestedXP.button
@@ -380,9 +392,10 @@ class RestedXPTests(unittest.TestCase):
             }},targeting={activeTargetFrame=frame},
                 settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function(id) return id end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             QuestTargetsDB={restedXPIntegration=true}
             boot()
             local button=NS.RestedXP.button
@@ -401,9 +414,10 @@ class RestedXPTests(unittest.TestCase):
             local rxp={RXPFrame={activeSteps={{active=true,elements={{targets={9}}}}}},
                 targeting={activeTargetFrame=frame},settings={profile={enableTargetFrame=true}},
                 GetCreatureName=function() return 'Marschall Dughan' end}
+            local standardLibStub=LibStub
             LibStub=function(name) if name=='AceAddon-3.0' then
                 return {GetAddon=function() return rxp end}
-            end end
+            else return standardLibStub(name) end end
             NS.Database.ResolveTurnIns=function() return {['Marschall Dughan']=true} end
             QuestTargetsDB={restedXPIntegration=true}
             boot()

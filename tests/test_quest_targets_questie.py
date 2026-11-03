@@ -9,7 +9,7 @@ class QuestieTrackerTests(unittest.TestCase):
     def test_optional_tracker_buttons_follow_questie_lines(self):
         self.lua.execute('''
             boot(); NS.UI.Settings(NS.app)
-            assert(NS.UI.settings.questieTrackerToggle==nil)
+            assert(NS.UI.settings.questieTrackerToggle and NS.UI.settings.questieOffsetControl)
             assert(#NS.QuestieTracker.buttons==0)
             local lines={}
             for i=1,3 do
@@ -35,7 +35,18 @@ class QuestieTrackerTests(unittest.TestCase):
             assert(button:GetFrameStrata()=='HIGH')
             assert(button:GetFrameLevel()==101)
             assert(button.point[2]==UIParent)
-            assert(button.point[4]==119 and button.point[5]==400)
+            assert(button.point[4]==84 and button.point[5]==400)
+            NS.app.db.questieTrackerOffset=12
+            NS.QuestieTracker.Sync(NS.app)
+            assert(button.point[4]==107)
+            NS.app.db.questieTrackerButtons=false
+            NS.QuestieTracker.Sync(NS.app)
+            assert(not button.shown and button.attributes.macrotext1==nil)
+            event('ADDON_LOADED','QuestTargets')
+            assert(NS.app.db.questieTrackerButtons==false and NS.app.db.questieTrackerOffset==12)
+            NS.app.db.questieTrackerButtons=true
+            NS.app.db.questieTrackerOffset=0
+            NS.QuestieTracker.Sync(NS.app)
             assert(button.width==22 and button.height==22)
             assert(button.normalTexture.texture:find('QuestCompassUp',1,true))
             assert(button.pushedTexture.texture:find('QuestCompassDown',1,true))
@@ -161,7 +172,7 @@ class QuestieTrackerTests(unittest.TestCase):
             QuestieLoader={ImportModule=function() return pool end}
             NS.QuestieTracker.Sync(NS.app)
             assert(pool.ResetLinesForChange==reset and pool.HideUnusedLines==hide)
-            assert(NS.UI.settings.questieTrackerToggle==nil)
+            assert(NS.UI.settings.questieTrackerToggle and NS.UI.settings.questieOffsetControl)
         ''')
 
     def test_questie_buttons_appear_without_setting_or_reload(self):

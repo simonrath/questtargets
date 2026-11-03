@@ -49,7 +49,7 @@ end
 function app:Refresh(forceResolution)
     if not self.db then return end
     if InCombatLockdown() then self.dirty = true; UI.UpdateStatus(self); return end
-    if UI.moving then self.dirty = true; return end
+    if UI.moving or UI.resizing then self.dirty = true; return end
     if not UI.frame then UI.Create(self) end
     local quests, err, pending = Core.ReadQuests(self.db.watchedOnly)
     local allQuests, allError, allPending = quests, err, pending
@@ -212,10 +212,20 @@ events:SetScript("OnEvent", function(_, event, loadedName)
                 if title == oldDefault then title = nil; break end
             end
         end
-        app.db.masterAppearance = app.db.masterAppearance == "modern" and "modern" or "classic"
+        app.db.masterAppearance = app.db.masterAppearance == "classic" and "classic" or "modern"
         app.db.masterText = type(title) == "string" and Core.Clean(title) or NS.L("masterDefault")
         app.db.minimapHidden = app.db.minimapHidden == true
-        app.db.questieTrackerButtons = nil -- removed setting; Questie is detected automatically
+        if type(app.db.minimap) ~= "table" then
+            local angle = app.db.minimapAngle
+            app.db.minimap = {hide=app.db.minimapHidden,
+                minimapPos=type(angle) == "number" and angle == angle
+                    and angle * 180 / math.pi or 225}
+        end
+        app.db.minimapHidden = app.db.minimap.hide == true
+        app.db.questieTrackerButtons = app.db.questieTrackerButtons ~= false
+        local offset = app.db.questieTrackerOffset
+        app.db.questieTrackerOffset = type(offset) == "number" and offset == offset
+            and math.max(-40, math.min(80, math.floor(offset + 0.5))) or 35
         app.db.restedXPIntegration = app.db.restedXPIntegration == true
         app.db.minimapStyle = nil -- remove the premature design-selection setting
         app.db.showTooltips = app.db.showTooltips == true
@@ -247,11 +257,13 @@ events:SetScript("OnEvent", function(_, event, loadedName)
     elseif event == "PLAYER_REGEN_DISABLED" then
         UI.CancelBindingAssignment()
         UI.EndMasterMove(app, true)
+        UI.StopResizing(app)
         UI.StopMoving(app.db)
         app.dirty = true
         UI.UpdateStatus(app)
     elseif event == "PLAYER_REGEN_ENABLED" then
         UI.RegisterSettings(app)
+        UI.StopResizing(app)
         UI.StopMoving(app.db)
         app:Refresh(false)
     else

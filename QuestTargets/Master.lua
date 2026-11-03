@@ -169,75 +169,27 @@ end
 
 function UI.CreateMinimap(app)
     if UI.minimap or not Minimap then return end
-    local frame = CreateFrame("Button", "QuestTargetsMinimapButton", Minimap)
-    UI.minimap = frame
-    frame:SetSize(28, 28)
-    frame:SetFrameStrata("HIGH")
-    UI.PositionMinimap(app)
-    frame:SetNormalTexture(COMPASS_UP)
-    frame:SetPushedTexture(COMPASS_DOWN)
-    local normal, pushed = frame:GetNormalTexture(), frame:GetPushedTexture()
-    normal:ClearAllPoints()
-    normal:SetSize(22, 22)
-    normal:SetPoint("CENTER", frame, "CENTER", 0, 0)
-    pushed:ClearAllPoints()
-    pushed:SetSize(21, 21)
-    pushed:SetPoint("CENTER", frame, "CENTER", 0, -1)
-    frame.border = frame:CreateTexture(nil, "OVERLAY")
-    frame.border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-    frame.border:SetSize(48, 48)
-    frame.border:SetPoint("TOPLEFT", frame, "TOPLEFT", -1, 0)
-    frame:SetHighlightAtlas("UI-QuestPoi-InnerGlow")
-    frame:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", function(self) self.dragging = true; self.dragged = true end)
-    frame:SetScript("OnDragStop", function(self)
-        if self.dragging then
-            self.dragging = false
-            UI.DragMinimap(app)
-            C_Timer.After(0, function() self.dragged = false end)
-        end
-    end)
-    frame:SetScript("OnUpdate", function(self)
-        if self.dragging then UI.DragMinimap(app) end
-    end)
-    frame:SetScript("OnClick", function(_, mouseButton)
-        if frame.dragging or frame.dragged then return end
-        if mouseButton == "RightButton" then UI.Settings(app) else app:Toggle() end
-    end)
-    frame:SetScript("OnEnter", function(self)
-        if not app.db.showTooltips then return end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Quest Targets")
-        GameTooltip:AddLine(L("minimapTip"), 1, 1, 1)
-        GameTooltip:Show()
-    end)
-    frame:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    frame:SetShown(not app.db.minimapHidden)
+    local icon = LibStub("LibDBIcon-1.0")
+    local broker = LibStub("LibDataBroker-1.1"):NewDataObject("QuestTargets", {
+        type = "launcher", icon = COMPASS_UP,
+        OnClick = function(_, mouseButton)
+            if mouseButton == "RightButton" then UI.Settings(app) else app:Toggle() end
+        end,
+        OnTooltipShow = function(tooltip)
+            if not app.db.showTooltips then return end
+            tooltip:SetText("Quest Targets")
+            tooltip:AddLine(L("minimapTip"), 1, 1, 1)
+        end,
+    })
+    icon:Register("QuestTargets", broker, app.db.minimap)
+    UI.minimap = icon:GetMinimapButton("QuestTargets")
 end
 
-function UI.PositionMinimap(app)
-    if not UI.minimap then return end
-    local angle = app.db.minimapAngle
-    if type(angle) ~= "number" or angle ~= angle then angle = math.pi * 1.25 end
-    local radiusX = (Minimap:GetWidth() or 140) / 2 + 2
-    local radiusY = (Minimap:GetHeight() or 140) / 2 + 2
-    UI.minimap:ClearAllPoints()
-    UI.minimap:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle) * radiusX, math.sin(angle) * radiusY)
-end
-
-function UI.DragMinimap(app)
-    local cursorX, cursorY = GetCursorPosition()
-    local mapX, mapY = Minimap:GetCenter()
-    local scale = Minimap:GetEffectiveScale()
-    local x, y = cursorX / scale - mapX, cursorY / scale - mapY
-    if x == 0 and y == 0 then return end
-    if math.atan2 then
-        app.db.minimapAngle = math.atan2(y, x)
-    else
-        app.db.minimapAngle = math.atan(y / x) + (x < 0 and math.pi or 0)
-    end
-    UI.PositionMinimap(app)
+function UI.SetMinimapShown(app, shown)
+    app.db.minimapHidden = not shown
+    app.db.minimap.hide = not shown
+    local icon = LibStub("LibDBIcon-1.0")
+    if shown then icon:Show("QuestTargets") else icon:Hide("QuestTargets") end
 end
 
 function UI.StopMaster(app)

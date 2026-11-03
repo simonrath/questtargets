@@ -1,0 +1,21 @@
+Bundled upstream libraries (unmodified)
+
+LibDBIcon-1.0: LibDBIcon authors / Rabbit / Funkeh / nebula169.
+Project and upstream license: https://www.wowace.com/projects/libdbicon-1-0
+The upstream project declares Ace3 Style BSD:
+https://www.wowace.com/project/15552/license
+
+LibStub and CallbackHandler-1.0: Ace3 Development Team.
+Their original BSD-style license texts are included in their directories.
+
+LibDataBroker-1.1: tekkub and contributors.
+https://github.com/tekkub/libdatabroker-1-1
+The author's embedding instructions are published at:
+https://www.wowace.com/projects/libdatabroker-1-1
+The original README.textile is included. Upstream rights are retained;
+the Quest Targets license does not replace any upstream library terms.
+
+These files were sourced from the pinned Questie reference checkout at commit
+62ae63250ae373b77634e2da3cf521ea46c50a67. File hashes and exact paths are recorded
+in docs/minimap-library-pins.json in the Quest Targets source repository.
+Only the library files are embedded here, not Questie or QuestieDB.

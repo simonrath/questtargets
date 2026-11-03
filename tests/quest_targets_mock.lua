@@ -93,12 +93,12 @@ function methods:SetAlpha(value) self.alpha = value end
 function methods:SetDesaturated(value) self.desaturated = value end
 function methods:GetAlpha() return self.alpha or 1 end
 function methods:SetNormalTexture(asset)
-    assert(type(asset) == 'string', 'SetNormalTexture requires an asset')
+    assert(type(asset) == 'string' or type(asset) == 'number', 'SetNormalTexture requires an asset')
     self.normalTexture = self.normalTexture or create(self)
     self.normalTexture.texture = asset
 end
 function methods:SetPushedTexture(asset)
-    assert(type(asset) == 'string', 'SetPushedTexture requires an asset')
+    assert(type(asset) == 'string' or type(asset) == 'number', 'SetPushedTexture requires an asset')
     self.pushedTexture = self.pushedTexture or create(self)
     self.pushedTexture.texture = asset
 end
@@ -117,7 +117,7 @@ end
 function methods:SetFontString(fontString) self.fontString = fontString end
 function methods:SetPushedTextOffset(x, y) self.pushedTextOffset = {x, y} end
 function methods:SetHighlightTexture(asset)
-    assert(type(asset) == 'string', 'SetHighlightTexture requires an asset')
+    assert(type(asset) == 'string' or type(asset) == 'number', 'SetHighlightTexture requires an asset')
     self.highlight = self.highlight or create(self)
     self.highlight.texture = asset
 end
@@ -265,7 +265,7 @@ function CreateFrame(kind, name, parent, template)
             self.parent:SetVerticalScroll(value)
         end
     else
-        assert(template == nil or template == "UIPanelButtonTemplate" or template == "UIMenuButtonStretchTemplate" or template == "UIPanelCloseButtonNoScripts" or template == "UICheckButtonTemplate" or template == "InputBoxTemplate" or template == "UIDropDownMenuTemplate" or template == "UIPanelScrollBarTemplate" or template == "OptionsSliderTemplate" or template == "BackdropTemplate" or template == "UIPanelScrollFrameTemplate", template)
+        assert(template == nil or template == "GameTooltipTemplate" or template == "UIPanelButtonTemplate" or template == "UIMenuButtonStretchTemplate" or template == "UIPanelCloseButtonNoScripts" or template == "UICheckButtonTemplate" or template == "InputBoxTemplate" or template == "UIDropDownMenuTemplate" or template == "UIPanelScrollBarTemplate" or template == "OptionsSliderTemplate" or template == "BackdropTemplate" or template == "UIPanelScrollFrameTemplate", template)
     end
     if name then _G[name] = f end
     frames[#frames + 1] = f
@@ -388,3 +388,29 @@ function plate(name, title, objective)
     }}}
     return units[unit]
 end
+
+-- Library contract double: rendering/dragging belongs to upstream LibDBIcon.
+brokerObjects, dbiconObjects = {}, {}
+local broker = {NewDataObject=function(_, name, object) brokerObjects[name]=object; return object end}
+local dbicon = {}
+function dbicon:Register(name, object, db)
+    local frame=CreateFrame("Button","LibDBIcon10_"..name,Minimap)
+    frame:SetScript("OnClick",object.OnClick)
+    frame:SetShown(not db.hide)
+    dbiconObjects[name]=frame
+end
+function dbicon:GetMinimapButton(name) return dbiconObjects[name] end
+function dbicon:Show(name) dbiconObjects[name]:Show() end
+function dbicon:Hide(name) dbiconObjects[name]:Hide() end
+function LibStub(name)
+    if name=="LibDBIcon-1.0" then return dbicon end
+    if name=="LibDataBroker-1.1" then return broker end
+    error("Unexpected library: "..name)
+end
+
+-- Most legacy layout tests exercise an existing classic appearance profile.
+QuestTargetsDB={masterAppearance="classic"}
+
+function methods:SetResizable(value) guard(self); self.resizable=value end
+function methods:SetResizeBounds(...) guard(self); self.resizeBounds={...} end
+function methods:StartSizing(point) guard(self); self.sizing=point end

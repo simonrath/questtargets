@@ -5,6 +5,12 @@ local L = NS.L
 local FEEDBACK_URL = "https://feedback.jacknine.org"
 UI.PAGE_SIZE = 6
 
+function UI.OptionsTitle()
+    local get = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+    local version = get and get("QuestTargets", "Version")
+    return L("title") .. (type(version) == "string" and version ~= "" and (" " .. version) or "")
+end
+
 local function addonLoaded(name)
     if C_AddOns and C_AddOns.IsAddOnLoaded then
         return C_AddOns.IsAddOnLoaded(name) == true
@@ -257,6 +263,7 @@ function UI.UpdateTransparency(app)
     if UI.dragHint then
         UI.dragHint:SetAlpha(app.db.transparencyMode and UI.frame:IsMouseOver() and 0.1 or 0)
     end
+    if UI.resizeGrip then UI.resizeGrip:SetAlpha((not app.db.transparencyMode or UI.frame:IsMouseOver()) and 1 or 0) end
     if UI.transparencyButton then
         UI.transparencyButton:GetNormalTexture():SetDesaturated(not app.db.transparencyMode)
         UI.transparencyButton:SetAlpha(1)
@@ -295,7 +302,8 @@ end
 function UI.Create(app)
     local frame = CreateFrame("Frame", "QuestTargetsFrame", UIParent, "DefaultPanelFlatTemplate")
     UI.frame = frame
-    frame:SetSize(282, 354)
+    frame:SetSize(UI.WindowDimension(app.db.menuWidth, 282, 282, 700),
+        UI.WindowDimension(app.db.menuHeight, 354, 198, 900))
     frame:SetFrameStrata("MEDIUM")
     frame:SetClampedToScreen(true)
     frame:SetMovable(true)
@@ -335,6 +343,7 @@ function UI.Create(app)
         local over = self:IsMouseOver()
         if over == UI.transparencyOver then return end
         UI.transparencyOver = over
+        if UI.resizeGrip then UI.resizeGrip:SetAlpha(over and 1 or 0) end
         UI.dragHint:SetAlpha(over and 0.1 or 0)
         if over then
             UI.transparencyTimer = (UI.transparencyTimer or 0) + 1
@@ -374,7 +383,7 @@ function UI.Create(app)
     local help = button(frame, "?", 24, function() app:Help() end)
     help:SetPoint("TOPRIGHT", -10, -30)
     UI.rows = {}
-    for index = 1, UI.PAGE_SIZE do
+    for index = 1, 20 do
         local row = CreateFrame("Button", "QuestTargetsTarget" .. index, frame, "SecureActionButtonTemplate")
         row:SetPoint("TOPLEFT", 10, -62 - (index - 1) * 39)
         row:SetSize(238, 36)
@@ -458,7 +467,8 @@ function UI.Create(app)
     UI.settingsButton = button(frame, L("settings"), 126, function() UI.Settings(app) end)
     UI.settingsButton:SetPoint("BOTTOMLEFT", 10, 8)
     UI.feedbackButton = button(frame, L("feedback"), 126, function() UI.FeedbackLink() end)
-    UI.feedbackButton:SetPoint("BOTTOMRIGHT", -10, 8)
+    UI.feedbackButton:SetPoint("BOTTOMRIGHT", -28, 8)
+    UI.CreateResizeGrip(app)
     UI.chrome = {}
     for _, region in ipairs({frame:GetRegions()}) do UI.chrome[#UI.chrome + 1] = region end
     local function addChrome(region)
@@ -478,6 +488,7 @@ function UI.Create(app)
     addChrome(UI.scrollbar)
     addChrome(UI.settingsButton)
     addChrome(UI.feedbackButton)
+    addChrome(UI.resizeGrip)
     UI.chromeAlpha = 1
     UI.UpdateTransparency(app)
     frame:SetShown(not app.db.hidden)
@@ -612,7 +623,7 @@ function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "master", "hotkeys"}
-    local heights = {590, 340, 710, 210}
+    local heights = {750, 340, 710, 210}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -653,9 +664,9 @@ function UI.LayoutSettings(app)
         panel.pages[index] = {scroll=scroll, content=content}
     end
     local general, markers, hotkeys = panel.pages[1].content, panel.pages[2].content, panel.pages[4].content
-    local display = settingsBox(general, "display", -32, 226)
-    local window = settingsBox(general, "window", -292, 125)
-    local language = settingsBox(general, "language", -451, 102)
+    local display = settingsBox(general, "display", -32, 380)
+    local window = settingsBox(general, "window", -446, 125)
+    local language = settingsBox(general, "language", -605, 102)
     local marking = settingsBox(markers, "targetMarkers", -32, 292)
     local appearance = settingsBox(master, "masterAppearance", -32, 84)
     local dimensions = settingsBox(master, "buttonSize", -150, 220)
@@ -669,9 +680,10 @@ function UI.LayoutSettings(app)
     panel.hotkeysText:Hide()
     for i, control in ipairs({panel.masterToggle, panel.menuToggle, panel.transparencyToggle,
         panel.tooltipToggle, panel.minimapToggle,
-        panel.restedXPToggle}) do
+        panel.restedXPToggle, panel.questieTrackerToggle}) do
         place(control, display, 18, -32 - (i-1)*30)
     end
+    place(panel.questieOffsetControl, display, 22, -253)
     place(panel.scaleControl, window, 22, -31)
     panel.scaleControl:SetPoint("TOPRIGHT", window, "TOPRIGHT", -22, -31)
     place(panel.languageDropdown, language, 2, -42)
@@ -885,6 +897,18 @@ function QuestTargetsBindingSettingMixin:Release()
 end
 
 local function nativeSettings(app)
+    -- The native sidebar and heading share GetName(). Keep registration plain;
+    -- change only our displayed heading after Blizzard selects the category.
+    if SettingsPanel and SettingsPanel.DisplayCategory and UI.versionHeaderPanel ~= SettingsPanel then
+        UI.versionHeaderPanel = SettingsPanel
+        hooksecurefunc(SettingsPanel, "DisplayCategory", function(panel, selected)
+            if not UI.nativeCategory or selected ~= UI.nativeCategory then return end
+            local list = panel:GetSettingsList()
+            if list and list.Header and list.Header.Title then
+                list.Header.Title:SetText(UI.OptionsTitle())
+            end
+        end)
+    end
     if UI.nativeCategory then return end
 
     local category, layout = Settings.RegisterVerticalLayoutCategory(L("title"))
@@ -910,8 +934,8 @@ local function nativeSettings(app)
         return localizedRow(Settings.CreateCheckbox(category, setting(key, "Boolean", default, get, set),
             descriptionKey and L(descriptionKey) or nil), key)
     end
-    local function sliderSetting(key, savedKey, minimum, maximum, step)
-        local value = setting(key, "Number", 1,
+    local function sliderSetting(key, savedKey, minimum, maximum, step, pixels)
+        local value = setting(key, "Number", pixels and 35 or 1,
             function() return app.db[savedKey] end,
             function(nextValue)
                 app.db[savedKey] = nextValue
@@ -919,7 +943,8 @@ local function nativeSettings(app)
             end)
         local options = Settings.CreateSliderOptions(minimum, maximum, step)
         options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right,
-            function(number) return string.format("%d%%", math.floor(number * 100 + 0.5)) end)
+            function(number) return pixels and string.format("%d px", number)
+                or string.format("%d%%", math.floor(number * 100 + 0.5)) end)
         return localizedRow(Settings.CreateSlider(category, value, options), key)
     end
     local function dropdownSetting(key, default, get, set, choices)
@@ -957,8 +982,22 @@ local function nativeSettings(app)
     checkboxSetting("showMinimap", true, function() return not app.db.minimapHidden end,
         function(value)
             app.db.minimapHidden = not value
-            if UI.minimap then UI.minimap:SetShown(value) end
+            UI.SetMinimapShown(app, value)
         end)
+    local questieToggle = checkboxSetting("questieTrackerButtons", true,
+        function() return app.db.questieTrackerButtons end,
+        function(value)
+            if InCombatLockdown() or not addonLoaded("Questie") then return end
+            app.db.questieTrackerButtons = value
+            NS.QuestieTracker.Sync(app)
+        end)
+    questieToggle:AddModifyPredicate(function() return addonLoaded("Questie") end)
+    local questieOffset = sliderSetting("questieTrackerOffset", "questieTrackerOffset", -40, 80, 1, true)
+    questieOffset:SetParentInitializer(questieToggle)
+    questieOffset:AddModifyPredicate(function()
+        return addonLoaded("Questie") and app.db.questieTrackerButtons
+    end)
+
     local restedXPToggle = checkboxSetting("restedXPIntegration", false,
         function() return app.db.restedXPIntegration end,
         function(value)
@@ -985,7 +1024,7 @@ local function nativeSettings(app)
         function() return {strsplit(",", L("markers"))} end)
 
     section("master")
-    local _, appearance = dropdownSetting("masterAppearance", 1,
+    local _, appearance = dropdownSetting("masterAppearance", 2,
         function() return app.db.masterAppearance == "modern" and 2 or 1 end,
         function(value)
             app.db.masterAppearance = value == 2 and "modern" or "classic"
@@ -1087,7 +1126,7 @@ function UI.RegisterSettings(app)
         UI.settings = panel
         panel:SetSize(600, 690)
         panel.titleText = label(panel, 20, -18, 540, "GameFontNormalLarge")
-        panel.titleText:SetText(L("title"))
+        panel.titleText:SetText(UI.OptionsTitle())
         panel.toggle = checkbox(panel, L("autoMark"), function()
             app.db.autoMark = not app.db.autoMark
             UI.UpdateSettings(app)
@@ -1150,10 +1189,19 @@ function UI.RegisterSettings(app)
         panel.tooltipToggle:SetPoint("TOPLEFT", 20, -308)
         panel.minimapToggle = checkbox(panel, L("showMinimap"), function()
             app.db.minimapHidden = not app.db.minimapHidden
-            if UI.minimap then UI.minimap:SetShown(not app.db.minimapHidden) end
+            UI.SetMinimapShown(app, not app.db.minimapHidden)
             UI.UpdateSettings(app)
         end)
         panel.minimapToggle:SetPoint("TOPLEFT", 20, -338)
+        panel.questieTrackerToggle = checkbox(panel, L("questieTrackerButtons"), function()
+            if InCombatLockdown() or not addonLoaded("Questie") then return end
+            app.db.questieTrackerButtons = not app.db.questieTrackerButtons
+            NS.QuestieTracker.Sync(app)
+            UI.UpdateSettings(app)
+        end)
+        panel.questieOffsetControl = settingsSlider(panel, "QuestTargetsQuestieOffsetSlider",
+            "questieTrackerOffset", -40, 80, 1, app)
+        panel.questieOffsetControl.caption:SetText(L("questieTrackerOffset"))
         panel.restedXPToggle = checkbox(panel, L("restedXPIntegration"), function()
             if InCombatLockdown() or not addonLoaded("RXPGuides") then return end
             app.db.restedXPIntegration = not app.db.restedXPIntegration
@@ -1332,6 +1380,15 @@ function UI.UpdateSettings(app)
     UI.settings.scaleControl:Refresh()
     UI.settings.tooltipToggle:SetChecked(app.db.showTooltips)
     UI.settings.minimapToggle:SetChecked(not app.db.minimapHidden)
+    local questieAvailable = addonLoaded("Questie")
+    UI.settings.questieTrackerToggle:SetChecked(app.db.questieTrackerButtons)
+    UI.settings.questieTrackerToggle:SetEnabled(questieAvailable)
+    local gray = questieAvailable and 1 or 0.5
+    UI.settings.questieTrackerToggle.caption:SetTextColor(gray, gray, gray)
+    UI.settings.questieOffsetControl:Refresh()
+    local offsetEnabled = questieAvailable and app.db.questieTrackerButtons
+    UI.settings.questieOffsetControl.slider:SetEnabled(offsetEnabled)
+    UI.settings.questieOffsetControl.edit:SetEnabled(offsetEnabled)
     UI.settings.restedXPToggle:SetChecked(app.db.restedXPIntegration)
     local restedXPAvailable = addonLoaded("RXPGuides")
     UI.settings.restedXPToggle:SetEnabled(restedXPAvailable)
@@ -1360,7 +1417,7 @@ function UI.ApplyLanguage(app)
     end
     local panel = UI.settings
     if panel then
-        panel.titleText:SetText(L("title"))
+        panel.titleText:SetText(UI.OptionsTitle())
         if panel.tabs then
             for _, tab in ipairs(panel.tabs) do tab:SetText(L(tab.localeKey)) end
             for _, group in ipairs(panel.groups) do group.heading:SetText(L(group.localeKey)) end
@@ -1378,6 +1435,8 @@ function UI.ApplyLanguage(app)
         panel.transparencyToggle.caption:SetText(L("transparencyMode"))
         panel.tooltipToggle.caption:SetText(L("showTooltips"))
         panel.minimapToggle.caption:SetText(L("showMinimap"))
+        panel.questieTrackerToggle.caption:SetText(L("questieTrackerButtons"))
+        panel.questieOffsetControl.caption:SetText(L("questieTrackerOffset"))
         panel.restedXPToggle.caption:SetText(L("restedXPIntegration"))
         panel.hotkeyNote:SetText(L("hotkeyNote"))
         panel.hotkeysText:SetText(L("hotkeys"))
@@ -1509,7 +1568,7 @@ function UI.RenderRows(app)
     assert(not InCombatLockdown(), "Quest Targets: protected scroll during combat")
     local entries = app.questEntries or {}
     for index, row in ipairs(UI.rows) do
-        local entry = entries[(app.scrollOffset or 0) + index]
+        local entry = index <= UI.PAGE_SIZE and entries[(app.scrollOffset or 0) + index] or nil
         row:SetAttribute("macrotext1", nil)
         row.entry = entry
         if row.fallbackQuestID ~= (entry and entry.questID) then row.fallbackIndex = nil end

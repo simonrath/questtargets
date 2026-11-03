@@ -10,7 +10,7 @@ class QuestTargetsTests(unittest.TestCase):
     def setUp(self):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute((ROOT / 'tests/quest_targets_mock.lua').read_text(encoding='utf-8'))
-        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Master.lua', 'QuestieTracker.lua', 'RestedXP.lua', 'Diagnostics.lua', 'Main.lua'):
+        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Resize.lua', 'Master.lua', 'QuestieTracker.lua', 'RestedXP.lua', 'Diagnostics.lua', 'Main.lua'):
             self.lua.execute('assert(loadstring(...))("QuestTargets", NS)',
                              (ROOT / 'QuestTargets' / name).read_text(encoding='utf-8'))
 
@@ -54,7 +54,7 @@ class QuestTargetsTests(unittest.TestCase):
         ''')
         self.setUp()
         self.lua.execute('''
-            QuestTargetsDB={masterScaleX=1.5,masterScaleY=1.5,masterModernScale=1.5}
+            QuestTargetsDB={masterAppearance="classic",masterScaleX=1.5,masterScaleY=1.5,masterModernScale=1.5}
             boot()
             assert(NS.app.db.masterScaleX==1 and NS.app.db.masterScaleY==1)
             assert(NS.app.db.masterModernScale==1)
@@ -114,11 +114,11 @@ class QuestTargetsTests(unittest.TestCase):
             local ui=NS.UI
             assert(ui.frame.height==354)
             assert(ui.refreshButton==nil)
-            assert(ui.settingsButton.width==126 and ui.feedbackButton.width==126)
+            assert(ui.settingsButton.width==117 and ui.feedbackButton.width==117)
             assert(ui.settingsButton.point[1]=='BOTTOMLEFT')
             assert(ui.settingsButton.point[2]==10 and ui.settingsButton.point[3]==8)
             assert(ui.feedbackButton.point[1]=='BOTTOMRIGHT')
-            assert(ui.feedbackButton.point[2]==-10 and ui.feedbackButton.point[3]==8)
+            assert(ui.feedbackButton.point[2]==-28 and ui.feedbackButton.point[3]==8)
             assert(ui.feedbackButton.text==NS.L('feedback'))
         ''')
 
@@ -458,7 +458,10 @@ class QuestTargetsTests(unittest.TestCase):
                 end,
                 Release=function(self) self.data=nil end}
             MinimalSliderWithSteppersMixin={Label={Right=1}}
-            SettingsPanel={RepairDisplay=function() error('Direct native panel refresh') end}
+            local headerTitle=CreateFrame('Frame',nil,UIParent):CreateFontString(nil,'ARTWORK')
+            SettingsPanel={RepairDisplay=function() error('Direct native panel refresh') end,
+                GetSettingsList=function() return {Header={Title=headerTitle}} end,
+                DisplayCategory=function(_,category) headerTitle:SetText(category.name) end}
             SettingsInbound={RepairDisplay=function() nativeRepairs=(nativeRepairs or 0)+1 end}
             Settings={VarType={Boolean='boolean', Number='number'},
                 CreateElementInitializer=function(template,data)
@@ -519,6 +522,13 @@ class QuestTargetsTests(unittest.TestCase):
             NS.UI.Settings(NS.app)
             assert(nativeRegistered==nativeCategory and nativeOpened==categoryID)
             assert(NS.UI.settings==nil and NS.UI.nativeCategory==nativeCategory)
+            C_AddOns.GetAddOnMetadata=function() return '1.5.1-preview' end
+            SettingsPanel:DisplayCategory(nativeCategory)
+            assert(nativeCategory.name=='Quest Targets', 'Version leaked into sidebar')
+            assert(headerTitle.text=='Quest Targets 1.5.1-preview', 'Missing heading version')
+            SettingsPanel:DisplayCategory({name='Other addon'})
+            assert(headerTitle.text=='Other addon', 'Changed another addon heading')
+            C_AddOns.GetAddOnMetadata=nil
             local sections={}
             local counts={section=0,checkbox=0,slider=0,dropdown=0,button=0,editbox=0,move=0}
             for _,item in ipairs(layout.initializers) do
@@ -528,7 +538,7 @@ class QuestTargetsTests(unittest.TestCase):
             end
             assert(table.concat(sections,'|')==table.concat({NS.L('display'),NS.L('window'),
                 NS.L('targetMarkers'),NS.L('master'),NS.L('hotkeys'),NS.L('language')},'|'))
-            assert(counts.section==6 and counts.checkbox==7 and counts.slider==4
+            assert(counts.section==6 and counts.checkbox==8 and counts.slider==5
                 and counts.dropdown==3 and counts.button==2 and counts.editbox==1)
             assert(counts.move==1, 'native move option missing')
             local moveRow=NS.UI.nativeMove
@@ -545,7 +555,21 @@ class QuestTargetsTests(unittest.TestCase):
             end
             assert(masterCheckbox and masterCheckbox.data.description==NS.L('masterMoveTip'))
             assert(not nativeSettings.QUESTTARGETS_focusHotkeyEnabled)
-            assert(not nativeSettings.QUESTTARGETS_questieTrackerButtons)
+            assert(nativeSettings.QUESTTARGETS_questieTrackerButtons.GetValue()==true)
+            nativeSettings.QUESTTARGETS_questieTrackerButtons.SetValue(false)
+            assert(NS.app.db.questieTrackerButtons==true) -- absent addon
+            for _,item in ipairs(layout.initializers) do
+                if item.data.setting and item.data.setting.variable=='QUESTTARGETS_questieTrackerOffset' then
+                    assert(not item.predicate())
+                end
+            end
+            loadedAddons.Questie=true
+            nativeSettings.QUESTTARGETS_questieTrackerButtons.SetValue(false)
+            assert(NS.app.db.questieTrackerButtons==false)
+            nativeSettings.QUESTTARGETS_questieTrackerButtons.SetValue(true)
+            nativeSettings.QUESTTARGETS_questieTrackerOffset.SetValue(15)
+            assert(NS.app.db.questieTrackerOffset==15)
+            loadedAddons.Questie=false
             for _,item in ipairs(layout.initializers) do
                 assert(not (item.data.kind=='button' and item.data.name==NS.L('clear')))
             end
@@ -739,13 +763,13 @@ class QuestTargetsTests(unittest.TestCase):
             assert(nativeOpened==categoryID and nativeRegistered==nativeCategory)
         ''')
 
-    def test_restedxp_option_is_disabled_without_addon_and_questie_has_no_toggle(self):
+    def test_integration_options_are_disabled_without_their_addons(self):
         self.lua.execute('''
             loadedAddons={Questie=false,RXPGuides=false}
             C_AddOns={IsAddOnLoaded=function(name) return loadedAddons[name] end}
             boot(); NS.UI.Settings(NS.app)
             local panel=NS.UI.settings
-            assert(panel.questieTrackerToggle==nil)
+            assert(panel.questieTrackerToggle.enabled==false and not panel.questieOffsetControl.slider.enabled)
             assert(panel.restedXPToggle.enabled==false)
             assert(panel.restedXPToggle.caption.textColor[1]==0.5)
             panel.restedXPToggle.scripts.OnClick()
@@ -763,7 +787,7 @@ class QuestTargetsTests(unittest.TestCase):
             StaticPopupDialogs={}
             StaticPopup_Show=function(key) shownPopup=key end
             boot(); NS.UI.Settings(NS.app)
-            assert(NS.UI.settings.questieTrackerToggle==nil)
+            assert(NS.UI.settings.questieTrackerToggle)
             assert(StaticPopupDialogs.QUESTTARGETS_QUESTIE_RELOAD==nil)
             assert(shownPopup~='QUESTTARGETS_QUESTIE_RELOAD' and not reloaded)
         ''')
@@ -991,27 +1015,84 @@ class QuestTargetsTests(unittest.TestCase):
             assert(not button.shown and button.entry==nil and button.attributes.macrotext1==nil)
         ''')
 
-    def test_minimap_button_follows_map_edge_and_uses_compass_states(self):
-        self.lua.execute('''boot()
-            local button=NS.UI.minimap
-            assert(button.parent == Minimap)
-            assert(button.point[1] == 'CENTER' and button.point[2] == Minimap and button.point[3] == 'CENTER')
-            assert(math.abs(button.point[4]) <= 72 and math.abs(button.point[5]) <= 72)
-            assert(button.normalTexture.texture:find('QuestCompassUp', 1, true))
-            assert(button.pushedTexture.texture:find('QuestCompassDown', 1, true))
-            cursorX, cursorY=1000, 500
-            button.scripts.OnDragStart(button)
-            button.scripts.OnUpdate(button)
-            assert(math.abs(button.point[4]-72) < 0.01 and math.abs(button.point[5]) < 0.01)
-            button.scripts.OnDragStop(button)
-            assert(math.abs(NS.app.db.minimapAngle) < 0.01)
-            local shown=NS.UI.frame.shown
-            button.scripts.OnClick(button, 'LeftButton')
-            assert(NS.UI.frame.shown == shown)
-            flush()
-            button.scripts.OnClick(button, 'LeftButton')
-            assert(NS.UI.frame.shown ~= shown)
-        ''')
+    def test_minimap_is_registered_with_libdbicon_and_legacy_angle_migrates(self):
+        self.lua.execute("""
+            QuestTargetsDB={minimapAngle=math.pi/2}
+            boot()
+            assert(dbiconObjects.QuestTargets==NS.UI.minimap)
+            assert(math.abs(NS.app.db.minimap.minimapPos-90)<0.001)
+            local old=NS.UI.frame.shown
+            brokerObjects.QuestTargets.OnClick(NS.UI.minimap,'LeftButton')
+            assert(NS.UI.frame.shown~=old)
+            NS.UI.SetMinimapShown(NS.app,false)
+            assert(not NS.UI.minimap.shown and NS.app.db.minimap.hide)
+            NS.UI.SetMinimapShown(NS.app,true)
+            assert(NS.UI.minimap.shown and not NS.app.db.minimap.hide)
+        """)
+
+    def test_minimap_vendor_libraries_load_and_broker_is_available(self):
+        self.lua.execute('LibStub=nil')
+        for name in ('LibStub/LibStub.lua', 'CallbackHandler-1.0/CallbackHandler-1.0.lua',
+                     'LibDataBroker-1.1/LibDataBroker-1.1.lua', 'LibDBIcon-1.0/LibDBIcon-1.0.lua'):
+            self.lua.execute((ROOT/'QuestTargets/Libs'/name).read_text(encoding='utf-8'))
+        self.lua.execute("""
+            local object=LibStub('LibDataBroker-1.1'):NewDataObject('Probe',{type='launcher',icon='icon'})
+            assert(object.icon=='icon')
+            assert(type(LibStub('LibDBIcon-1.0').Register)=='function')
+        """)
+
+    def test_new_defaults_modern_master_and_35_pixel_spacing(self):
+        self.lua.execute("""
+            QuestTargetsDB={}; boot()
+            assert(NS.app.db.masterAppearance=='modern')
+            assert(NS.app.db.questieTrackerOffset==35)
+            NS.app.db.masterAppearance='classic'; NS.app.db.questieTrackerOffset=0
+            event('ADDON_LOADED','QuestTargets')
+            assert(NS.app.db.masterAppearance=='classic' and NS.app.db.questieTrackerOffset==0)
+        """)
+
+    def test_quest_window_resize_saves_dimensions_and_changes_list_capacity(self):
+        self.lua.execute("""boot()
+            local ui,app=NS.UI,NS.app
+            assert(ui.resizeGrip and ui.frame.resizable)
+            ui.resizeGrip.scripts.OnMouseDown(ui.resizeGrip,'LeftButton')
+            assert(ui.resizing and ui.frame.sizing=='BOTTOMRIGHT')
+            ui.frame:SetSize(400,510)
+            ui.frame.scripts.OnSizeChanged(ui.frame,400,510)
+            assert(ui.PAGE_SIZE==10 and ui.rows[1].width==356)
+            ui.resizeGrip.scripts.OnMouseUp(ui.resizeGrip,'LeftButton')
+            assert(not ui.resizing and app.db.menuWidth==400 and app.db.menuHeight==510)
+            combat=true
+            ui.resizeGrip.scripts.OnMouseDown(ui.resizeGrip,'LeftButton')
+            assert(not ui.resizing)
+            combat=false
+            ui.resizeGrip.scripts.OnMouseDown(ui.resizeGrip,'LeftButton')
+            combat=true; event('PLAYER_REGEN_DISABLED')
+            assert(ui.resizePending)
+            combat=false; event('PLAYER_REGEN_ENABLED')
+            assert(not ui.resizePending and not ui.resizing)
+        """)
+
+    def test_saved_quest_window_size_is_restored_and_invalid_sizes_are_clamped(self):
+        self.lua.execute("""
+            QuestTargetsDB={menuWidth=430,menuHeight=510}; boot()
+            assert(NS.UI.frame.width==430 and NS.UI.frame.height==510)
+            assert(NS.UI.PAGE_SIZE==10)
+        """)
+        self.setUp()
+        self.lua.execute("""
+            QuestTargetsDB={menuWidth=0/0,menuHeight=99999}; boot()
+            assert(NS.UI.frame.width==282 and NS.UI.frame.height==900)
+        """)
+
+    def test_options_title_uses_installed_metadata_version(self):
+        self.lua.execute("""
+            C_AddOns={GetAddOnMetadata=function(name,key)
+                assert(name=='QuestTargets' and key=='Version'); return '1.5.1-preview' end}
+            boot()
+            assert(NS.UI.OptionsTitle()=='Quest Targets 1.5.1-preview')
+            assert(NS.UI.settings.titleText.text==NS.UI.OptionsTitle())
+        """)
 
     def test_modern_master_uses_two_compass_states_and_uniform_scale(self):
         self.lua.execute('''boot(); NS.UI.Settings(NS.app)
@@ -1085,7 +1166,7 @@ class QuestTargetsTests(unittest.TestCase):
         ''')
 
     def test_all_six_languages_and_persistent_settings_choice(self):
-        self.lua.execute('''QuestTargetsDB={language='deDE'}; boot(); NS.UI.Settings(NS.app)
+        self.lua.execute('''QuestTargetsDB={language='deDE',masterAppearance='classic'}; boot(); NS.UI.Settings(NS.app)
             local labels={'English','Deutsch','Español','Français','Türkçe','简体中文'}
             local codes={'enUS','deDE','esES','frFR','trTR','zhCN'}
             for index, code in ipairs(codes) do
