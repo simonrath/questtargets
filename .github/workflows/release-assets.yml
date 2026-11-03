@@ -1,0 +1,70 @@
+name: Build GitHub release assets
+
+on:
+  push:
+    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-assets-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify release tag and player notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          import sys
+          sys.path.insert(0, 'tools')
+          from publish_curseforge import read_changelog
+          tag = os.environ['RELEASE_TAG']
+          if not re.fullmatch(r'v\d+\.\d+\.\d+', tag):
+              raise SystemExit('Only stable version tags are supported')
+          toc = Path('QuestTargets/QuestTargets.toc').read_text()
+          if f'## Version: {tag[1:]}' not in toc.splitlines():
+              raise SystemExit('Release tag differs from addon version')
+          read_changelog(Path('.'), tag[1:])
+          PY
+      - name: Build all five addon-only packages
+        shell: pwsh
+        run: ./tools/package_quest_targets.ps1
+      - name: Verify packages and write checksums
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import sys
+          sys.path.insert(0, 'tools')
+          from publish_curseforge import FLAVORS, verify_asset
+          version = os.environ['RELEASE_TAG'][1:]
+          pins = json.loads(Path('tools/client-versions.json').read_text())['flavors']
+          files = [Path('dist') / f'QuestTargets-{version}-{flavor}.zip' for flavor in FLAVORS]
+          checksums = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
+          for flavor, path in zip(FLAVORS, files):
+              verify_asset(path, version, flavor, checksums, pins[flavor]['interface'])
+          Path('dist/SHA256SUMS.txt').write_text(''.join(f'{checksums[p.name]}  {p.name}\n' for p in files))
+          PY
+      - name: Attach packages to existing draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true
+          gh release upload "$RELEASE_TAG" dist/*.zip dist/SHA256SUMS.txt
