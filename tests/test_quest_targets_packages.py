@@ -1,4 +1,4 @@
-"""Verify the distributable package shapes and unchanged upstream payloads."""
+"""Verify addon-only packages and compatibility with external QuestieDB."""
 import hashlib
 import json
 from pathlib import Path
@@ -11,7 +11,6 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = Path(tempfile.gettempdir()) / 'quest-targets-questiedb-v1.0.9'
-PRODUCER_COMMIT = b'7901fee2753cecb577a72c2e4b7126198e05baec'
 HASHES = {
     'Classic': ('Vanilla', '72b0353075df53d09d540dbd016c84b37ccce7ea08394421d7558fbd28121f9c'),
     'TBC': ('TBC', '6bcd8c1aff2ee55e6ec878f9b4f4e9323d645eb56125a56deab2bb7fa3735460'),
@@ -81,32 +80,21 @@ class PackageTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_combined_packages_contain_exact_official_provider_files(self):
-        require_provider_cache()
-        self.build('All', '-ProviderCache', str(CACHE))
-        for label, (flavor, expected_hash) in HASHES.items():
-            with self.subTest(label=label):
-                upstream_path = CACHE / f'QuestieDB-{flavor}.zip'
-                self.assertEqual(hashlib.sha256(upstream_path.read_bytes()).hexdigest(), expected_hash)
-                package_path = ROOT / 'dist' / f'QuestTargets-{self.version}-{label}.zip'
-                with zipfile.ZipFile(upstream_path) as upstream, zipfile.ZipFile(package_path) as package:
-                    toc = upstream.read(f'QuestieDB/QuestieDB_{flavor}.toc')
-                    self.assertIn(b'## Version: 1.0.9', toc)
-                    self.assertIn(b'## X-Contract-Version: 4', toc)
-                    self.assertIn(b'## X-BUILD-COMMIT: ' + PRODUCER_COMMIT, toc)
-                    provider_names = {n for n in package.namelist() if n.startswith('QuestieDB/')}
-                    source_names = {n for n in upstream.namelist() if not n.endswith('/')}
-                    self.assertEqual(provider_names, source_names)
-                    self.assertTrue(all(n.startswith(('QuestTargets/', 'QuestieDB/')) for n in package.namelist()))
-                    self.assertTrue(any(n.startswith('QuestTargets/') for n in package.namelist()))
-                    self.assertEqual(len(package.namelist()), len(set(package.namelist())))
-                    for name in source_names:
-                        self.assertEqual(package.read(name), upstream.read(name), name)
-                    self.assertEqual(package.testzip(), None)
-                    tocs = {n for n in provider_names if n.endswith('.toc')}
-                    expected_tocs = ({'QuestieDB/QuestieDB_Forever.toc', 'QuestieDB/QuestieDB_Camelot.toc'}
-                                     if label == 'Forever' else {f'QuestieDB/QuestieDB_{flavor}.toc'})
-                    self.assertEqual(tocs, expected_tocs)
+    def test_all_flavors_contain_only_quest_targets(self):
+        self.build('All')
+        for flavor in ('Retail', *HASHES):
+            with self.subTest(flavor=flavor):
+                path = ROOT / 'dist' / f'QuestTargets-{self.version}-{flavor}.zip'
+                with zipfile.ZipFile(path) as package:
+                    names = package.namelist()
+                    self.assertTrue(names)
+                    self.assertTrue(all(n.startswith('QuestTargets/') for n in names))
+                    self.assertEqual(len(names), len(set(names)))
+                    self.assertIn('QuestTargets/Bindings.xml', names)
+                    self.assertIn(f'## Version: {self.version}'.encode(),
+                                  package.read('QuestTargets/QuestTargets.toc'))
+                    self.assertFalse(any(n.endswith('.md') for n in names))
+                    self.assertIsNone(package.testzip())
 
     def test_forever_archive_contains_v109_base_data(self):
         require_provider_cache()
@@ -175,18 +163,6 @@ class PackageTests(unittest.TestCase):
             self.assertTrue(all(n.startswith('QuestTargets/') for n in package.namelist()))
             self.assertFalse(any(n.endswith('.md') for n in package.namelist()))
 
-    def test_corrupt_provider_archive_is_rejected(self):
-        require_powershell()
-        with tempfile.TemporaryDirectory() as cache:
-            (Path(cache) / 'QuestieDB-Vanilla.zip').write_bytes(b'not a QuestieDB release')
-            result = subprocess.run(
-                [POWERSHELL, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
-                 str(ROOT / 'tools/package_quest_targets.ps1'), '-Flavor', 'Classic',
-                 '-ProviderCache', cache],
-                cwd=ROOT, capture_output=True, text=True,
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn('checksum mismatch', result.stdout + result.stderr)
 
 
 if __name__ == '__main__':

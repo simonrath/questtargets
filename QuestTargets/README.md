@@ -1,4 +1,4 @@
-# Quest Targets — 1.4.1
+# Quest Targets — 1.4.2
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever 1.60.1, Build 70707 (16001)** und **Retail 12.1.5 (120105)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -6,19 +6,16 @@ und Abgabe-NPCs.
 
 ## Installation
 
-Für lokale Tests gibt es fünf getrennte Pakete: `QuestTargets-<Version>-Classic.zip`
-für Classic Era, `QuestTargets-<Version>-TBC.zip` für Burning Crusade,
-`QuestTargets-<Version>-Mists.zip` für Mists of Pandaria,
-`QuestTargets-<Version>-Forever.zip` für Forever und
-`QuestTargets-<Version>-Retail.zip` für Retail. Die Nicht-Retail-Pakete
-enthalten auf oberster Ebene `QuestTargets/` und die passende, unveränderte
-offizielle `QuestieDB/` v1.0.9. Vor einem Update das Spiel schließen und einen
-bereits vorhandenen Ordner `Interface/AddOns/QuestieDB` entfernen. Danach beide
-Ordner aus dem zum Client passenden ZIP nach `Interface/AddOns` entpacken und
-das Spiel neu starten. So bleiben keine alten TOC-Dateien zurück.
-QuestieDB 1.0.9 unterstützt sowohl Quest Targets als auch Questie 12.1.0.
-Es liefert nur Daten; für den Questie-Tracker muss das vollständige Addon
-`Questie/` zusätzlich installiert und aktiviert bleiben.
+Es gibt fünf Pakete: Classic, TBC, Mists, Forever und Retail.
+Alle ZIPs enthalten ausschließlich `QuestTargets/`. Zum Aktualisieren das Spiel
+schließen und `Interface/AddOns/QuestTargets` durch den Ordner aus dem ZIP ersetzen.
+
+Für Classic Era, Burning Crusade, Mists und Forever muss das passende
+**QuestieDB** separat von [CurseForge](https://www.curseforge.com/wow/addons/questiedb)
+oder den [offiziellen Releases](https://github.com/Questie/QuestieDB/releases/)
+installiert und aktiviert werden. Eine vorhandene QuestieDB-Installation beim
+Quest-Targets-Update behalten und unabhängig aktualisieren. QuestieDB liefert nur
+Daten; für den Questie-Tracker muss auch `Questie/` installiert und aktiviert sein.
 
 Das Retail-Paket enthält nur `QuestTargets/` und benötigt kein QuestieDB.
 Es liest offene Ziele aus dem Retail-Questlog und erkennt lesbare Mobnamen aus
@@ -36,7 +33,7 @@ Classic Era, `QuestieDB-TBC.zip` für Burning Crusade oder
 Download-Hinweis. Die Erkennung über Questtexte und lesbare
 Questinformationen sichtbarer Namensplaketten bleibt verfügbar.
 
-Herkunft und Prüfsummen der kombinierten Pakete stehen im
+Herkunft und Prüfsummen früherer kombinierter Pakete stehen im
 [QuestieDB-Hinweis](QUESTIEDB-NOTICE.md).
 
 ## Bedienung

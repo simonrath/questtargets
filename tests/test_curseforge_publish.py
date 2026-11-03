@@ -49,9 +49,6 @@ class CurseForgeTests(unittest.TestCase):
             archive.writestr('QuestTargets/QuestTargets.toc',
                              f'## Version: {version}\n## Interface: 120105, 16001\n')
             archive.writestr('QuestTargets/Bindings.xml', '<Bindings/>')
-            if flavor != 'Retail':
-                archive.writestr('QuestieDB/QuestieDB_Forever.toc', '## Version: 1.0.9')
-                archive.writestr('QuestieDB/src/api.lua', '-- provider')
             if extra:
                 archive.writestr(*extra)
         return path
@@ -79,6 +76,14 @@ class CurseForgeTests(unittest.TestCase):
                 path = self.make_archive(tmp, extra=(entry, 'bad'))
                 with self.assertRaises(cf.PublishError):
                     self.verify(path)
+
+    def test_rejects_bundled_database_for_every_flavor(self):
+        for flavor in cf.FLAVORS:
+            with self.subTest(flavor=flavor), tempfile.TemporaryDirectory() as tmp:
+                path = self.make_archive(tmp, flavor=flavor,
+                                         extra=('QuestieDB/src/api.lua', '-- provider'))
+                with self.assertRaises(cf.PublishError):
+                    self.verify(path, flavor=flavor)
 
     def test_reserve_precedes_upload_and_duplicate_is_not_uploaded(self):
         events = []

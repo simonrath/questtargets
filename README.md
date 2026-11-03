@@ -6,27 +6,21 @@ Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)**, **Burnin
 
 ## Installation
 
-The build script produces local `QuestTargets-<version>-Retail.zip`,
-`QuestTargets-<version>-Classic.zip`, `QuestTargets-<version>-TBC.zip`,
-`QuestTargets-<version>-Mists.zip`, and `QuestTargets-<version>-Forever.zip`
-packages by default. Choose the ZIP for your client. The non-Retail
-packages contain `QuestTargets/` and the corresponding official `QuestieDB/` at
-the ZIP root. Close the game, remove an existing `Interface/AddOns/QuestieDB`
-folder, extract both folders into `Interface/AddOns`, then restart the game.
-Removing the old folder prevents TOCs from another game flavor lingering.
+Download the ZIP for your client: Retail, Classic, TBC, Mists, or Forever.
+All release packages contain only `QuestTargets/`. Close WoW and replace
+`Interface/AddOns/QuestTargets` with the folder from the ZIP.
 
-The public minimal `QuestTargets-<version>.zip` remains available without
-QuestieDB; install the matching provider separately from the
+For Classic Era, Burning Crusade Classic, Mists of Pandaria Classic, and Forever,
+install and enable **QuestieDB** separately from
+[CurseForge](https://www.curseforge.com/wow/addons/questiedb) or the
 [official QuestieDB releases](https://github.com/Questie/QuestieDB/releases/).
-Retail users can install `QuestTargets-<version>-Retail.zip` directly; it needs
-no QuestieDB and reads objectives from the Retail quest log. Mob names come
-from readable quest text and visible nameplates. Item sources and turn-in NPCs
+Choose the version for your client. QuestieDB is no longer included in Quest Targets.
+If QuestieDB is already installed, keep it and update it separately.
+QuestieDB supplies data only; keep the full Questie addon enabled to use its tracker.
+
+Retail needs no QuestieDB and reads objectives from the Retail quest log. Mob names
+come from readable quest text and visible nameplates. Item sources and turn-in NPCs
 without names in the quest text are not inferred on Retail.
-The combined packages include the matching QuestieDB release; see the
-[QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md) for its provenance.
-They bundle QuestieDB 1.0.9, which supports both Quest Targets and Questie 12.1.0.
-QuestieDB supplies data only; keep the full Questie addon installed and enabled
-to use its tracker.
 
 ## Features
 
@@ -76,9 +70,8 @@ Install Python dependencies with `python -m pip install -r tests/requirements.tx
 Run `python -m unittest discover -s tests -p "test_quest_targets*.py"`.
 Database integration tests use the pinned QuestieDB v1.0.9 Vanilla archive in
 the system temporary directory at
-`quest-targets-questiedb-v1.0.9/QuestieDB-Vanilla.zip`. Package tests use
-the official v1.0.9 Vanilla, TBC, Mists, and Forever artifacts; the packaging script
-downloads missing artifacts and verifies their SHA-256 hashes.
+`quest-targets-questiedb-v1.0.9/QuestieDB-Vanilla.zip`. Package tests verify that every flavor contains Quest Targets only;
+building packages requires no QuestieDB download or provider cache.
 
 Build all five local packages with PowerShell:
 
@@ -93,11 +86,10 @@ Build a minimal release ZIP or only the Retail package with PowerShell:
 ./tools/package_quest_targets.ps1 -Flavor Retail
 ```
 
-The minimal ZIP contains runtime Lua, TOC, and texture files only. Tests,
-documentation, and QuestieDB are excluded. `-AddonOnly` also omits QuestieDB
-but includes documentation. Use `-Flavor Classic`, `-Flavor TBC`, `-Flavor Mists`, or `-Flavor Forever` to build
-only one combined flavor. See the [QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md)
-for source hashes and the unresolved redistribution terms.
+Every ZIP contains runtime Lua, XML, TOC, and texture files only. Tests,
+documentation, and QuestieDB are excluded. `-AddonOnly` and `-CurseForge` produce
+the unsuffixed minimal ZIP. Use `-Flavor Classic`, `-Flavor TBC`, `-Flavor Mists`,
+`-Flavor Forever`, or `-Flavor Retail` to build a single client package.
 
 ## License
 
@@ -105,6 +97,7 @@ for source hashes and the unresolved redistribution terms.
 
 ### QuestieDB attribution
 
-Questie is listed on [CurseForge](https://www.curseforge.com/wow/addons/questie) under the GNU General Public License version 3 (GPLv3). Quest Targets includes an unmodified copy of QuestieDB, the database used by Questie. Quest Targets is a separate addon that accesses QuestieDB through its public API; we have not changed QuestieDB’s code or data.
-
-Credit for QuestieDB belongs to the QuestieDB team and its contributors. Local combined packages use the [official QuestieDB v1.0.9 release](https://github.com/Questie/QuestieDB/releases/tag/v1.0.9). Its source is available in the [QuestieDB repository](https://github.com/Questie/QuestieDB). Redistribution terms remain unresolved; see the [QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md) before publishing combined packages.
+Quest Targets accesses the separately installed QuestieDB addon through its public
+API. QuestieDB code and data belong to the [QuestieDB team and its contributors](https://github.com/Questie/QuestieDB).
+Quest Targets 1.4.2 and later do not redistribute QuestieDB. See the
+[QuestieDB notice](QuestTargets/QUESTIEDB-NOTICE.md) for earlier package provenance.

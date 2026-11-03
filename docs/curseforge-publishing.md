@@ -33,7 +33,7 @@ Es wurde noch kein CurseForge-Upload durchgeführt und kein Token eingerichtet.
    [Actions](https://github.com/simonrath/questtargets/actions) den Workflow
    **Publish GitHub release to CurseForge** auswählen → **Run workflow**:
    - Branch: `main`
-   - Tag: `v1.4.1`
+   - Tag: `v1.4.2`
    - `dry_run`: **true / angehakt lassen**
    - Flavor: `All`
    Der Probelauf liest die CurseForge-Versionsliste und die GitHub-Pakete,
@@ -67,8 +67,7 @@ Der Workflow lädt diese Dateien aus genau diesem GitHub-Release herunter:
 
 Er baut die Pakete nicht neu. Vor dem ersten Upload prüft er alle ausgewählten
 Dateien, ihre SHA-256-Werte, ZIP-Pfade, TOC-Versionen und Flavor-Inhalte. Die
-vier kombinierten Pakete behalten ihre enthaltene QuestieDB; Retail bleibt ohne
-QuestieDB. Das zusätzliche Minimal-ZIP wird nicht nochmals auf CurseForge geladen.
+fünf Pakete enthalten ausschließlich Quest Targets. QuestieDB wird für Nicht-Retail-Clients separat installiert; die CurseForge-Abhängigkeit richtet der Projektinhaber manuell ein. Das zusätzliche Minimal-ZIP wird nicht nochmals auf CurseForge geladen.
 
 Die unterstützte Spielversion jedes Flavors stammt aus `tools/client-versions.json`.
 Ihre CurseForge-ID wird über die aktuelle Upload-API-Versionsliste eindeutig
@@ -143,7 +142,7 @@ Lokaler Dry-Run (Python 3 und authentifizierte GitHub-CLI erforderlich):
 
 ```powershell
 # CF_API_TOKEN vorher sicher als Umgebungsvariable setzen.
-python tools/publish_curseforge.py --tag v1.4.1 --dry-run
+python tools/publish_curseforge.py --tag v1.4.2 --dry-run
 ```
 
 ## Quellen und Grenzen der Vorbereitung

@@ -15,7 +15,6 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 FLAVORS = ('Classic', 'TBC', 'Mists', 'Forever', 'Retail')
-PROVIDER = {'Classic': 'Vanilla', 'TBC': 'TBC', 'Mists': 'Mists', 'Forever': 'Forever'}
 CF_API = 'https://wow.curseforge.com/api'
 
 
@@ -69,7 +68,7 @@ def verify_asset(path, version, flavor, checksums, interface):
     try:
         with zipfile.ZipFile(path) as archive:
             names = archive.namelist()
-            allowed = {'QuestTargets'} if flavor == 'Retail' else {'QuestTargets', 'QuestieDB'}
+            allowed = {'QuestTargets'}
             if len(names) != len(set(names)) or sum(i.file_size for i in archive.infolist()) > 300_000_000:
                 raise PublishError('Duplicate or oversized ZIP payload.')
             for name in names:
@@ -86,10 +85,6 @@ def verify_asset(path, version, flavor, checksums, interface):
                 raise PublishError(f'{flavor} interface pin is not supported by the ZIP.')
             if 'QuestTargets/Bindings.xml' not in names:
                 raise PublishError('ZIP is missing native keybindings.')
-            if flavor != 'Retail':
-                for name in (f'QuestieDB/QuestieDB_{PROVIDER[flavor]}.toc', 'QuestieDB/src/api.lua'):
-                    if name not in names:
-                        raise PublishError(f'Combined package missing {name}.')
     except (zipfile.BadZipFile, KeyError, UnicodeError) as exc:
         raise PublishError(f'Invalid release ZIP: {path.name}') from exc
 
