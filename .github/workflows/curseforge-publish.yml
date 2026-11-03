@@ -13,11 +13,6 @@ on:
         description: Validate and preview only; do not upload
         type: boolean
         default: true
-      flavor:
-        description: All flavors, or one flavor when continuing a partial upload
-        type: choice
-        default: All
-        options: [All, Classic, TBC, Mists, Forever, Retail]
 
 permissions:
   contents: read
@@ -35,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write # Atomic per-release/per-flavor upload reservation refs.
+      contents: write # Atomic per-release upload reservation ref.
     steps:
       - name: Check out publisher and player changelogs
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -50,6 +45,5 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CURSEFORGE_ENABLED: ${{ vars.CURSEFORGE_ENABLED }}
           RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
-          FLAVOR: ${{ inputs.flavor || 'All' }}
           MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '--publish' }}
-        run: python3 tools/publish_curseforge.py --tag "$RELEASE_TAG" --flavor "$FLAVOR" "$MODE"
+        run: python3 tools/publish_curseforge.py --tag "$RELEASE_TAG" "$MODE"

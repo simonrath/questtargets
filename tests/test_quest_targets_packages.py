@@ -1,5 +1,4 @@
 """Verify addon-only packages and compatibility with external QuestieDB."""
-import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -82,9 +81,10 @@ class PackageTests(unittest.TestCase):
 
     def test_all_flavors_contain_only_quest_targets(self):
         self.build('All')
+        self.assertFalse(list((ROOT / 'dist').glob(f'QuestTargets-{self.version}-*.zip')))
         for flavor in ('Retail', *HASHES):
             with self.subTest(flavor=flavor):
-                path = ROOT / 'dist' / f'QuestTargets-{self.version}-{flavor}.zip'
+                path = ROOT / 'dist' / f'QuestTargets-{self.version}.zip'
                 with zipfile.ZipFile(path) as package:
                     names = package.namelist()
                     self.assertTrue(names)
@@ -106,7 +106,7 @@ class PackageTests(unittest.TestCase):
 
     def test_default_build_also_contains_retail_without_questiedb(self):
         self.build('Retail')
-        package_path = ROOT / 'dist' / f'QuestTargets-{self.version}-Retail.zip'
+        package_path = ROOT / 'dist' / f'QuestTargets-{self.version}.zip'
         with zipfile.ZipFile(package_path) as package:
             self.assertEqual(package.testzip(), None)
             self.assertTrue(all(name.startswith('QuestTargets/') for name in package.namelist()))

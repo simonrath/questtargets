@@ -34,7 +34,8 @@ live-client verification or a complete taint fix without evidence. Keep detailed
 developer notes separately in `docs/releases/<version>.md`.
 
 The CurseForge workflow automatically publishes these player notes with the
-existing GitHub flavor ZIPs. Include all five ZIPs and SHA256SUMS.txt in the
-GitHub release. Never substitute GitHub-generated commit notes for player notes.
+existing universal GitHub ZIP. Include QuestTargets-<version>.zip and
+SHA256SUMS.txt in the GitHub release. Upload the ZIP once to CurseForge with
+all five supported game-version IDs. Never substitute GitHub-generated commit notes for player notes.
 Keep `tools/client-versions.json` compatible with each released ZIP. API tokens
 belong in GitHub Secrets, never in code, release notes, logs or chat.

@@ -2,7 +2,7 @@
 
 Vorbereitet für [Quest Targets auf CurseForge](https://www.curseforge.com/wow/addons/questtargets),
 Projekt-ID **1709717**, und GitHub-Repository `simonrath/questtargets`.
-Es wurde noch kein CurseForge-Upload durchgeführt und kein Token eingerichtet.
+Ab Version 1.5.0 wird ein gemeinsames Paket für alle fünf Clients veröffentlicht.
 
 ## Einmalige Einrichtung
 
@@ -33,9 +33,8 @@ Es wurde noch kein CurseForge-Upload durchgeführt und kein Token eingerichtet.
    [Actions](https://github.com/simonrath/questtargets/actions) den Workflow
    **Publish GitHub release to CurseForge** auswählen → **Run workflow**:
    - Branch: `main`
-   - Tag: `v1.4.2`
+   - Tag: `v1.5.0`
    - `dry_run`: **true / angehakt lassen**
-   - Flavor: `All`
    Der Probelauf liest die CurseForge-Versionsliste und die GitHub-Pakete,
    prüft die ZIPs und zeigt die Spieler-Patchnotes. Er erstellt keine
    Reservierungen und lädt keine Dateien hoch. Token und Game-Version-Zuordnung
@@ -53,21 +52,17 @@ damit zwei unabhängige Abläufe keine doppelten Dateien erzeugen.
 
 ## Was beim nächsten Release automatisch passiert
 
-Ein veröffentlichter **stabiler** GitHub-Release wie `v1.4.2` startet den Workflow.
+Ein veröffentlichter **stabiler** GitHub-Release wie `v1.5.0` startet den Workflow.
 Entwürfe und Pre-Releases werden nicht auf CurseForge veröffentlicht.
 
 Der Workflow lädt diese Dateien aus genau diesem GitHub-Release herunter:
 
-- `QuestTargets-1.4.2-Classic.zip`
-- `QuestTargets-1.4.2-TBC.zip`
-- `QuestTargets-1.4.2-Mists.zip`
-- `QuestTargets-1.4.2-Forever.zip`
-- `QuestTargets-1.4.2-Retail.zip`
+- `QuestTargets-1.5.0.zip`
 - `SHA256SUMS.txt`
 
-Er baut die Pakete nicht neu. Vor dem ersten Upload prüft er alle ausgewählten
-Dateien, ihre SHA-256-Werte, ZIP-Pfade, TOC-Versionen und Flavor-Inhalte. Die
-fünf Pakete enthalten ausschließlich Quest Targets. QuestieDB wird für Nicht-Retail-Clients separat installiert; die CurseForge-Abhängigkeit richtet der Projektinhaber manuell ein. Das zusätzliche Minimal-ZIP wird nicht nochmals auf CurseForge geladen.
+Er baut das Paket nicht neu. Vor dem Upload prüft er SHA-256, ZIP-Pfade,
+TOC-Version und alle fünf Interface-Pins. Das Paket enthält nur Quest Targets.
+QuestieDB wird für Nicht-Retail-Clients separat installiert.
 
 Die unterstützte Spielversion jedes Flavors stammt aus `tools/client-versions.json`.
 Ihre CurseForge-ID wird über die aktuelle Upload-API-Versionsliste eindeutig
@@ -76,8 +71,8 @@ Fehlt eine Version oder ist ihr Name mehrdeutig, stoppt der Ablauf, statt einen
 falschen Client auszuwählen. Beim Aktualisieren der unterstützten Clients müssen
 Pins und Release-Pakete weiterhin zusammenpassen.
 
-CurseForge erhält fünf Dateien vom Typ **Release** mit den passenden Spielversionen
-und denselben englischen Spieler-Patchnotes. Nach Annahme des Uploads gelten
+CurseForge erhält eine Datei vom Typ **Release**, deren `gameVersions` alle fünf
+aufgelösten Spielversions-IDs enthält, mit englischen Spieler-Patchnotes. Nach Annahme des Uploads gelten
 weiterhin CurseForges Freigabe-/Moderationsregeln; eine Datei kann dort zunächst
 als ausstehend erscheinen. Die zurückgegebenen Datei-IDs stehen im Actions-Log
 und in der Zusammenfassung des Laufs.
@@ -85,7 +80,7 @@ und in der Zusammenfassung des Laufs.
 ## Spieler-Patchnotes
 
 Für jeden Release gehört eine englische Datei
-`docs/curseforge/<version>.md` dazu, zum Beispiel `docs/curseforge/1.4.2.md`.
+`docs/curseforge/<version>.md` dazu, zum Beispiel `docs/curseforge/1.5.0.md`.
 Die Anweisung für künftige Release-Arbeiten steht bereits in `AGENTS.md`:
 Bei der Release-Vorbereitung werden diese Notizen aus den tatsächlich geänderten
 Funktionen formuliert. Die Veröffentlichung übernimmt sie automatisch unverändert.
@@ -99,7 +94,7 @@ GitHub-generierte Commit-Patchnotes werden nicht ersatzweise veröffentlicht.
 Beispiel:
 
 ```markdown
-# Quest Targets 1.4.2
+# Quest Targets 1.5.0
 
 - Assign controller buttons to your targeting actions.
 - Fixed an issue that prevented settings from appearing after login.
@@ -107,7 +102,9 @@ Beispiel:
 
 ## Bestehenden Release nachträglich übertragen
 
-Die Aktivierung veröffentlicht alte Releases nicht rückwirkend. Dazu denselben
+Die Aktivierung veröffentlicht alte Releases nicht rückwirkend. Der aktuelle
+Publisher erwartet das universelle Format ab 1.5.0; ältere Flavor-Releases
+werden damit nicht erneut übertragen. Dazu denselben
 Workflow manuell mit dem gewünschten vorhandenen Tag starten und `dry_run`
 nach erfolgreichem Probelauf auf **false** stellen. `CURSEFORGE_ENABLED=true`
 ist auch bei manuellen echten Uploads erforderlich. Vorher auf CurseForge prüfen,
@@ -123,18 +120,17 @@ diesen Workflow per `workflow_dispatch` starten. Die bisherige Veröffentlichung
 ## Fehler und Wiederholungen
 
 Vor jedem tatsächlichen Upload wird ein GitHub-Tag reserviert, etwa
-`curseforge/v1.4.2/Classic`. Er verhindert einen erneuten Upload desselben
-Release-Flavors auch nach einem abgebrochenen Lauf. Es gibt keine automatische
+`curseforge/v1.5.0/All`. Er verhindert einen erneuten Upload desselben
+Releases auch nach einem abgebrochenen Lauf. Es gibt keine automatische
 Wiederholung eines Upload-POSTs: Nach einem Verbindungsabbruch könnte CurseForge
 die Datei bereits angenommen haben.
 
-- Bereits erfolgreiche Flavors nicht erneut übertragen. Bei einem Teilfehler
-  die übrigen einzeln mit dem manuellen Flavor-Auswahlfeld veröffentlichen.
+- Der gemeinsame Release wird nur einmal übertragen; es gibt keine Flavor-Auswahl.
 - Bei einer vorhandenen Reservierung zuerst anhand des Actions-Logs und der
   CurseForge-Dateiliste feststellen, ob der Upload angenommen wurde.
 - **Nur wenn sicher keine entsprechende Datei angelegt wurde**, den genau
-  betroffenen Reservierungs-Tag auf GitHub löschen und diesen Flavor erneut
-  starten. Nicht den eigentlichen Release-Tag `v1.4.2` löschen.
+  betroffenen Reservierungs-Tag auf GitHub löschen und den Upload erneut
+  starten. Nicht den eigentlichen Release-Tag `v1.5.0` löschen.
 - Die Automatik pausieren: `CURSEFORGE_ENABLED` auf `false` setzen. Einen bereits
   laufenden Upload bei Bedarf zusätzlich unter Actions abbrechen.
 
@@ -142,7 +138,7 @@ Lokaler Dry-Run (Python 3 und authentifizierte GitHub-CLI erforderlich):
 
 ```powershell
 # CF_API_TOKEN vorher sicher als Umgebungsvariable setzen.
-python tools/publish_curseforge.py --tag v1.4.2 --dry-run
+python tools/publish_curseforge.py --tag v1.5.0 --dry-run
 ```
 
 ## Quellen und Grenzen der Vorbereitung

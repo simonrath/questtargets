@@ -6,8 +6,8 @@ Quest-targeting addon for **WoW Classic Era 1.15.9 (Interface 11509)**, **Burnin
 
 ## Installation
 
-Download the ZIP for your client: Retail, Classic, TBC, Mists, or Forever.
-All release packages contain only `QuestTargets/`. Close WoW and replace
+Download `QuestTargets-<version>.zip` for any supported client: Retail, Classic,
+TBC, Mists, or Forever. The same ZIP works on all five and contains only `QuestTargets/`. Close WoW and replace
 `Interface/AddOns/QuestTargets` with the folder from the ZIP.
 
 For Classic Era, Burning Crusade Classic, Mists of Pandaria Classic, and Forever,
@@ -73,23 +73,16 @@ the system temporary directory at
 `quest-targets-questiedb-v1.0.9/QuestieDB-Vanilla.zip`. Package tests verify that every flavor contains Quest Targets only;
 building packages requires no QuestieDB download or provider cache.
 
-Build all five local packages with PowerShell:
+Build the universal release package with PowerShell:
 
 ```powershell
 ./tools/package_quest_targets.ps1
 ```
 
-Build a minimal release ZIP or only the Retail package with PowerShell:
-
-```powershell
-./tools/package_quest_targets.ps1 -CurseForge
-./tools/package_quest_targets.ps1 -Flavor Retail
-```
-
-Every ZIP contains runtime Lua, XML, TOC, and texture files only. Tests,
-documentation, and QuestieDB are excluded. `-AddonOnly` and `-CurseForge` produce
-the unsuffixed minimal ZIP. Use `-Flavor Classic`, `-Flavor TBC`, `-Flavor Mists`,
-`-Flavor Forever`, or `-Flavor Retail` to build a single client package.
+The result is `dist/QuestTargets-<version>.zip`, shared by all five clients.
+It contains runtime Lua, XML, TOC, and texture files only. Tests, documentation,
+and QuestieDB are excluded. Legacy `-Flavor`, `-AddonOnly`, and `-CurseForge`
+arguments remain accepted and produce the same universal archive.
 
 ## License
 

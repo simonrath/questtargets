@@ -1,4 +1,4 @@
-# Quest Targets — 1.4.2
+# Quest Targets — 1.5.0
 
 Addon für **WoW Classic Era 1.15.9 (Interface 11509)**, **Burning Crusade Classic 2.5.6 (20506)**, **Mists of Pandaria Classic 5.5.4 (50504)**, **WoW Forever 1.60.1, Build 70707 (16001)** und **Retail 12.1.5 (120105)**. Quest Targets bietet einen
 Button pro Quest sowie einen Masterbutton zum Anvisieren passender Questmobs
@@ -6,8 +6,8 @@ und Abgabe-NPCs.
 
 ## Installation
 
-Es gibt fünf Pakete: Classic, TBC, Mists, Forever und Retail.
-Alle ZIPs enthalten ausschließlich `QuestTargets/`. Zum Aktualisieren das Spiel
+Das gemeinsame Paket `QuestTargets-<Version>.zip` funktioniert auf Classic, TBC,
+Mists, Forever und Retail. Es enthält ausschließlich `QuestTargets/`. Zum Aktualisieren das Spiel
 schließen und `Interface/AddOns/QuestTargets` durch den Ordner aus dem ZIP ersetzen.
 
 Für Classic Era, Burning Crusade, Mists und Forever muss das passende
@@ -192,6 +192,5 @@ Die Test- und Build-Anleitung steht in der
 ./tools/package_quest_targets.ps1 -CurseForge
 ```
 
-Der erste Aufruf erzeugt alle fünf lokalen Flavor-Pakete, der zweite den
-minimalen Build ohne QuestieDB. Angaben zum Datenanbieter und seiner Herkunft
+Beide Aufrufe erzeugen dasselbe gemeinsame Paket für alle fünf Clients ohne QuestieDB. Angaben zum Datenanbieter und seiner Herkunft
 stehen im [QuestieDB-Hinweis](QUESTIEDB-NOTICE.md).

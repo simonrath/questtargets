@@ -29,15 +29,14 @@ function Add-FileEntry($archive, [string]$sourcePath, [string]$entryName) {
     try { $source.CopyTo($target) } finally { $target.Dispose(); $source.Dispose() }
 }
 
-$taskFlavors = if ($Flavor -eq 'All') { @('Retail', 'Classic', 'TBC', 'Mists', 'Forever') }
-    elseif ($Flavor -eq 'Both') { @('Classic', 'Forever') } else { @($Flavor) }
+# Legacy flavor switches remain accepted; every client uses the same archive.
+$taskFlavors = @('All')
 foreach ($taskFlavor in $taskFlavors) {
     $taskFiles = $taskRuntimeFiles
     foreach ($taskFile in $taskFiles) {
         if (-not (Test-Path -LiteralPath (Join-Path $taskAddon $taskFile))) { throw "Missing source: $taskFile" }
     }
-    $suffix = if ($taskFlavor -eq 'Minimal') { '' } else { '-' + $taskFlavor }
-    $taskZip = Join-Path $taskDist "QuestTargets-$taskVersion$suffix.zip"
+    $taskZip = Join-Path $taskDist "QuestTargets-$taskVersion.zip"
     $stream = [IO.File]::Open($taskZip, [IO.FileMode]::Create)
     $archive = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create)
     try {

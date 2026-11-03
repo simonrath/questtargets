@@ -44,7 +44,7 @@ class CurseForgeTests(unittest.TestCase):
                 cf.read_changelog(root, '1.4.1')
 
     def make_archive(self, directory, flavor='Retail', version='1.4.1', extra=None):
-        path = Path(directory) / f'QuestTargets-1.4.1-{flavor}.zip'
+        path = Path(directory) / 'QuestTargets-1.4.1.zip'
         with zipfile.ZipFile(path, 'w') as archive:
             archive.writestr('QuestTargets/QuestTargets.toc',
                              f'## Version: {version}\n## Interface: 120105, 16001\n')
@@ -55,7 +55,7 @@ class CurseForgeTests(unittest.TestCase):
 
     def verify(self, path, flavor='Retail', checksum=None):
         checksum = checksum or hashlib.sha256(path.read_bytes()).hexdigest()
-        cf.verify_asset(path, '1.4.1', flavor, {path.name: checksum}, 120105 if flavor=='Retail' else 16001)
+        cf.verify_asset(path, '1.4.1', {path.name: checksum}, [120105, 16001])
 
     def test_checksums_version_and_flavor_payload(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -114,34 +114,55 @@ class CurseForgeTests(unittest.TestCase):
         self.assertIn(b'"gameVersions": [42]', body)
         self.assertIn(b'ZIP\x00DATA', body)
 
-    def test_no_upload_when_later_flavor_validation_fails(self):
+    def test_unified_release_uploads_once_with_every_game_version(self):
         from types import SimpleNamespace
         release = {'isDraft': False, 'isPrerelease': False, 'assets':
-                   [{'name': f'QuestTargets-1.4.1-{flavor}.zip'} for flavor in cf.FLAVORS]
-                   + [{'name': 'SHA256SUMS.txt'}]}
+                   [{'name': 'QuestTargets-1.4.1.zip'}, {'name': 'SHA256SUMS.txt'}]}
         def fake_gh(*args, **kwargs):
             if args[:2] == ('release', 'view'):
                 return SimpleNamespace(stdout=json.dumps(release))
             if args[:2] == ('release', 'download'):
-                destination = Path(args[args.index('--dir')+1])
-                (destination/'SHA256SUMS.txt').write_text('')
+                folder = Path(args[args.index('--dir')+1])
+                path = self.make_archive(folder)
+                path.unlink()
+                with zipfile.ZipFile(path, 'w') as archive:
+                    archive.writestr('QuestTargets/QuestTargets.toc',
+                        '## Version: 1.4.1\n## Interface: 11509, 20506, 50504, 16001, 120105\n')
+                    archive.writestr('QuestTargets/Bindings.xml', '<Bindings/>')
+                (folder/'SHA256SUMS.txt').write_text(hashlib.sha256(path.read_bytes()).hexdigest()+'  '+path.name+'\n')
                 return SimpleNamespace(stdout='')
+            if args[0] == 'api':
+                return SimpleNamespace(stdout=json.dumps({'sha': 'a'*40}))
             self.fail(f'Unexpected GitHub write: {args}')
-        def verify(path, version, flavor, checksums, interface):
-            if flavor == 'Retail':
-                raise cf.PublishError('Final archive is invalid')
+        pins = json.loads((ROOT/'tools/client-versions.json').read_text())['flavors']
+        rows = [{'name': '.'.join(pin['version'].split('.')[:3]), 'id': i+1}
+                for i, pin in enumerate(pins.values())]
+        uploads = []
+        def fake_cf(endpoint, token, data=None, content_type=None):
+            if endpoint == '/game/versions':
+                return rows
+            uploads.append(data)
+            return {'id': 321}
         with patch.object(cf, 'gh', side_effect=fake_gh), \
-             patch.object(cf, 'verify_asset', side_effect=verify), \
              patch.object(cf, 'read_changelog', return_value='- Player notes'), \
-             patch.object(cf, 'resolve_versions', return_value=dict.fromkeys(cf.FLAVORS, 42)), \
-             patch.object(cf, 'cf_json', return_value=[]), \
-             patch.object(cf, 'reserve_upload') as reserve, \
+             patch.object(cf, 'cf_json', side_effect=fake_cf), \
+             patch.object(cf, 'reserve_upload', return_value=True) as reserve, \
              patch.dict(os.environ, {'CURSEFORGE_ENABLED': 'true', 'CF_API_TOKEN': 'test-token',
                                      'GITHUB_REPOSITORY': 'simonrath/questtargets'}), \
              patch.object(cf.sys, 'argv', ['publisher', '--tag', 'v1.4.1', '--publish']):
-            with self.assertRaisesRegex(cf.PublishError, 'Final archive'):
-                cf.main()
-            reserve.assert_not_called()
+            cf.main()
+            reserve.assert_called_once_with('simonrath/questtargets', 'v1.4.1', 'All', 'a'*40)
+        self.assertEqual(len(uploads), 1)
+        metadata = json.loads(uploads[0].split(b'\r\n\r\n')[1].split(b'\r\n--')[0])
+        self.assertEqual(set(metadata['gameVersions']), {1, 2, 3, 4, 5})
+        self.assertEqual(metadata['displayName'], 'Quest Targets 1.4.1')
+
+    def test_missing_one_supported_interface_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self.make_archive(tmp)
+            with self.assertRaises(cf.PublishError):
+                cf.verify_asset(path, '1.4.1',
+                    {path.name: hashlib.sha256(path.read_bytes()).hexdigest()}, [120105, 16001, 11509])
 
     def test_disabled_publishing_cannot_write(self):
         with patch.dict(os.environ, {'CURSEFORGE_ENABLED': 'false'}), \

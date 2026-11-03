@@ -38,7 +38,7 @@ jobs:
               raise SystemExit('Release tag differs from addon version')
           read_changelog(Path('.'), tag[1:])
           PY
-      - name: Build all five addon-only packages
+      - name: Build universal addon-only package
         shell: pwsh
         run: ./tools/package_quest_targets.ps1
       - name: Verify packages and write checksums
@@ -55,10 +55,9 @@ jobs:
           from publish_curseforge import FLAVORS, verify_asset
           version = os.environ['RELEASE_TAG'][1:]
           pins = json.loads(Path('tools/client-versions.json').read_text())['flavors']
-          files = [Path('dist') / f'QuestTargets-{version}-{flavor}.zip' for flavor in FLAVORS]
+          files = [Path('dist') / f'QuestTargets-{version}.zip']
           checksums = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
-          for flavor, path in zip(FLAVORS, files):
-              verify_asset(path, version, flavor, checksums, pins[flavor]['interface'])
+          verify_asset(files[0], version, checksums, [pins[flavor]['interface'] for flavor in FLAVORS])
           Path('dist/SHA256SUMS.txt').write_text(''.join(f'{checksums[p.name]}  {p.name}\n' for p in files))
           PY
       - name: Attach packages to existing draft

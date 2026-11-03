@@ -61,8 +61,8 @@ def read_checksums(path):
     return result
 
 
-def verify_asset(path, version, flavor, checksums, interface):
-    expected_name = f'QuestTargets-{version}-{flavor}.zip'
+def verify_asset(path, version, checksums, interfaces):
+    expected_name = f'QuestTargets-{version}.zip'
     if path.name != expected_name or checksums.get(path.name) != hashlib.sha256(path.read_bytes()).hexdigest():
         raise PublishError(f'Archive name/checksum mismatch: {path.name}')
     try:
@@ -81,8 +81,9 @@ def verify_asset(path, version, flavor, checksums, interface):
             if not re.search(r'^## Version: ' + re.escape(version) + r'\s*$', toc, re.M):
                 raise PublishError('ZIP TOC version differs from release tag.')
             declared = re.search(r'^## Interface: (.+)$', toc, re.M)
-            if not declared or str(interface) not in declared[1].strip().split(', '):
-                raise PublishError(f'{flavor} interface pin is not supported by the ZIP.')
+            supported = set(re.split(r',\s*', declared[1].strip())) if declared else set()
+            if not {str(interface) for interface in interfaces} <= supported:
+                raise PublishError('ZIP does not support every pinned client interface.')
             if 'QuestTargets/Bindings.xml' not in names:
                 raise PublishError('ZIP is missing native keybindings.')
     except (zipfile.BadZipFile, KeyError, UnicodeError) as exc:
@@ -153,7 +154,6 @@ def run_uploads(plans, reserve, upload):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--tag', required=True)
-    parser.add_argument('--flavor', choices=('All', *FLAVORS), default='All')
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument('--publish', action='store_true')
     modes.add_argument('--dry-run', action='store_true')
@@ -170,7 +170,7 @@ def main():
                             '--json', 'isDraft,isPrerelease,tagName,assets').stdout)
     version = release_version(args.tag, release)
     notes = read_changelog(ROOT, version)
-    flavors = list(FLAVORS) if args.flavor == 'All' else [args.flavor]
+    flavors = list(FLAVORS)
     pins = json.loads((ROOT / 'tools/client-versions.json').read_text(encoding='utf-8'))['flavors']
     token = os.environ.get('CF_API_TOKEN', '')
     if args.offline_versions:
@@ -181,7 +181,7 @@ def main():
             raise PublishError('Set CF_API_TOKEN to a CurseForge Upload API token, or use --offline-versions for a dry run.')
         rows = cf_json('/game/versions', token)
     versions = resolve_versions(rows, pins, flavors)
-    filenames = [f'QuestTargets-{version}-{flavor}.zip' for flavor in flavors]
+    filenames = [f'QuestTargets-{version}.zip']
     # Some release tools publish before attaching assets. Read-only waiting is safe.
     for attempt in range(13):
         assets = {asset['name']: asset for asset in release['assets']}
@@ -198,18 +198,17 @@ def main():
         patterns = [item for name in [*filenames, 'SHA256SUMS.txt'] for item in ('--pattern', name)]
         gh('release', 'download', args.tag, '--repo', repository, '--dir', tmp, *patterns)
         checksums = read_checksums(folder / 'SHA256SUMS.txt')
-        plans = []
-        for flavor, filename in zip(flavors, filenames):
-            path = folder / filename
-            verify_asset(path, version, flavor, checksums, pins[flavor]['interface'])
-            digest = assets[filename].get('digest')
-            if digest and digest != 'sha256:' + checksums[filename]:
-                raise PublishError('GitHub asset digest differs from SHA256SUMS.txt.')
-            metadata = {'displayName': f'Quest Targets {version} - {flavor}',
-                        'changelog': notes, 'changelogType': 'markdown',
-                        'gameVersions': [versions[flavor]], 'releaseType': 'release'}
-            plans.append({'flavor': flavor, 'path': path, 'metadata': metadata})
-            print(f'Validated {filename}; CurseForge game version ID {versions[flavor]}')
+        filename = filenames[0]
+        path = folder / filename
+        verify_asset(path, version, checksums, [pins[flavor]['interface'] for flavor in flavors])
+        digest = assets[filename].get('digest')
+        if digest and digest != 'sha256:' + checksums[filename]:
+            raise PublishError('GitHub asset digest differs from SHA256SUMS.txt.')
+        metadata = {'displayName': f'Quest Targets {version}',
+                    'changelog': notes, 'changelogType': 'markdown',
+                    'gameVersions': list(dict.fromkeys(versions.values())), 'releaseType': 'release'}
+        plans = [{'flavor': 'All', 'path': path, 'metadata': metadata}]
+        print(f'Validated {filename}; CurseForge game version IDs {metadata["gameVersions"]}')
         print('\nPlayer changelog:\n' + notes)
         if not args.publish:
             print('\nDRY RUN: no reservations created and no files uploaded.')
