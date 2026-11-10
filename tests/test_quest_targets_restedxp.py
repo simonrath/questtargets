@@ -74,14 +74,13 @@ class RestedXPTests(unittest.TestCase):
             local button=NS.RestedXP.button
             assert(button and button:IsVisible())
             assert(not frame.protected and not scroll.protected)
-            assert(button.parent==UIParent and button.point[2]==UIParent)
-            local x=button.point[4]
+            assert(button.parent==UIParent and button.point[2]==NS.UI.master)
             frame.centerX=320
             NS.RestedXP.Sync(NS.app)
-            assert(button.point[4]==x+20)
+            assert(button.point[2]==NS.UI.master)
             frame:Hide()
             NS.RestedXP.Sync(NS.app)
-            assert(not button:IsVisible())
+            assert(button:IsVisible())
         ''')
 
     def test_effective_target_lists_override_stale_guide_elements(self):
@@ -280,7 +279,7 @@ class RestedXPTests(unittest.TestCase):
             assert(not macro:find('/cleartarget',1,true))
         ''')
 
-    def test_guided_master_and_attached_button_cycle_matching_quest_targets(self):
+    def test_guided_master_and_bar_button_cycle_matching_quest_targets(self):
         self.lua.execute('''
             quests[3]={questID=3,title='Spinnen',objectives={
                 {type='monster',text='Spinne getötet: 0/3',numFulfilled=0,numRequired=3,finished=false}}}
@@ -301,7 +300,24 @@ class RestedXPTests(unittest.TestCase):
             assert(NS.UI.master.entry.name=='Nicht im Questlog')
             local button=NS.RestedXP.button
             assert(button and button.parent==UIParent and button:IsVisible())
-            assert(button.point[2]==UIParent and button.point[4]==974)
+            assert(button.point[2]==NS.UI.master and button.point[3]=='RIGHT')
+            local compass=NS.UI.master:GetNormalTexture():GetTexture()
+            assert(button:GetNormalTexture():GetTexture()==compass)
+            ItemTree={UI={}}
+            NS.UI.settings.itemTreeToggle.scripts.OnClick()
+            local item=NS.ItemTree.target
+            assert(item and item.inBar and item.point[2]==button)
+            assert(item:GetNormalTexture():GetTexture()==compass)
+            assert(item:GetNormalTexture().vertexColor[1]>item:GetNormalTexture().vertexColor[3])
+            assert(button:GetNormalTexture().vertexColor[3]>button:GetNormalTexture().vertexColor[1])
+            item:Hide()
+            NS.ItemTree.Sync(NS.app)
+            assert(item:IsShown() and item:GetAlpha()==1)
+            local size=button:GetWidth()
+            NS.app.db.masterAppearance='modern'
+            NS.app.db.masterModernScale=1.5
+            NS.UI.RenderMaster(NS.app)
+            assert(button:GetWidth()>size and item:GetWidth()==button:GetWidth())
             assert(button.attributes.type1=='macro')
             assert(button.entry.name=='Nicht im Questlog')
             assert(button.attributes.macrotext1:find('Nicht im Questlog',1,true))
@@ -324,12 +340,19 @@ class RestedXPTests(unittest.TestCase):
             local replacement=CreateFrame('Frame',nil,UIParent)
             rxp.targeting.activeTargetFrame=replacement
             NS.RestedXP.Sync(NS.app)
-            assert(button.parent==UIParent and button.rxpFrame==replacement)
+            assert(button.parent==UIParent and button.point[2]==NS.UI.master)
             replacement:Hide()
             NS.RestedXP.Sync(NS.app)
-            assert(not button:IsVisible())
+            assert(button:IsVisible())
             NS.UI.settings.restedXPToggle.scripts.OnClick()
             assert(not NS.app.db.restedXPIntegration and not button.shown)
+            assert(item.point[2]==NS.UI.master)
+            NS.app.db.masterHidden=true
+            NS.UI.RenderMaster(NS.app)
+            assert(item.inBar and item.point[3]=='CENTER' and NS.UI.BeginMasterMove(NS.app))
+            NS.UI.EndMasterMove(NS.app, false)
+            NS.UI.settings.itemTreeToggle.scripts.OnClick()
+            assert(not item.inBar and NS.UI.master.barWidth==0)
             assert(NS.UI.master.entry.nameList[1]=='Spinne' or NS.UI.master.entry.nameList[1]=='Waldwolf')
         ''')
 

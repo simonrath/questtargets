@@ -91,6 +91,7 @@ function app:Refresh(forceResolution)
     UI.SyncFocusBinding(self)
     NS.QuestieTracker.Sync(self)
     NS.RestedXP.Sync(self)
+    NS.ItemTree.Sync(self)
     if self.pendingVisibility ~= nil then
         UI.frame:SetShown(self.pendingVisibility)
         self.db.hidden = not self.pendingVisibility
@@ -146,6 +147,7 @@ function app:Poll()
     end
     NS.QuestieTracker.Sync(self)
     NS.RestedXP.Sync(self)
+    NS.ItemTree.Sync(self)
 end
 
 function app:Help()
@@ -254,6 +256,10 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         -- Observe delayed secure target results without rescanning quests or
         -- writing any protected attributes from the event handler.
         Core.ConfirmSearchResult()
+        if app.db and app.db.itemTreeMacroBody and not InCombatLockdown() then
+            -- Let the targeting macro finish before rewriting its stored body.
+            C_Timer.After(0, function() NS.ItemTree.SyncMacro(app) end)
+        end
     elseif event == "PLAYER_REGEN_DISABLED" then
         UI.CancelBindingAssignment()
         UI.EndMasterMove(app, true)

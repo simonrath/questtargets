@@ -91,6 +91,7 @@ end
 function methods:SetAllPoints() self.allPoints = true end
 function methods:SetAlpha(value) self.alpha = value end
 function methods:SetDesaturated(value) self.desaturated = value end
+function methods:SetVertexColor(...) self.vertexColor = {...} end
 function methods:GetAlpha() return self.alpha or 1 end
 function methods:SetNormalTexture(asset)
     assert(type(asset) == 'string' or type(asset) == 'number', 'SetNormalTexture requires an asset')
@@ -414,3 +415,5 @@ QuestTargetsDB={masterAppearance="classic"}
 function methods:SetResizable(value) guard(self); self.resizable=value end
 function methods:SetResizeBounds(...) guard(self); self.resizeBounds={...} end
 function methods:StartSizing(point) guard(self); self.sizing=point end
+
+function methods:GetAttribute(key) return self.attributes[key] end

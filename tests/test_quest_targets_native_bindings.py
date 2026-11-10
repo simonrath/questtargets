@@ -9,7 +9,7 @@ class NativeBindingsTests(unittest.TestCase):
     def test_native_click_actions_are_registered_and_packaged(self):
         actions = ET.parse(addon.ROOT / 'QuestTargets/Bindings.xml').getroot().findall('Binding')
         self.assertEqual([item.attrib['name'] for item in actions],
-                         ['CLICK QuestTargetsMaster:LeftButton', 'CLICK QuestTargetsFocused:LeftButton'])
+                         ['CLICK QuestTargetsMaster:LeftButton', 'CLICK QuestTargetsFocused:LeftButton', 'CLICK QuestTargetsItemTree:LeftButton'])
         self.assertTrue(all(item.attrib['category'] == 'Quest Targets' for item in actions))
         self.assertIn('Bindings.xml', (addon.ROOT/'tools/package_quest_targets.ps1').read_text())
         self.lua.execute('''boot()

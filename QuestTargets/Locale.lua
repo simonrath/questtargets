@@ -6,6 +6,12 @@ NS.LANGUAGE_NAMES = {"English", "Deutsch", "Español", "Français", "Türkçe", 
 
 -- English, German, Spanish, French, Turkish, Simplified Chinese.
 local phrases = {
+    itemTreeBinding = {"Target ItemTree mobs", "ItemTree-Mobs anvisieren"},
+    itemTreeImport = {"Import mobs", "Mobs übernehmen"},
+    itemTreeEmpty = {"ItemTree: No usable mob drops in the current Sources view.", "ItemTree: Keine verwendbaren Mob-Drops in dieser Quellenansicht."},
+    itemTreeMacroFailed = {"Could not save ItemTree Mobs. Check your macro slots.", "ItemTree Mobs konnte nicht gespeichert werden. Prüfe deine Makroplätze."},
+    itemTreeMacroConflict = {"ItemTree Mobs already exists and was edited or created elsewhere.", "ItemTree Mobs existiert bereits und wurde anderweitig erstellt oder geändert."},
+    itemTreeTargetsImported = {"ItemTree button and hotkey: %d targets imported.", "ItemTree-Button und Hotkey: %d Ziele übernommen."},
     title = {"Quest Targets", "Quest Targets", "Objetivos de misión", "Cibles de quête", "Görev Hedefleri", "任务目标"},
     all = {"All quests", "Alle Quests", "Todas las misiones", "Toutes les quêtes", "Tüm görevler", "所有任务"},
     tracked = {"Tracked quests", "Verfolgte Quests", "Misiones seguidas", "Quêtes suivies", "Takip edilen görevler", "追踪的任务"},
@@ -32,8 +38,10 @@ local phrases = {
     markerNote = {"Marks targets when clicked. Group permissions still apply. Combat changes take effect afterward.", "Markierung beim Zielklick. Gruppenrechte gelten weiterhin. Änderungen im Kampf werden nach Kampfende übernommen.", "Marca al seleccionar. Se respetan los permisos de grupo. Los cambios en combate se aplican después.", "Marque au clic. Les droits du groupe restent applicables. Les changements en combat prennent effet ensuite.", "Tıklanınca işaretler. Grup izinleri geçerlidir. Savaştaki değişiklikler sonra uygulanır.", "点击目标时标记。仍受队伍权限限制。战斗中的更改将在战斗后生效。"},
     display = {"Display", "Anzeige", "Pantalla", "Affichage", "Görünüm", "显示"},
     hotkeys = {"Hotkeys", "Tastenkürzel", "Teclas rápidas", "Raccourcis clavier", "Kısayol tuşları", "快捷键"},
+    buttons = {"Buttons", "Buttons", "Botones", "Boutons", "Düğmeler", "按钮"},
+    showItemTreeButton = {"Show ItemTree button", "ItemTree-Button anzeigen", "Mostrar botón de ItemTree", "Afficher le bouton ItemTree", "ItemTree düğmesini göster", "显示 ItemTree 按钮"},
     showMaster = {"Show master button", "Masterbutton anzeigen", "Mostrar botón principal", "Afficher le bouton principal", "Ana düğmeyi göster", "显示主按钮"},
-    masterMove = {"Move master button", "Masterbutton verschieben", "Mover botón principal", "Déplacer le bouton principal", "Ana düğmeyi taşı", "移动主按钮"},
+    masterMove = {"Move button bar", "Buttonleiste verschieben", "Mover barra de botones", "Déplacer la barre de boutons", "Düğme çubuğunu taşı", "移动按钮栏"},
     masterMoveStart = {"Start", "Starten", "Iniciar", "Démarrer", "Başlat", "开始"},
     masterMoveHelp = {"Outside combat: hold right mouse button and drag, or start edit mode to drag with the left mouse button.", "Außerhalb des Kampfes: rechte Maustaste halten und ziehen, oder den Bearbeitungsmodus zum Linksziehen starten.", "Fuera de combate: mantén el botón derecho y arrastra, o inicia el modo de edición para arrastrar con el izquierdo.", "Hors combat : glissez avec le bouton droit, ou démarrez le mode édition pour glisser avec le bouton gauche.", "Savaş dışında: sağ tuşu basılı tutup sürükle veya sol tuşla sürüklemek için düzenleme modunu başlat.", "非战斗时：按住右键拖动，或启动编辑模式后使用左键拖动。"},
     masterMoveDrag = {"Hold left mouse button and drag", "Linke Maustaste halten und ziehen", "Mantén el botón izquierdo y arrastra", "Maintenez le bouton gauche et glissez", "Sol tuşu basılı tutup sürükle", "按住左键拖动"},
@@ -41,7 +49,7 @@ local phrases = {
     masterMoveCancel = {"Cancel", "Abbrechen", "Cancelar", "Annuler", "İptal", "取消"},
     masterMoveReset = {"Reset position", "Position zurücksetzen", "Restablecer posición", "Réinitialiser", "Konumu sıfırla", "重置位置"},
     masterMoveCombat = {"The master button cannot be moved in combat.", "Der Masterbutton kann im Kampf nicht verschoben werden.", "No se puede mover el botón principal en combate.", "Le bouton principal ne peut pas être déplacé en combat.", "Ana düğme savaşta taşınamaz.", "战斗中无法移动主按钮。"},
-    masterMoveHidden = {"Enable Show master button before moving it.", "Aktiviere zuerst Masterbutton anzeigen, um ihn zu verschieben.", "Activa Mostrar botón principal antes de moverlo.", "Activez Afficher le bouton principal avant de le déplacer.", "Taşımadan önce Ana düğmeyi göster seçeneğini aç.", "移动前请先启用显示主按钮。"},
+    masterMoveHidden = {"Enable a button before moving the bar.", "Aktiviere einen Button, um die Leiste zu verschieben.", "Activa un botón antes de mover la barra.", "Activez un bouton avant de déplacer la barre.", "Çubuğu taşımadan önce bir düğmeyi etkinleştir.", "移动前请先启用一个按钮。"},
     masterMoveTip = {"Hold the right mouse button on the master button and drag to move it.", "Rechte Maustaste auf dem Masterbutton gedrückt halten und ziehen, um ihn zu verschieben.", "Mantén pulsado el botón derecho sobre el botón principal y arrástralo para moverlo.", "Maintenez le bouton droit sur le bouton principal et glissez pour le déplacer.", "Ana düğmeyi taşımak için üzerinde sağ tuşa basılı tutup sürükleyin.", "按住主按钮上的鼠标右键并拖动以移动它。"},
     showMenu = {"Show quest window", "Questmenü anzeigen", "Mostrar ventana de misiones", "Afficher la fenêtre des quêtes", "Görev penceresini göster", "显示任务窗口"},
     transparencyMode = {"Transparency mode (quest list only)", "Transparenzmodus (nur Questliste)", "Modo transparente (solo lista)", "Mode transparent (liste seule)", "Saydam mod (yalnızca görev listesi)", "透明模式（仅显示任务列表）"},
@@ -179,6 +187,7 @@ function NS.L(key)
 end
 
 function NS.UpdateBindingLabels()
+    _G["BINDING_NAME_CLICK QuestTargetsItemTree:LeftButton"] = NS.L("itemTreeBinding")
     BINDING_HEADER_QUESTTARGETS = NS.L("title")
     _G["BINDING_NAME_CLICK QuestTargetsMaster:LeftButton"] = NS.L("masterDefault")
     _G["BINDING_NAME_CLICK QuestTargetsFocused:LeftButton"] = NS.L("focusHotkey")

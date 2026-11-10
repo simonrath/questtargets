@@ -170,6 +170,9 @@ function P.Order(entry)
         local af = entry.finisherNames and entry.finisherNames[a] == true or false
         local bf = entry.finisherNames and entry.finisherNames[b] == true or false
         if af ~= bf then return not af end
+        local az = entry.localNames and entry.localNames[a] == true or false
+        local bz = entry.localNames and entry.localNames[b] == true or false
+        if az ~= bz then return az end
         if distances[a] ~= distances[b] then return distances[a] < distances[b] end
         return a < b
     end)

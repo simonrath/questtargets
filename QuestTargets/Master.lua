@@ -4,6 +4,51 @@ local L = NS.L
 local COMPASS_UP = "Interface\\AddOns\\QuestTargets\\Textures\\QuestCompassUp"
 local COMPASS_DOWN = "Interface\\AddOns\\QuestTargets\\Textures\\QuestCompassDown"
 
+function UI.StyleTargetButton(button, red, green, blue)
+    button:SetNormalTexture(COMPASS_UP)
+    button:SetPushedTexture(COMPASS_DOWN)
+    for _, texture in ipairs({button:GetNormalTexture(), button:GetPushedTexture()}) do
+        texture:SetAllPoints(button)
+        texture:SetDesaturated(true)
+        texture:SetVertexColor(red, green, blue)
+    end
+    button:SetFrameStrata("MEDIUM")
+    button:RegisterForDrag("RightButton")
+    button:SetScript("OnDragStart", function()
+        UI.master:GetScript("OnDragStart")(UI.master)
+    end)
+    button:SetScript("OnDragStop", function()
+        UI.master:GetScript("OnDragStop")(UI.master)
+    end)
+end
+
+function UI.LayoutTargetButtons(app)
+    local master = UI.master
+    if not master or InCombatLockdown() then return end
+    local width, height = master:GetWidth(), master:GetHeight()
+    local iconWidth = master.modernAppearance and height or math.floor(33 * app.db.masterScaleX + 0.5)
+    local previous = master:IsShown() and master or nil
+    local barWidth = previous and width or 0
+    local function place(button)
+        if not button then return end
+        local anchor, edge = previous or master, previous and "RIGHT" or "CENTER"
+        if button.barAnchor ~= anchor or button.barEdge ~= edge then
+            button:ClearAllPoints()
+            button:SetPoint(previous and "LEFT" or "CENTER", anchor, edge, previous and 4 or 0, 0)
+            button.barAnchor, button.barEdge = anchor, edge
+        end
+        if button:GetWidth() ~= iconWidth or button:GetHeight() ~= height then button:SetSize(iconWidth, height) end
+        barWidth = barWidth + (previous and 4 or 0) + iconWidth
+        previous = button
+    end
+    local rested = NS.RestedXP.button
+    place(rested and rested:IsShown() and rested)
+    local item = NS.ItemTree.target
+    place(item and item.inBar and item)
+    master.barWidth = barWidth
+    master.barOffset = math.max(0, barWidth - (master:IsShown() and width or iconWidth)) / 2
+end
+
 function UI.RenderMaster(app)
     assert(not InCombatLockdown())
     if not UI.master then
@@ -71,10 +116,6 @@ function UI.RenderMaster(app)
     UI.ApplyPendingMasterMove(app)
     UI.StopMaster(app)
     UI.PositionMaster(app)
-    if UI.masterMoveActive then
-        if app.db.masterHidden then UI.EndMasterMove(app, false)
-        else UI.UpdateMasterMove(app) end
-    end
     UI.CreateMinimap(app)
     local entry = {title = L("active"), refs = {}, names = {}, nameList = {}, finisherNames = {}}
     for _, quest in ipairs(Core.QuestEntriesFor(app, true)) do
@@ -110,6 +151,11 @@ function UI.RenderMaster(app)
     UI.master.entry = entry
     UI.master:SetAttribute("macrotext1", (Core.EntryMacro(entry, app.db)))
     UI.master:SetShown(not app.db.masterHidden)
+    UI.LayoutTargetButtons(app)
+    if UI.masterMoveActive then
+        if UI.master.barWidth == 0 then UI.EndMasterMove(app, false)
+        else UI.UpdateMasterMove(app) end
+    end
     UI.RenderFocus(app)
 end
 
@@ -237,8 +283,12 @@ end
 function UI.UpdateMasterMove(app)
     if not UI.masterMoveActive or InCombatLockdown() then return end
     local edit, master = UI.masterMove, UI.master
-    edit:SetSize(math.max(380, master:GetWidth() + 12), master:GetHeight() + 112)
-    edit.outline:SetSize(math.max(28, master:GetWidth() + 8), math.max(28, master:GetHeight() + 8))
+    local width = master.barWidth or master:GetWidth()
+    local offset = master.barOffset or 0
+    edit:SetSize(math.max(380, width + 2 * offset + 12), master:GetHeight() + 112)
+    edit.outline:ClearAllPoints()
+    edit.outline:SetPoint("CENTER", edit, "CENTER", offset, 0)
+    edit.outline:SetSize(math.max(28, width + 8), math.max(28, master:GetHeight() + 8))
     edit.grip:ClearAllPoints()
     edit.grip:SetPoint("BOTTOM", edit, "CENTER", 0, master:GetHeight() / 2 + 8)
     edit.toolbar:ClearAllPoints()
@@ -368,7 +418,7 @@ end
 
 function UI.BeginMasterMove(app)
     if InCombatLockdown() then print(L("masterMoveCombat")); return false end
-    if not app.db or app.db.masterHidden or not UI.master then
+    if not app.db or not UI.master or UI.master.barWidth == 0 then
         print(L("masterMoveHidden")); return false
     end
     if UI.masterMoveActive then closeMasterMoveSettings(); return true end

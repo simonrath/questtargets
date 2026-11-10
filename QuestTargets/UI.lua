@@ -20,6 +20,13 @@ end
 
 local MASTER_BINDING = "CLICK QuestTargetsMaster:LeftButton"
 local FOCUS_BINDING = "CLICK QuestTargetsFocused:LeftButton"
+local ITEMTREE_BINDING = "CLICK QuestTargetsItemTree:LeftButton"
+local function bindingAction(focused)
+    if focused == "itemTree" then return ITEMTREE_BINDING, "QuestTargetsItemTree" end
+    if focused then return FOCUS_BINDING, "QuestTargetsFocused" end
+    return MASTER_BINDING, "QuestTargetsMaster"
+end
+
 local function bindingText(key)
     if not key then return L("unbound") end
     return GetBindingText and GetBindingText(key) or key
@@ -66,8 +73,7 @@ end
 
 local function setBindingSlot(app, focused, binding, slot)
     if InCombatLockdown() then return false end
-    local command = focused and FOCUS_BINDING or MASTER_BINDING
-    local target = focused and "QuestTargetsFocused" or "QuestTargetsMaster"
+    local command, target = bindingAction(focused)
     local first, second = GetBindingKey(command)
     if slot == 2 then
         second = binding
@@ -125,11 +131,12 @@ UI.CancelBindingAssignment = stopBindingCapture
 local function bindingActionName(command)
     if command == MASTER_BINDING then return L("masterDefault") end
     if command == FOCUS_BINDING then return L("focusHotkey") end
+    if command == ITEMTREE_BINDING then return L("itemTreeBinding") end
     return GetBindingName and GetBindingName(command) or command
 end
 
 local function requestBindingSlot(button, app, focused, binding, slot, refresh)
-    local command = focused and FOCUS_BINDING or MASTER_BINDING
+    local command = bindingAction(focused)
     local oldAction = binding and GetBindingAction and GetBindingAction(binding)
     if not oldAction or oldAction == "" or oldAction == command then
         setBindingSlot(app, focused, binding, slot)
@@ -622,8 +629,8 @@ end
 function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
-    local keys = {"general", "targetMarkers", "master", "hotkeys"}
-    local heights = {750, 340, 710, 210}
+    local keys = {"general", "targetMarkers", "buttons", "hotkeys"}
+    local heights = {750, 340, 864, 248}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -668,22 +675,25 @@ function UI.LayoutSettings(app)
     local window = settingsBox(general, "window", -446, 125)
     local language = settingsBox(general, "language", -605, 102)
     local marking = settingsBox(markers, "targetMarkers", -32, 292)
-    local appearance = settingsBox(master, "masterAppearance", -32, 84)
-    local dimensions = settingsBox(master, "buttonSize", -150, 220)
-    local caption = settingsBox(master, "caption", -404, 112)
-    local position = settingsBox(master, "masterMove", -550, 132)
+    local toggles = settingsBox(master, "buttons", -32, 130)
+    local appearance = settingsBox(master, "masterAppearance", -186, 84)
+    local dimensions = settingsBox(master, "buttonSize", -304, 220)
+    local caption = settingsBox(master, "caption", -558, 112)
+    local position = settingsBox(master, "masterMove", -704, 132)
     master.positionGroup = position
-    local bindings = settingsBox(hotkeys, "hotkeys", -32, 195)
-    panel.groups = {display, window, language, marking, appearance, dimensions, caption, position, bindings}
+    local bindings = settingsBox(hotkeys, "hotkeys", -32, 233)
+    panel.groups = {display, window, language, marking, toggles, appearance, dimensions, caption, position, bindings}
     panel.displayText:Hide()
     panel.languageText:Hide()
     panel.hotkeysText:Hide()
-    for i, control in ipairs({panel.masterToggle, panel.menuToggle, panel.transparencyToggle,
-        panel.tooltipToggle, panel.minimapToggle,
-        panel.restedXPToggle, panel.questieTrackerToggle}) do
+    for i, control in ipairs({panel.menuToggle, panel.transparencyToggle,
+        panel.tooltipToggle, panel.minimapToggle, panel.questieTrackerToggle}) do
         place(control, display, 18, -32 - (i-1)*30)
     end
-    place(panel.questieOffsetControl, display, 22, -253)
+    for i, control in ipairs({panel.masterToggle, panel.restedXPToggle, panel.itemTreeToggle}) do
+        place(control, toggles, 18, -32 - (i-1)*30)
+    end
+    place(panel.questieOffsetControl, display, 22, -193)
     place(panel.scaleControl, window, 22, -31)
     panel.scaleControl:SetPoint("TOPRIGHT", window, "TOPRIGHT", -22, -31)
     place(panel.languageDropdown, language, 2, -42)
@@ -717,7 +727,7 @@ function UI.LayoutSettings(app)
         header:ClearAllPoints()
         panel.bindingHeaders[slot] = header
     end
-    for index, row in ipairs({{panel.hotkey, panel.hotkey2}, {panel.focusHotkey, panel.focusHotkey2}}) do
+    for index, row in ipairs({{panel.hotkey, panel.hotkey2}, {panel.focusHotkey, panel.focusHotkey2}, {panel.itemTreeHotkey, panel.itemTreeHotkey2}}) do
         local y = -58 - (index - 1) * 38
         for _, control in ipairs(row) do
             control:SetParent(bindings)
@@ -737,9 +747,12 @@ function UI.LayoutSettings(app)
     panel.focusHotkeyAction = label(bindings, 18, -101, 210, "GameFontHighlight")
     panel.focusHotkeyAction:SetText(L("focusHotkey"))
     panel.focusHotkeyAction:SetPoint("TOPRIGHT", panel.focusHotkey, "TOPLEFT", -12, -5)
-    place(panel.hotkeyNote, bindings, 18, -138)
+    panel.itemTreeHotkeyAction = label(bindings, 18, -139, 210, "GameFontHighlight")
+    panel.itemTreeHotkeyAction:SetText(L("itemTreeBinding"))
+    panel.itemTreeHotkeyAction:SetPoint("TOPRIGHT", panel.itemTreeHotkey, "TOPLEFT", -12, -5)
+    place(panel.hotkeyNote, bindings, 18, -176)
     panel.hotkeyNote:SetWidth(450)
-    panel.hotkeyNote:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -138)
+    panel.hotkeyNote:SetPoint("TOPRIGHT", bindings, "TOPRIGHT", -18, -176)
     panel.pages[4].scroll:SetScript("OnHide", function()
         stopBindingCapture()
         UI.UpdateSettings(app)
@@ -846,6 +859,7 @@ function QuestTargetsBindingSettingMixin:OnLoad()
         local control = CreateFrame("Button", nil, self, "UIMenuButtonStretchTemplate")
         control:SetSize(160, 22)
         control:SetNormalFontObject("GameFontHighlightSmall")
+        control:SetDisabledFontObject("GameFontDisableSmall")
         control:SetScript("OnClick", function(button)
             if self.data then self.data.callback(button, index) end
         end)
@@ -867,7 +881,11 @@ end
 function QuestTargetsBindingSettingMixin:RefreshBindings()
     if not self.data then return end
     self.Text:SetText(self.data.name)
+    local enabled = not self.data.isEnabled or self.data.isEnabled()
+    local gray = enabled and 1 or 0.5
+    self.Text:SetTextColor(gray, gray, gray)
     for slot, control in ipairs(self.Buttons) do
+        control:SetEnabled(enabled)
         if not control.listening then control:SetText(self.data.text(slot)) end
     end
 end
@@ -967,8 +985,6 @@ local function nativeSettings(app)
     end
 
     section("display")
-    checkboxSetting("showMaster", true, function() return not app.db.masterHidden end,
-        function(value) app.db.masterHidden = not value; app:Schedule() end, "masterMoveTip")
     checkboxSetting("showMenu", true, function()
         if app.pendingVisibility ~= nil then return app.pendingVisibility end
         return not app.db.hidden
@@ -998,15 +1014,6 @@ local function nativeSettings(app)
         return addonLoaded("Questie") and app.db.questieTrackerButtons
     end)
 
-    local restedXPToggle = checkboxSetting("restedXPIntegration", false,
-        function() return app.db.restedXPIntegration end,
-        function(value)
-            if InCombatLockdown() or not addonLoaded("RXPGuides") then return end
-            app.db.restedXPIntegration = value
-            NS.RestedXP.Sync(app)
-        end)
-    restedXPToggle:AddModifyPredicate(function() return addonLoaded("RXPGuides") end)
-
     section("window")
     checkboxSetting("transparencyMode", false,
         function() return app.db.transparencyMode end,
@@ -1023,7 +1030,27 @@ local function nativeSettings(app)
         function(value) app.db.markerIcon = value; app:Schedule() end,
         function() return {strsplit(",", L("markers"))} end)
 
-    section("master")
+    section("buttons")
+    checkboxSetting("showMaster", true, function() return not app.db.masterHidden end,
+        function(value) app.db.masterHidden = not value; app:Schedule() end, "masterMoveTip")
+    local restedXPToggle = checkboxSetting("restedXPIntegration", false,
+        function() return app.db.restedXPIntegration end,
+        function(value)
+            if InCombatLockdown() or not addonLoaded("RXPGuides") then return end
+            app.db.restedXPIntegration = value
+            NS.RestedXP.Sync(app)
+        end)
+    restedXPToggle:AddModifyPredicate(function() return addonLoaded("RXPGuides") end)
+
+    local itemTreeToggle = checkboxSetting("showItemTreeButton", false,
+        function() return app.db.itemTreeButton == true end,
+        function(value)
+            if InCombatLockdown() or not addonLoaded("ItemTree") then return end
+            app.db.itemTreeButton = value
+            NS.ItemTree.Sync(app)
+        end)
+    itemTreeToggle:AddModifyPredicate(function() return addonLoaded("ItemTree") end)
+
     local _, appearance = dropdownSetting("masterAppearance", 2,
         function() return app.db.masterAppearance == "modern" and 2 or 1 end,
         function(value)
@@ -1065,17 +1092,21 @@ local function nativeSettings(app)
 
     section("hotkeys")
     local function bindingRow(key, focused, descriptionKey)
-        local command = focused and FOCUS_BINDING or MASTER_BINDING
+        local command = bindingAction(focused)
         local initializer
+        local function isEnabled()
+            return focused ~= "itemTree" or addonLoaded("ItemTree")
+        end
         local function text(slot)
             local first, second = GetBindingKey(command)
             if slot == 2 then return bindingText(second) end
             return bindingText(first)
         end
         initializer = Settings.CreateElementInitializer("QuestTargetsBindingSettingTemplate", {
-            name=L(key), text=text,
+            name=L(key), text=text, isEnabled=isEnabled,
             tooltip=descriptionKey and L(descriptionKey) or nil,
             callback=function(control, slot)
+                if not isEnabled() then return end
                 beginBindingCapture(control, app, focused, slot or 1, function()
                     control:SetText(text(slot))
                     refresh()
@@ -1088,6 +1119,7 @@ local function nativeSettings(app)
     end
     bindingRow("masterDefault", false)
     bindingRow("focusHotkey", true, "focusHotkeyTip")
+    bindingRow("itemTreeBinding", "itemTree")
     section("language")
     dropdownSetting("language", NS.Language(), NS.Language, function(value)
         if InCombatLockdown() or value == NS.Language() then return end
@@ -1208,16 +1240,24 @@ function UI.RegisterSettings(app)
             NS.RestedXP.Sync(app)
             UI.UpdateSettings(app)
         end)
+        panel.itemTreeToggle = checkbox(panel, L("showItemTreeButton"), function()
+            if InCombatLockdown() or not addonLoaded("ItemTree") then return end
+            app.db.itemTreeButton = not app.db.itemTreeButton
+            NS.ItemTree.Sync(app)
+            UI.UpdateSettings(app)
+        end)
         panel.hotkeysText = label(panel, 20, -472, 330, "GameFontNormal")
         panel.hotkeysText:SetText(L("hotkeys"))
         local function bindingButton(focused, slot)
             local control = CreateFrame("Button", nil, panel, "UIMenuButtonStretchTemplate")
             control:SetSize(160, 22)
             control:SetNormalFontObject("GameFontHighlightSmall")
+            if focused == "itemTree" then control:SetDisabledFontObject("GameFontDisableSmall") end
             control:SetScript("OnClick", function(self)
+                if focused == "itemTree" and not addonLoaded("ItemTree") then return end
                 beginBindingCapture(self, app, focused, slot, function() UI.UpdateSettings(app) end)
             end)
-            if focused then
+            if focused == true then
                 control:HookScript("OnEnter", function(self)
                     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                     GameTooltip:SetText(L("focusHotkey"))
@@ -1232,6 +1272,8 @@ function UI.RegisterSettings(app)
         panel.hotkey2 = bindingButton(false, 2)
         panel.focusHotkey = bindingButton(true, 1)
         panel.focusHotkey2 = bindingButton(true, 2)
+        panel.itemTreeHotkey = bindingButton("itemTree", 1)
+        panel.itemTreeHotkey2 = bindingButton("itemTree", 2)
         panel:SetScript("OnHide", stopBindingCapture)
         panel.hotkeyNote = label(panel, 20, -532, 520)
         panel.hotkeyNote:SetText(L("hotkeyNote"))
@@ -1400,6 +1442,17 @@ function UI.UpdateSettings(app)
     first, second = GetBindingKey(FOCUS_BINDING)
     if not UI.settings.focusHotkey.listening then UI.settings.focusHotkey:SetText(bindingText(first)) end
     if not UI.settings.focusHotkey2.listening then UI.settings.focusHotkey2:SetText(bindingText(second)) end
+    local itemTreeAvailable = addonLoaded("ItemTree")
+    UI.settings.itemTreeToggle:SetChecked(app.db.itemTreeButton == true)
+    UI.settings.itemTreeToggle:SetEnabled(itemTreeAvailable)
+    UI.settings.itemTreeHotkey:SetEnabled(itemTreeAvailable)
+    UI.settings.itemTreeHotkey2:SetEnabled(itemTreeAvailable)
+    gray = itemTreeAvailable and 1 or 0.5
+    UI.settings.itemTreeToggle.caption:SetTextColor(gray, gray, gray)
+    UI.settings.itemTreeHotkeyAction:SetTextColor(gray, gray, gray)
+    first, second = GetBindingKey(ITEMTREE_BINDING)
+    if not UI.settings.itemTreeHotkey.listening then UI.settings.itemTreeHotkey:SetText(bindingText(first)) end
+    if not UI.settings.itemTreeHotkey2.listening then UI.settings.itemTreeHotkey2:SetText(bindingText(second)) end
     UIDropDownMenu_SetSelectedID(UI.settings.languageDropdown, NS.Language())
     UIDropDownMenu_SetText(UI.settings.languageDropdown, NS.LANGUAGE_NAMES[NS.Language()])
     for index, choice in ipairs(UI.settings.icons) do choice:SetEnabled(index ~= app.db.markerIcon) end
@@ -1423,6 +1476,7 @@ function UI.ApplyLanguage(app)
             for _, group in ipairs(panel.groups) do group.heading:SetText(L(group.localeKey)) end
             panel.hotkeyAction:SetText(L("masterDefault"))
             panel.focusHotkeyAction:SetText(L("focusHotkey"))
+            panel.itemTreeHotkeyAction:SetText(L("itemTreeBinding"))
             for slot, header in ipairs(panel.bindingHeaders) do
                 header:SetText(L(slot == 1 and "bindingKey1" or "bindingKey2"))
             end
@@ -1438,6 +1492,7 @@ function UI.ApplyLanguage(app)
         panel.questieTrackerToggle.caption:SetText(L("questieTrackerButtons"))
         panel.questieOffsetControl.caption:SetText(L("questieTrackerOffset"))
         panel.restedXPToggle.caption:SetText(L("restedXPIntegration"))
+        panel.itemTreeToggle.caption:SetText(L("showItemTreeButton"))
         panel.hotkeyNote:SetText(L("hotkeyNote"))
         panel.hotkeysText:SetText(L("hotkeys"))
         panel.languageText:SetText(L("language"))

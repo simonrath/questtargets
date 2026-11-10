@@ -10,7 +10,7 @@ class QuestTargetsTests(unittest.TestCase):
     def setUp(self):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute((ROOT / 'tests/quest_targets_mock.lua').read_text(encoding='utf-8'))
-        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Resize.lua', 'Master.lua', 'QuestieTracker.lua', 'RestedXP.lua', 'Diagnostics.lua', 'Main.lua'):
+        for name in ('Core.lua', 'Locale.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Resize.lua', 'Master.lua', 'QuestieTracker.lua', 'RestedXP.lua', 'ItemTree.lua', 'Diagnostics.lua', 'Main.lua'):
             self.lua.execute('assert(loadstring(...))("QuestTargets", NS)',
                              (ROOT / 'QuestTargets' / name).read_text(encoding='utf-8'))
 
@@ -537,9 +537,9 @@ class QuestTargetsTests(unittest.TestCase):
                 if kind=='section' then sections[#sections+1]=item.data.name end
             end
             assert(table.concat(sections,'|')==table.concat({NS.L('display'),NS.L('window'),
-                NS.L('targetMarkers'),NS.L('master'),NS.L('hotkeys'),NS.L('language')},'|'))
-            assert(counts.section==6 and counts.checkbox==8 and counts.slider==5
-                and counts.dropdown==3 and counts.button==2 and counts.editbox==1)
+                NS.L('targetMarkers'),NS.L('buttons'),NS.L('hotkeys'),NS.L('language')},'|'))
+            assert(counts.section==6 and counts.checkbox==9 and counts.slider==5
+                and counts.dropdown==3 and counts.button==3 and counts.editbox==1)
             assert(counts.move==1, 'native move option missing')
             local moveRow=NS.UI.nativeMove
             assert(moveRow and moveRow.template=='QuestTargetsMoveSettingTemplate')
@@ -634,6 +634,24 @@ class QuestTargetsTests(unittest.TestCase):
                 assert(not secondary.scripts.OnGamePadButtonDown)
             end
             assert(NS.app.db.focusHotkeyKey=='PAD2' and NS.app.db.focusHotkeyKey2=='PAD4')
+            local itemTreeInitializer
+            for _,item in ipairs(layout.initializers) do
+                if item.data.name==NS.L('itemTreeBinding') then itemTreeInitializer=item end
+            end
+            assert(itemTreeInitializer)
+            local itemTreeRow=CreateFrame('Frame',nil,UIParent)
+            itemTreeRow.Text=itemTreeRow:CreateFontString()
+            for name,value in pairs(QuestTargetsBindingSettingMixin) do itemTreeRow[name]=value end
+            itemTreeRow:OnLoad(); itemTreeRow:Init(itemTreeInitializer)
+            assert(itemTreeRow.Buttons[1].enabled==false and itemTreeRow.Buttons[2].enabled==false)
+            assert(itemTreeRow.Text.textColor[1]==0.5)
+            itemTreeInitializer.data.callback(itemTreeRow.Buttons[1],1)
+            assert(not itemTreeRow.Buttons[1].listening)
+            loadedAddons.ItemTree=true
+            itemTreeRow:RefreshBindings()
+            assert(itemTreeRow.Buttons[1].enabled and itemTreeRow.Buttons[2].enabled)
+            assert(itemTreeRow.Text.textColor[1]==1)
+            itemTreeRow:Release()
             local rows={}
             for _,initializer in ipairs({hotkeyButton,focusButton}) do
                 local row=CreateFrame('Frame',nil,UIParent)

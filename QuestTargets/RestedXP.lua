@@ -3,9 +3,6 @@ local Core, UI = NS.Core, NS.UI
 local Integration = {targets = {}, cursor = 1}
 NS.RestedXP = Integration
 
-local UP = "Interface\\AddOns\\QuestTargets\\Textures\\QuestCompassUp"
-local DOWN = "Interface\\AddOns\\QuestTargets\\Textures\\QuestCompassDown"
-
 local function restedXP()
     if not LibStub then return end
     local ok, ace = pcall(LibStub, "AceAddon-3.0", true)
@@ -67,18 +64,12 @@ local function currentNames(rxp, validNames)
     return names, guideFriendlyNames
 end
 
-local function createButton(frame)
-    -- A secure child or anchor would protect RestedXP's scroll frame and make
-    -- its ordinary scroll updates fail after a guide step changes.
+local function createButton()
     local button = CreateFrame("Button", "QuestTargetsRestedXPTarget", UIParent, "SecureActionButtonTemplate")
-    button.rxpFrame = frame
-    button:SetSize(25, 25)
     button:RegisterForClicks("LeftButtonUp")
     button:SetAttribute("type1", "macro")
     button:SetAttribute("useOnKeyDown", false)
-    button:SetNormalTexture(UP)
-    button:SetPushedTexture(DOWN)
-    button:SetHighlightAtlas("UI-QuestPoi-InnerGlow")
+    UI.StyleTargetButton(button, 0.28, 0.65, 1)
     button:SetScript("PreClick", function(self, mouseButton, down)
         if mouseButton == "LeftButton" and not down then Integration.PreClick(NS.app, self) end
     end)
@@ -97,25 +88,6 @@ local function createButton(frame)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
     button:Hide()
     return button
-end
-
-local function positionButton(button, frame)
-    local cx, cy = frame:GetCenter()
-    if not cx or not cy then return false end
-    local scale = frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
-    local x = (cx + frame:GetWidth() / 2 + 4) * scale
-    local y = (cy + frame:GetHeight() / 2 - 15) * scale
-    if button.positionX ~= x or button.positionY ~= y then
-        button:ClearAllPoints()
-        button:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
-        button.positionX, button.positionY = x, y
-    end
-    button.rxpFrame = frame
-    local strata = frame:GetFrameStrata()
-    if button:GetFrameStrata() ~= strata then button:SetFrameStrata(strata) end
-    local level = frame:GetFrameLevel() + 1
-    if button:GetFrameLevel() ~= level then button:SetFrameLevel(level) end
-    return true
 end
 
 local function setMacro(button, entry, settings)
@@ -166,6 +138,7 @@ function Integration.Sync(app)
             setMacro(Integration.button, nil, app.db)
             Integration.button:Hide()
         end
+        UI.LayoutTargetButtons(app)
         return
     end
 
@@ -204,27 +177,10 @@ function Integration.Sync(app)
     local entry = (not name or Integration.fallbackOnce) and base.name and base or guideEntry
     setMacro(UI.master, entry, app.db)
 
-    local frame = rxp.targeting and rxp.targeting.activeTargetFrame
-    if not frame or not frame:IsVisible() or not entry or not rxp.settings or not rxp.settings.profile
-        or not rxp.settings.profile.enableTargetFrame then
-        if Integration.button then
-            setMacro(Integration.button, nil, app.db)
-            Integration.button:Hide()
-        end
-        return
-    end
-    local button = Integration.button
-    if not button then
-        button = createButton(frame)
-        Integration.button = button
-    end
-    if not positionButton(button, frame) then
-        setMacro(button, nil, app.db)
-        button:Hide()
-        return
-    end
-    setMacro(button, entry, app.db)
-    button:Show()
+    if not Integration.button then Integration.button = createButton() end
+    setMacro(Integration.button, entry, app.db)
+    Integration.button:Show()
+    UI.LayoutTargetButtons(app)
 end
 
 function Integration.PreClick(app, button)
