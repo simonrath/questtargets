@@ -123,6 +123,10 @@ local function stopBindingCapture()
     capture.button:EnableKeyboard(false)
     setGamePadCapture(capture.button, false)
     capture.button:SetScript("OnKeyDown", nil)
+    capture.button:SetScript("OnClick", capture.onClick)
+    capture.button:RegisterForClicks("LeftButtonUp")
+    capture.button:SetScript("OnMouseWheel", capture.onMouseWheel)
+    capture.button:EnableMouseWheel(capture.mouseWheelEnabled)
     capture.refresh()
 end
 
@@ -184,7 +188,9 @@ end
 local function beginBindingCapture(button, app, focused, slot, refresh)
     if InCombatLockdown() then return end
     stopBindingCapture()
-    UI.bindingCapture = {button=button, refresh=refresh}
+    UI.bindingCapture = {button=button, refresh=refresh,
+        onClick=button:GetScript("OnClick"), onMouseWheel=button:GetScript("OnMouseWheel"),
+        mouseWheelEnabled=button.IsMouseWheelEnabled and button:IsMouseWheelEnabled() or false}
     button.listening = true
     button:SetText(L("pressKey"))
     button:EnableKeyboard(true)
@@ -204,6 +210,30 @@ local function beginBindingCapture(button, app, focused, slot, refresh)
         end
         stopBindingCapture()
         if assign then requestBindingSlot(self, app, focused, binding, slot, refresh) end
+    end)
+    -- As in Blizzard's custom binding controls, mouse input needs explicit
+    -- click registration and conversion to BUTTONn. Keep LMB/RMB for cancel.
+    -- Capture on release so the opening click cannot bind itself or reopen
+    -- capture after a mouse assignment has restored the original handler.
+    button:RegisterForClicks("AnyUp")
+    button:SetScript("OnClick", function(self, mouseButton)
+        local key
+        if mouseButton == "LeftButton" or mouseButton == "RightButton" then
+            key = "ESCAPE"
+        elseif mouseButton == "MiddleButton" then
+            key = "BUTTON3"
+        else
+            local index = type(mouseButton) == "string" and mouseButton:match("^Button(%d+)$")
+            index = tonumber(index)
+            if index and index >= 4 and index <= 31 then key = "BUTTON" .. index end
+        end
+        if key then self:GetScript("OnKeyDown")(self, key) end
+    end)
+    button:EnableMouseWheel(true)
+    button:SetScript("OnMouseWheel", function(self, delta)
+        if delta ~= 0 then
+            self:GetScript("OnKeyDown")(self, delta > 0 and "MOUSEWHEELUP" or "MOUSEWHEELDOWN")
+        end
     end)
     setGamePadCapture(button, true)
     if not button.questTargetsHideHook then

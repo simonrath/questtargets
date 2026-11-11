@@ -588,6 +588,10 @@ class QuestTargetsTests(unittest.TestCase):
             capture.scripts.OnKeyDown(capture,'G')
             assert(GetBindingKey('CLICK QuestTargetsMaster:LeftButton')=='G')
             hotkeyButton.data.callback(capture)
+            capture.scripts.OnClick(capture,'Button4')
+            assert(GetBindingKey('CLICK QuestTargetsMaster:LeftButton')=='BUTTON4')
+            assert(not capture.listening and not capture.scripts.OnMouseWheel)
+            hotkeyButton.data.callback(capture)
             capture.scripts.OnKeyDown(capture,'DELETE')
             assert(GetBindingKey('CLICK QuestTargetsMaster:LeftButton')==nil)
             local focusButton
