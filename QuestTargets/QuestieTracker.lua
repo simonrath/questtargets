@@ -18,6 +18,9 @@ local function createButton(index)
     button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
     button.focusMark = UI.CreateFocusMark(button, button, 22)
     button:SetScript("PreClick", function(self, mouseButton, down)
+        if InCombatLockdown() and mouseButton == "LeftButton" and not down then
+            Core.PrepareDeadTargetSound(self:GetAttribute("macrotext1"), NS.app.db)
+        end
         if down or InCombatLockdown() or not self.entry then return end
         local line = self.questieLine
         if not line or line.mode ~= "quest" or not line.Quest
@@ -28,7 +31,7 @@ local function createButton(index)
             return
         end
         if mouseButton == "LeftButton" then
-            self:SetAttribute("macrotext1", Core.ClickMacro(self.entry, {self.entry}, NS.app.db, self))
+            Core.SetClickMacro(self, Core.ClickMacro(self.entry, {self.entry}, NS.app.db, self), NS.app.db)
         end
     end)
     button:SetScript("PostClick", function(self, mouseButton, down)

@@ -9,6 +9,45 @@ local function readable(value)
 end
 Core.Readable = readable
 
+-- FileDataID of Sound/Interface/iDeselectTarget.ogg, not a SoundKit ID.
+-- Keep this outside macrotext: only our hardware-click preparation opts in.
+local DEAD_TARGET_SOUND = 567520
+local soundSerial, soundMuted = 0, false
+function Core.ReleaseDeadTargetSound()
+    soundSerial = soundSerial + 1
+    if soundMuted then pcall(UnmuteSoundFile, DEAD_TARGET_SOUND) end
+    soundMuted = false
+end
+function Core.SetClickMacro(button, macro, settings)
+    if InCombatLockdown() then return end
+    button:SetAttribute("macrotext1", macro)
+    Core.PrepareDeadTargetSound(macro, settings)
+end
+
+function Core.PrepareDeadTargetSound(macro, settings)
+    if not settings or not settings.muteDeadTargetSound
+        or type(macro) ~= "string" or not macro:find("/targetexact", 1, true)
+        or type(MuteSoundFile) ~= "function" or type(UnmuteSoundFile) ~= "function"
+        or not C_Timer or type(C_Timer.After) ~= "function" then return end
+    local exists, dead, player = UnitExists("target"), UnitIsDeadOrGhost("target"), UnitIsPlayer("target")
+    if not readable(exists) or not readable(dead) or not readable(player)
+        or not exists or not dead or player then return end
+    soundSerial = soundSerial + 1
+    local serial = soundSerial
+    -- Target-frame events can arrive after PostClick. A short bounded window
+    -- covers those events without toggling global audio CVars or frame scripts.
+    -- A repeated click renews the window; an older timer must not unmute it.
+    local scheduled = pcall(C_Timer.After, 0.1, function()
+        if serial ~= soundSerial or not soundMuted then return end
+        Core.ReleaseDeadTargetSound()
+    end)
+    if scheduled and not soundMuted then
+        soundMuted = pcall(MuteSoundFile, DEAD_TARGET_SOUND)
+    elseif not scheduled and soundMuted then
+        Core.ReleaseDeadTargetSound()
+    end
+end
+
 function Core.IsRetail()
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE then
         return WOW_PROJECT_ID == WOW_PROJECT_MAINLINE

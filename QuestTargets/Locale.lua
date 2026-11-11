@@ -6,6 +6,8 @@ NS.LANGUAGE_NAMES = {"English", "Deutsch", "Español", "Français", "Türkçe", 
 
 -- English, German, Spanish, French, Turkish, Simplified Chinese.
 local phrases = {
+    muteDeadTargetSound = {"Mute dead-target clearing sound", "Abwahl-Sound bei toten Zielen stummschalten"},
+    muteDeadTargetSoundTip = {"Briefly mutes the lost-target sound when Quest Targets replaces a dead NPC. Other playback of this same sound is also muted during that brief window. Does not cover standalone action-bar macros.", "Unterdrückt kurz den Abwahl-Sound, wenn Quest Targets einen toten NPC ersetzt. In diesem kurzen Zeitraum ist auch jede andere Wiedergabe desselben Sounds stumm. Gilt nicht für eigenständige Aktionsleisten-Makros."},
     itemTreeBinding = {"Target ItemTree mobs", "ItemTree-Mobs anvisieren"},
     itemTreeImport = {"Import mobs", "Mobs übernehmen"},
     itemTreeEmpty = {"ItemTree: No usable mob drops in the current Sources view.", "ItemTree: Keine verwendbaren Mob-Drops in dieser Quellenansicht."},

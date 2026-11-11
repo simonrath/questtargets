@@ -87,9 +87,12 @@ function UI.RenderMaster(app)
             if self.moving then self.pendingStop = true; UI.StopMaster(app) end
         end)
         frame:SetScript("PreClick", function(self, mouseButton, down)
+            if InCombatLockdown() and mouseButton == "LeftButton" and not down then
+                Core.PrepareDeadTargetSound(self:GetAttribute("macrotext1"), app.db)
+            end
             if mouseButton ~= "LeftButton" or down or InCombatLockdown() then return end
             if NS.RestedXP.PreClick(app, self) then return end
-            self:SetAttribute("macrotext1", Core.ClickMacro(self.entry, app.allEntries or {}, app.db, self))
+            Core.SetClickMacro(self, Core.ClickMacro(self.entry, app.allEntries or {}, app.db, self), app.db)
         end)
         frame:SetScript("PostClick", function(self, _, down)
             if down then return end
@@ -172,8 +175,11 @@ function UI.RenderFocus(app)
         frame:SetAttribute("useOnKeyDown", false)
         frame:SetAttribute("type1", "macro")
         frame:SetScript("PreClick", function(self, mouseButton, down)
+            if InCombatLockdown() and mouseButton == "LeftButton" and not down then
+                Core.PrepareDeadTargetSound(self:GetAttribute("macrotext1"), app.db)
+            end
             if mouseButton ~= "LeftButton" or down or InCombatLockdown() then return end
-            self:SetAttribute("macrotext1", Core.ClickMacro(self.entry, app.allEntries or {}, app.db, self))
+            Core.SetClickMacro(self, Core.ClickMacro(self.entry, app.allEntries or {}, app.db, self), app.db)
         end)
         frame:SetScript("PostClick", function(self, _, down)
             if down then return end

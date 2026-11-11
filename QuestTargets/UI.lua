@@ -400,8 +400,11 @@ function UI.Create(app)
         row:SetAttribute("useOnKeyDown", false)
         row:SetAttribute("type1", "macro")
         row:SetScript("PreClick", function(self, mouseButton, down)
+            if InCombatLockdown() and mouseButton == "LeftButton" and not down then
+                NS.Core.PrepareDeadTargetSound(self:GetAttribute("macrotext1"), app.db)
+            end
             if mouseButton ~= "LeftButton" or down or InCombatLockdown() then return end
-            self:SetAttribute("macrotext1", NS.Core.ClickMacro(self.entry, app.entries, app.db, self))
+            NS.Core.SetClickMacro(self, NS.Core.ClickMacro(self.entry, app.entries, app.db, self), app.db)
         end)
         row:SetScript("PostClick", function(self, mouseButton, down)
             if down then return end
@@ -698,6 +701,7 @@ function UI.LayoutSettings(app)
     panel.scaleControl:SetPoint("TOPRIGHT", window, "TOPRIGHT", -22, -31)
     place(panel.languageDropdown, language, 2, -42)
     place(panel.toggle, marking, 18, -35)
+    place(panel.soundToggle, marking, 18, -245)
     place(panel.selection, marking, 18, -72)
     for index, choice in ipairs(panel.icons) do
         place(choice, marking, 20 + ((index - 1) % 4)*85, -103 - math.floor((index-1)/4)* 60)
@@ -1030,6 +1034,9 @@ local function nativeSettings(app)
         function(value) app.db.markerIcon = value; app:Schedule() end,
         function() return {strsplit(",", L("markers"))} end)
 
+    checkboxSetting("muteDeadTargetSound", false, function() return app.db.muteDeadTargetSound end,
+        function(value) app.db.muteDeadTargetSound = value end, "muteDeadTargetSoundTip")
+
     section("buttons")
     checkboxSetting("showMaster", true, function() return not app.db.masterHidden end,
         function(value) app.db.masterHidden = not value; app:Schedule() end, "masterMoveTip")
@@ -1165,6 +1172,18 @@ function UI.RegisterSettings(app)
             app:Schedule()
         end)
         panel.toggle:SetPoint("TOPLEFT", 20, -48)
+        panel.soundToggle = checkbox(panel, L("muteDeadTargetSound"), function()
+            app.db.muteDeadTargetSound = not app.db.muteDeadTargetSound
+            UI.UpdateSettings(app)
+        end)
+        panel.soundToggle:SetPoint("TOPLEFT", 20, -650)
+        panel.soundToggle:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(L("muteDeadTargetSound"))
+            GameTooltip:AddLine(L("muteDeadTargetSoundTip"), 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        panel.soundToggle:SetScript("OnLeave", function() GameTooltip:Hide() end)
         panel.selection = label(panel, 20, -84, 330, "GameFontNormal")
         panel.icons = {}
         local names = {strsplit(",", L("markers"))}
@@ -1412,6 +1431,7 @@ end
 function UI.UpdateSettings(app)
     if not UI.settings then return end
     UI.settings.toggle:SetChecked(app.db.autoMark)
+    UI.settings.soundToggle:SetChecked(app.db.muteDeadTargetSound)
     UI.settings.selection:SetText(string.format(L("marker"), UI.settings.names[app.db.markerIcon]))
     UI.settings.masterToggle:SetChecked(not app.db.masterHidden)
     local menuShown = app.pendingVisibility
@@ -1483,6 +1503,7 @@ function UI.ApplyLanguage(app)
             panel:ResizeTabs()
         end
         panel.toggle.caption:SetText(L("autoMark"))
+        panel.soundToggle.caption:SetText(L("muteDeadTargetSound"))
         panel.displayText:SetText(L("display"))
         panel.masterToggle.caption:SetText(L("showMaster"))
         panel.menuToggle.caption:SetText(L("showMenu"))

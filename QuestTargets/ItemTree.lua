@@ -143,8 +143,11 @@ local function createTarget(app)
     target:EnableMouse(false)
     NS.UI.StyleTargetButton(target, 1, 0.86, 0.18)
     target:SetScript("PreClick", function(self, mouseButton, down)
+        if InCombatLockdown() and mouseButton == "LeftButton" and not down then
+            NS.Core.PrepareDeadTargetSound(self:GetAttribute("macrotext1"), app.db)
+        end
         if mouseButton ~= "LeftButton" or down or InCombatLockdown() or not self.entry then return end
-        self:SetAttribute("macrotext1", NS.Core.ClickMacro(self.entry, {}, app.db, self))
+        NS.Core.SetClickMacro(self, NS.Core.ClickMacro(self.entry, {}, app.db, self), app.db)
     end)
     target:SetScript("PostClick", function(self, mouseButton, down)
         if mouseButton ~= "LeftButton" or down or InCombatLockdown() or not self.entry then return end

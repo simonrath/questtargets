@@ -185,7 +185,10 @@ end
 
 function Integration.PreClick(app, button)
     if not Integration.active then return false end
-    if InCombatLockdown() then return true end
+    if InCombatLockdown() then
+        Core.PrepareDeadTargetSound(button:GetAttribute("macrotext1"), app.db)
+        return true
+    end
     local entry = button.entry
     local native = entry and entry == UI.master.defaultEntry
     Integration.attemptSerial = (Integration.attemptSerial or 0) + 1
@@ -205,7 +208,7 @@ function Integration.PreClick(app, button)
             macro = appendNativeFallback(macro, UI.master.defaultEntry, app.db)
         end
     end
-    button:SetAttribute("macrotext1", macro)
+    Core.SetClickMacro(button, macro, app.db)
     return true
 end
 

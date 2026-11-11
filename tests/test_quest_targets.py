@@ -538,9 +538,15 @@ class QuestTargetsTests(unittest.TestCase):
             end
             assert(table.concat(sections,'|')==table.concat({NS.L('display'),NS.L('window'),
                 NS.L('targetMarkers'),NS.L('buttons'),NS.L('hotkeys'),NS.L('language')},'|'))
-            assert(counts.section==6 and counts.checkbox==9 and counts.slider==5
+            assert(counts.section==6 and counts.checkbox==10 and counts.slider==5
                 and counts.dropdown==3 and counts.button==3 and counts.editbox==1)
             assert(counts.move==1, 'native move option missing')
+            local soundSetting=nativeSettings.QUESTTARGETS_muteDeadTargetSound
+            assert(soundSetting.GetValue()==false)
+            soundSetting.SetValue(true)
+            assert(NS.app.db.muteDeadTargetSound==true)
+            soundSetting.SetValue(false)
+            assert(NS.app.db.muteDeadTargetSound==false)
             local moveRow=NS.UI.nativeMove
             assert(moveRow and moveRow.template=='QuestTargetsMoveSettingTemplate')
             assert(moveRow.data.help==NS.L('masterMoveHelp'))

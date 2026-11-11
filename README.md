@@ -62,6 +62,12 @@ Holding the right mouse button and dragging the master button still works direct
 If combat starts during editing, editing ends and the last released position is
 saved after combat. The positioning controls are available even with tooltips off.
 Targeting is subject to the client's protected-action and combat restrictions.
+Under **Target markers**, **Mute dead-target clearing sound** optionally suppresses
+the deselection sound for 100 ms when a Quest Targets button or hotkey replaces
+a dead NPC. It is off by default and adds no macro bytes. Selection sounds and
+living-target changes stay audible; another playback of the same deselection
+sound during the short window is also muted. Standalone action-bar macros are
+not covered. In-game timing still needs validation on each supported client.
 See [the detailed documentation](QuestTargets/README.md) for behavior and limitations.
 
 ## Development

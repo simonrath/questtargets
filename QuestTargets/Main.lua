@@ -160,6 +160,7 @@ events:RegisterEvent("PLAYER_LOGIN")
 events:RegisterEvent("UPDATE_BINDINGS")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("PLAYER_TARGET_CHANGED")
+events:RegisterEvent("PLAYER_LOGOUT")
 events:RegisterEvent("QUEST_LOG_UPDATE")
 events:RegisterEvent("QUEST_WATCH_LIST_CHANGED")
 events:RegisterEvent("QUEST_ACCEPTED")
@@ -231,6 +232,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         app.db.restedXPIntegration = app.db.restedXPIntegration == true
         app.db.minimapStyle = nil -- remove the premature design-selection setting
         app.db.showTooltips = app.db.showTooltips == true
+        app.db.muteDeadTargetSound = app.db.muteDeadTargetSound == true
         app.db.focusMarkEnabled = nil -- focused quests are always highlighted
         app.db.focusHotkeyEnabled = nil -- removed setting; an assigned key always works
         if type(app.db.focusQuestID) ~= "number" then app.db.focusQuestID = nil end
@@ -252,6 +254,8 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         UI.RegisterSettings(app)
         showMissingDatabase()
         app:Schedule()
+    elseif event == "PLAYER_LOGOUT" then
+        Core.ReleaseDeadTargetSound()
     elseif event == "PLAYER_TARGET_CHANGED" then
         -- Observe delayed secure target results without rescanning quests or
         -- writing any protected attributes from the event handler.
