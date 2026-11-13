@@ -44,7 +44,9 @@ keyboard/controller key requires confirmation before replacing its old action.
 - The compact quest window has adjacent Settings and Feedback buttons; quest data also refreshes automatically or with `/qt refresh`.
 - At 100%, both master-button styles are the size previously shown at 150%; saved scales are migrated to preserve their visible size.
 - English, German, Spanish, French, Turkish, and Simplified Chinese.
-- In-game feedback button linking to [the public feedback form](https://feedback.jacknine.org); no GitHub account needed.
+- In-game feedback button with a copyable link and a QR code for
+  [the public feedback form](https://feedback.jacknine.org/). Scan the code with
+  your phone to submit feedback; no GitHub account is needed.
 
 Use `/qt` to open the quest window and `/qt settings` to open settings.
 Under **Hotkeys**, Master and Focus each have two binding buttons side by side,

@@ -136,7 +136,8 @@ function methods:SetTexture(texture)
         or texture:match('^Interface\\Buttons\\UI%-Panel%-Button%-')
         or texture:match('^Interface\\Common\\dark%-goldframe%-button')
         or texture == 'Interface\\Minimap\\MiniMap-TrackingBorder'
-        or texture == 'Interface\\WorldMap\\UI-QuestPoi-NumberIcons'))
+        or texture == 'Interface\\WorldMap\\UI-QuestPoi-NumberIcons'
+        or texture == 'Interface\\AddOns\\QuestTargets\\Textures\\FeedbackQR'))
     self.texture = texture
 end
 function methods:SetAtlas(atlas)

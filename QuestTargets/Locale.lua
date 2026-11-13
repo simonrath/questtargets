@@ -28,6 +28,7 @@ local phrases = {
     settings = {"Settings", "Einstellungen", "Configuración", "Paramètres", "Ayarlar", "设置"},
     refresh = {"Refresh", "Aktualisieren", "Actualizar", "Actualiser", "Yenile", "刷新"},
     feedback = {"Feedback", "Feedback", "Comentarios", "Avis", "Geri bildirim", "反馈"},
+    feedbackQRHint = {"Scan this QR code with your phone to open the feedback form and send your feedback.", "Scanne diesen QR-Code mit deinem Handy, um das Feedbackformular zu öffnen und dein Feedback abzugeben.", "Escanea este código QR con tu móvil para abrir el formulario y enviar tus comentarios.", "Scannez ce code QR avec votre téléphone pour ouvrir le formulaire et envoyer votre avis.", "Geri bildirim formunu açmak ve geri bildirim göndermek için bu QR kodunu telefonunuzla tarayın.", "用手机扫描此二维码，打开反馈表单并提交反馈。"},
     feedbackLink = {"Copy this URL and open it in your browser to send feedback without an account:", "Kopiere diese URL und öffne sie im Browser, um ohne Konto Feedback zu senden:", "Copia esta URL y ábrela en el navegador para enviar comentarios sin cuenta:", "Copiez cette URL et ouvrez-la dans votre navigateur pour envoyer un avis sans compte :", "Hesap olmadan geri bildirim göndermek için bu adresi kopyalayıp tarayıcıda açın:", "复制此网址并在浏览器中打开，无需账户即可提交反馈："},
     language = {"Language", "Sprache", "Idioma", "Langue", "Dil", "语言"},
     languageNote = {"The language changes immediately.", "Die Sprache wechselt sofort.", "El idioma cambia inmediatamente.", "La langue change immédiatement.", "Dil hemen değişir.", "语言会立即切换。"},

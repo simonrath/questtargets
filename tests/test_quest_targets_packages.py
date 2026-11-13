@@ -34,6 +34,8 @@ class PackageTests(unittest.TestCase):
         self.build('All')
         version=next(line.split(': ',1)[1] for line in (ROOT/'QuestTargets/QuestTargets.toc').read_text(encoding='utf-8').splitlines() if line.startswith('## Version: '))
         with zipfile.ZipFile(ROOT/'dist'/f'QuestTargets-{version}.zip') as archive:
+            self.assertEqual(archive.read('QuestTargets/Textures/FeedbackQR.tga'),
+                             (ROOT/'QuestTargets/Textures/FeedbackQR.tga').read_bytes())
             for source in (ROOT/'QuestTargets/Libs').rglob('*'):
                 if source.is_file():
                     entry='QuestTargets/'+source.relative_to(ROOT/'QuestTargets').as_posix()

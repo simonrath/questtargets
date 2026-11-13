@@ -55,8 +55,9 @@ Herkunft und Prüfsummen früherer kombinierter Pakete stehen im
 - Mausrad oder Scrollbalken: weitere Quests in der Liste anzeigen.
 - `/qt refresh`: Questdaten manuell erneut einlesen. Änderungen an Quests,
   Fortschritt und Verfolgung aktualisieren das Addon auch automatisch.
-- „Feedback“: kopierbaren Link zum englischen
-  Feedbackformular anzeigen. Eine GitHub-Anmeldung ist nicht erforderlich.
+- „Feedback“: kopierbaren Link und QR-Code zum Feedbackformular anzeigen.
+  Den Code mit dem Handy scannen und das Feedback dort abgeben.
+  Eine GitHub-Anmeldung ist nicht erforderlich.
 - Titelleiste ziehen: Questfenster verschieben. Den Masterbutton mit gedrückter
   rechter Maustaste verschieben.
 - Alternativ **Einstellungen → Masterbutton → Masterbutton verschieben** starten.

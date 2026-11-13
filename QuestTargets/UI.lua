@@ -2,7 +2,7 @@ local _, NS = ...
 local UI = {}
 NS.UI = UI
 local L = NS.L
-local FEEDBACK_URL = "https://feedback.jacknine.org"
+local FEEDBACK_URL = "https://feedback.jacknine.org/"
 UI.PAGE_SIZE = 6
 
 function UI.OptionsTitle()
@@ -536,6 +536,21 @@ end
 
 function UI.FeedbackLink()
     if not StaticPopupDialogs or not StaticPopup_Show then return end
+    if not UI.feedbackQR then
+        local frame = CreateFrame("Frame", nil, UIParent)
+        frame:SetSize(280, 328)
+        frame.code = frame:CreateTexture(nil, "ARTWORK")
+        frame.code:SetTexture("Interface\\AddOns\\QuestTargets\\Textures\\FeedbackQR")
+        frame.code:SetSize(256, 256)
+        frame.code:SetPoint("TOP", frame, "TOP", 0, -4)
+        frame.hint = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        frame.hint:SetPoint("TOP", frame.code, "BOTTOM", 0, -8)
+        frame.hint:SetSize(280, 56)
+        frame.hint:SetJustifyH("CENTER")
+        frame:Hide()
+        UI.feedbackQR = frame
+    end
+    UI.feedbackQR.hint:SetText(L("feedbackQRHint"))
     local key = "QUESTTARGETS_FEEDBACK_LINK"
     local function selectLink(self)
         local box = self.GetEditBox and self:GetEditBox() or self.editBox or self.EditBox
@@ -555,7 +570,9 @@ function UI.FeedbackLink()
         OnShow = selectLink,
         OnAccept = selectLink,
     }
-    StaticPopup_Show(key)
+    -- The native popup lays out the edit box and inserted frame together on
+    -- all supported clients, and releases/hides the inserted frame on close.
+    StaticPopup_Show(key, nil, nil, nil, UI.feedbackQR)
 end
 
 -- Settings controls use ordinary frames; protected targeting stays in Master.lua.

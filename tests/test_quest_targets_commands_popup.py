@@ -6,6 +6,24 @@ import test_quest_targets as addon
 class CommandsPopupTests(unittest.TestCase):
     setUp = addon.QuestTargetsTests.setUp
 
+    def test_feedback_popup_inserts_reusable_qr_with_localized_phone_hint(self):
+        self.lua.execute('''
+            StaticPopupDialogs={}
+            StaticPopup_Show=function(key, a, b, data, inserted)
+                if key=='QUESTTARGETS_FEEDBACK_LINK' then qr=inserted end
+            end
+            boot(); NS.UI.FeedbackLink()
+            assert(qr, 'feedback QR missing from copy-link popup')
+            assert(qr.code.texture=='Interface\\\\AddOns\\\\QuestTargets\\\\Textures\\\\FeedbackQR')
+            assert(qr.code.width==256 and qr.code.height==256)
+            assert(qr.hint.text==NS.L('feedbackQRHint'))
+            local original=qr
+            NS.app.db.language='deDE'; NS.UI.FeedbackLink()
+            assert(qr==original and qr.hint.text==NS.L('feedbackQRHint'))
+            assert(qr.hint.text:find('Handy',1,true))
+            assert(StaticPopupDialogs.QUESTTARGETS_FEEDBACK_LINK.hasEditBox)
+        ''')
+
     def test_feedback_button_opens_copyable_site_url(self):
         self.lua.execute('''
             StaticPopupDialogs={}
@@ -19,7 +37,7 @@ class CommandsPopupTests(unittest.TestCase):
                 HighlightText=function(self) self.highlighted=true end,
                 SetFocus=function(self) self.focused=true end}
             popup.OnShow({EditBox=box})
-            assert(box.text=='https://feedback.jacknine.org')
+            assert(box.text=='https://feedback.jacknine.org/')
             assert(box.highlighted and box.focused)
             NS.app.db.language='deDE'; NS.UI.ApplyLanguage(NS.app)
             assert(NS.UI.feedbackButton.text==NS.L('feedback'))
