@@ -196,7 +196,7 @@ function UI.RenderMaster(app)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText(L("active"))
             if NS.RestedXP.active then
-                GameTooltip:AddLine(L("restedXPButton"), 1, 0.82, 0, true)
+                GameTooltip:AddLine(L(NS.RestedXP.provider == "polestar" and "polestarButton" or "restedXPButton"), 1, 0.82, 0, true)
                 GameTooltip:AddLine(self.entry and self.entry.name or L("restedXPNoTarget"), 1, 1, 1, true)
             else
                 GameTooltip:AddLine(L("masterTip1"), 1, 1, 1, true)

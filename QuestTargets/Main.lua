@@ -236,6 +236,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         app.db.questieTrackerOffset = type(offset) == "number" and offset == offset
             and math.max(-240, math.min(240, math.floor(offset + 0.5))) or 35
         app.db.restedXPIntegration = app.db.restedXPIntegration == true
+        app.db.polestarIntegration = app.db.polestarIntegration == true
         app.db.minimapStyle = nil -- remove the premature design-selection setting
         app.db.showTooltips = app.db.showTooltips == true
         app.db.muteDeadTargetSound = app.db.muteDeadTargetSound == true

@@ -2,6 +2,11 @@
 
 Player-facing changes, newest version first. Historical installation notes apply to the version listed.
 
+## 1.7.4 – Preview
+
+### Polestar
+- **Polestar guide targets:** On WoW Forever, with Polestar installed, enable the normally disabled **Buttons → Targeting bar → Follow Polestar guide targets** option. The main compass searches named open goals in the displayed guide step; without targets it falls back to quest search. Changes apply after combat. If RestedXP is also enabled and available, it takes precedence.
+
 ## 1.7.3 – Nov 20, 2026
 
 ### Options

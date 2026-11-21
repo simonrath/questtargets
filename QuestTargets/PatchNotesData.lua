@@ -2,6 +2,11 @@
 local _, NS = ...
 NS.PatchNotesData = {
     deDE = {
+        { version = "1.7.4", date = "Vorschau", sections = {
+                { title = "Polestar", items = {
+                    "**Polestar-Guideziele:** In WoW Forever kannst du mit installiertem Polestar unter **Buttons → Zielleiste → Polestar-Guideziele verwenden** die standardmäßig ausgeschaltete Option aktivieren. Der Hauptbutton sucht benannte offene Ziele des angezeigten Guide-Schritts; ohne Ziele übernimmt die Questsuche. Änderungen werden nach dem Kampf angewendet. Ist auch RestedXP aktiv und verfügbar, hat es Vorrang.",
+                }},
+            }},
         { version = "1.7.3", date = "20.11.2026", sections = {
                 { title = "Optionen", items = {
                     "Fehler in Blizzards **Kontaktoptionen** behoben.",
@@ -230,6 +235,11 @@ NS.PatchNotesData = {
             }},
     },
     enUS = {
+        { version = "1.7.4", date = "Preview", sections = {
+                { title = "Polestar", items = {
+                    "**Polestar guide targets:** On WoW Forever, with Polestar installed, enable the normally disabled **Buttons → Targeting bar → Follow Polestar guide targets** option. The main compass searches named open goals in the displayed guide step; without targets it falls back to quest search. Changes apply after combat. If RestedXP is also enabled and available, it takes precedence.",
+                }},
+            }},
         { version = "1.7.3", date = "Nov 20, 2026", sections = {
                 { title = "Options", items = {
                     "Fixed an error in Blizzard's **Social settings**.",
@@ -458,6 +468,11 @@ NS.PatchNotesData = {
             }},
     },
     esES = {
+        { version = "1.7.4", date = "Vista previa", sections = {
+                { title = "Polestar", items = {
+                    "**Objetivos de Polestar:** En WoW Forever, con Polestar instalado, activa **Botones → Barra de objetivos → Seguir objetivos de Polestar**, desactivado por defecto. La brújula principal busca objetivos abiertos con nombre del paso mostrado; si no hay ninguno, busca objetivos de misión. Los cambios se aplican después del combate. Si RestedXP también está activado y disponible, tiene prioridad.",
+                }},
+            }},
         { version = "1.7.3", date = "20.11.2026", sections = {
                 { title = "Opciones", items = {
                     "Corregido un error en los **ajustes sociales** de Blizzard.",
@@ -686,6 +701,11 @@ NS.PatchNotesData = {
             }},
     },
     frFR = {
+        { version = "1.7.4", date = "Aperçu", sections = {
+                { title = "Polestar", items = {
+                    "**Cibles Polestar :** Sur WoW Forever, avec Polestar installé, activez **Boutons → Barre de ciblage → Suivre les cibles Polestar**, désactivé par défaut. La boussole principale recherche les objectifs ouverts nommés de l’étape affichée ; à défaut, elle recherche les objectifs de quête. Les changements s’appliquent après le combat. Si RestedXP est aussi activé et disponible, il est prioritaire.",
+                }},
+            }},
         { version = "1.7.3", date = "20.11.2026", sections = {
                 { title = "Options", items = {
                     "Correction d’une erreur dans les **options sociales** de Blizzard.",
@@ -914,6 +934,11 @@ NS.PatchNotesData = {
             }},
     },
     trTR = {
+        { version = "1.7.4", date = "Önizleme", sections = {
+                { title = "Polestar", items = {
+                    "**Polestar rehber hedefleri:** WoW Forever'da Polestar yüklüyken varsayılan olarak kapalı **Düğmeler → Hedef çubuğu → Polestar hedeflerini izle** seçeneğini açın. Ana pusula, görüntülenen rehber adımındaki adlı açık hedefleri arar; hedef yoksa görev aramasına döner. Değişiklikler çatışmadan sonra uygulanır. RestedXP de açık ve kullanılabilir olduğunda önceliklidir.",
+                }},
+            }},
         { version = "1.7.3", date = "20.11.2026", sections = {
                 { title = "Seçenekler", items = {
                     "Blizzard’ın **sosyal ayarlarındaki** bir hata düzeltildi.",
@@ -1142,6 +1167,11 @@ NS.PatchNotesData = {
             }},
     },
     zhCN = {
+        { version = "1.7.4", date = "预览", sections = {
+                { title = "Polestar", items = {
+                    "**Polestar 指南目标：** 在 WoW Forever 中安装 Polestar 后，可在**按钮 → 目标按钮栏 → 跟随 Polestar 指南目标**启用默认关闭的选项。主罗盘会搜索当前显示步骤中有名称的未完成目标；没有目标时会回退到任务搜索。战斗中的更改会在战斗结束后应用。如果同时启用且可使用 RestedXP，则优先使用 RestedXP。",
+                }},
+            }},
         { version = "1.7.3", date = "2026年11月20日", sections = {
                 { title = "选项", items = {
                     "修复了暴雪**社交设置**中的一个错误。",

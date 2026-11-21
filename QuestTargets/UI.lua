@@ -716,7 +716,7 @@ function UI.LayoutSettings(app)
     local panel, master = UI.settings, UI.masterSettings
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "buttons", "hotkeys"}
-    local heights = {500, 340, 980, 310}
+    local heights = {500, 340, 1010, 310}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -762,7 +762,7 @@ function UI.LayoutSettings(app)
     local language = settingsBox(general, "language", -350, 102)
     local marking = settingsBox(markers, "targetMarkers", -32, 292)
     local toggles = settingsBox(master, "buttons", -32, 334)
-    local bar = settingsBox(master, "targetBar", -390, 565)
+    local bar = settingsBox(master, "targetBar", -390, 595)
     local bindings = settingsBox(hotkeys, "hotkeys", -32, 271)
     panel.groups = {display, window, language, marking, toggles, bar, bindings}
     panel.displayText:Hide()
@@ -777,16 +777,16 @@ function UI.LayoutSettings(app)
     place(panel.questieOffsetControl, toggles, 22, -122)
     place(panel.ellesmereToggle, toggles, 18, -210)
     place(panel.ellesmereOffsetControl, toggles, 22, -240)
-    for i, control in ipairs({panel.masterToggle, panel.restedXPToggle, panel.itemTreeToggle,
+    for i, control in ipairs({panel.masterToggle, panel.restedXPToggle, panel.polestarToggle, panel.itemTreeToggle,
         panel.rareScannerToggle, panel.rareScannerZoneToggle}) do
         place(control, bar, 18, -32 - (i-1)*30)
     end
-    place(master.orientationLabel, bar, 22, -187)
-    place(master.orientationDropdown, bar, 176, -179)
-    place(master.spacingControl, bar, 22, -220)
-    master.spacingControl:SetPoint("TOPRIGHT", bar, "TOPRIGHT", -22, -220)
-    place(master.borderToggle, bar, 18, -389)
-    place(master.dividersToggle, bar, 18, -419)
+    place(master.orientationLabel, bar, 22, -217)
+    place(master.orientationDropdown, bar, 176, -209)
+    place(master.spacingControl, bar, 22, -250)
+    master.spacingControl:SetPoint("TOPRIGHT", bar, "TOPRIGHT", -22, -250)
+    place(master.borderToggle, bar, 18, -419)
+    place(master.dividersToggle, bar, 18, -449)
     place(panel.scaleControl, window, 22, -31)
     panel.scaleControl:SetPoint("TOPRIGHT", window, "TOPRIGHT", -22, -31)
     place(panel.languageDropdown, language, 2, -42)
@@ -796,11 +796,11 @@ function UI.LayoutSettings(app)
     for index, choice in ipairs(panel.icons) do
         place(choice, marking, 20 + ((index - 1) % 4)*85, -103 - math.floor((index-1)/4)* 60)
     end
-    place(master.modernScaleControl, bar, 22, -305)
-    master.modernScaleControl:SetPoint("TOPRIGHT", bar, "TOPRIGHT", -22, -305)
-    place(master.moveButton, bar, 18, -464)
-    place(master.moveHelp, bar, 18, -500)
-    master.moveHelp:SetPoint("TOPRIGHT", bar, "TOPRIGHT", -18, -500)
+    place(master.modernScaleControl, bar, 22, -335)
+    master.modernScaleControl:SetPoint("TOPRIGHT", bar, "TOPRIGHT", -22, -335)
+    place(master.moveButton, bar, 18, -494)
+    place(master.moveHelp, bar, 18, -530)
+    master.moveHelp:SetPoint("TOPRIGHT", bar, "TOPRIGHT", -18, -530)
     panel.bindingHeaders = {}
     for slot = 1, 2 do
         local header = label(bindings, 0, 0, 160, "GameFontNormalSmall")
@@ -1177,6 +1177,15 @@ local function nativeSettings(app)
         end)
     restedXPToggle:AddModifyPredicate(function() return addonLoaded("RXPGuides") end)
 
+    local polestarToggle = checkboxSetting("polestarIntegration", false,
+        function() return app.db.polestarIntegration end,
+        function(value)
+            if InCombatLockdown() or not addonLoaded("Polestar") then return end
+            app.db.polestarIntegration = value
+            NS.RestedXP.Sync(app)
+        end)
+    polestarToggle:AddModifyPredicate(function() return addonLoaded("Polestar") end)
+
     local itemTreeToggle = checkboxSetting("showItemTreeButton", false,
         function() return app.db.itemTreeButton == true end,
         function(value)
@@ -1405,6 +1414,12 @@ function UI.RegisterSettings(app)
             NS.RestedXP.Sync(app)
             UI.UpdateSettings(app)
         end)
+        panel.polestarToggle = checkbox(panel, L("polestarIntegration"), function()
+            if InCombatLockdown() or not addonLoaded("Polestar") then return end
+            app.db.polestarIntegration = not app.db.polestarIntegration
+            NS.RestedXP.Sync(app)
+            UI.UpdateSettings(app)
+        end)
         panel.itemTreeToggle = checkbox(panel, L("showItemTreeButton"), function()
             if InCombatLockdown() or not addonLoaded("ItemTree") then return end
             app.db.itemTreeButton = not app.db.itemTreeButton
@@ -1595,6 +1610,11 @@ function UI.UpdateSettings(app)
     UI.settings.restedXPToggle:SetEnabled(restedXPAvailable)
     UI.settings.restedXPToggle.caption:SetTextColor(restedXPAvailable and 1 or 0.5,
         restedXPAvailable and 1 or 0.5, restedXPAvailable and 1 or 0.5)
+    local polestarAvailable = addonLoaded("Polestar")
+    UI.settings.polestarToggle:SetChecked(app.db.polestarIntegration)
+    UI.settings.polestarToggle:SetEnabled(polestarAvailable)
+    local polestarGray = polestarAvailable and 1 or 0.5
+    UI.settings.polestarToggle.caption:SetTextColor(polestarGray, polestarGray, polestarGray)
     local first, second = GetBindingKey(MASTER_BINDING)
     if not UI.settings.hotkey.listening then UI.settings.hotkey:SetText(bindingText(first)) end
     if not UI.settings.hotkey2.listening then UI.settings.hotkey2:SetText(bindingText(second)) end
@@ -1675,6 +1695,7 @@ function UI.ApplyLanguage(app)
         panel.questieTrackerToggle.caption:SetText(L("questieTrackerButtons"))
         panel.questieOffsetControl.caption:SetText(L("questieTrackerOffset"))
         panel.restedXPToggle.caption:SetText(L("restedXPIntegration"))
+        panel.polestarToggle.caption:SetText(L("polestarIntegration"))
         panel.itemTreeToggle.caption:SetText(L("showItemTreeButton"))
         panel.rareScannerToggle.caption:SetText(L("showRareScannerButton"))
         panel.rareScannerZoneToggle.caption:SetText(L("rareScannerZone"))

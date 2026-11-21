@@ -631,8 +631,17 @@ class QuestTargetsTests(unittest.TestCase):
             end
             assert(table.concat(sections,'|')==table.concat({NS.L('display'),NS.L('window'),
                 NS.L('targetMarkers'),NS.L('buttons'),NS.L('targetBar'),NS.L('hotkeys'),NS.L('language')},'|'))
-            assert(counts.section==7 and counts.checkbox==15 and counts.slider==5
+            assert(counts.section==7 and counts.checkbox==16 and counts.slider==5
                 and counts.dropdown==3 and counts.button==4 and counts.editbox==0)
+            local polestarSetting=nativeSettings.QUESTTARGETS_polestarIntegration
+            assert(polestarSetting.GetValue()==false)
+            polestarSetting.SetValue(true)
+            assert(not NS.app.db.polestarIntegration)
+            loadedAddons.Polestar=true
+            polestarSetting.SetValue(true)
+            assert(NS.app.db.polestarIntegration==true)
+            polestarSetting.SetValue(false)
+            assert(NS.app.db.polestarIntegration==false)
             assert(counts.move==2, 'expected move and patch note action rows')
             local soundSetting=nativeSettings.QUESTTARGETS_muteDeadTargetSound
             assert(soundSetting.GetValue()==false)

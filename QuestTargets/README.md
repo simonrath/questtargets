@@ -109,6 +109,11 @@ Herkunft und Prüfsummen früherer kombinierter Pakete stehen im
   zuletzt vorbereitete Ziel aktiv, bis geschützte Aktionen wieder geändert
   werden dürfen. Ein bereits gültiges Ziel bleibt ausgewählt, solange kein
   anderes passendes Ziel sichtbar ist.
+- Optional „Polestar-Guideziele verwenden“ unter Buttons → Zielleiste: Der Hauptbutton
+  berücksichtigt benannte offene Ziele des angezeigten Polestar-Schritts. Ohne
+  passendes Ziel übernimmt die normale Questsuche; Änderungen im Kampf werden
+  danach nachgeholt. Sind beide Guide-Integrationen aktiv und RestedXP geladen,
+  hat RestedXP Vorrang. Polestars eigene Bedienelemente bleiben unverändert.
 
 Die kleinen Questbuttons zeigen beim Drücken eine native Klickanimation.
 Jede Quest erscheint einmal mit ihrem Fortschritt. Alle bekannten Mobarten
