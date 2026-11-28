@@ -2,6 +2,11 @@
 
 Oyuncuları ilgilendiren değişiklikler en yeni sürümden başlayarak sıralanır. Eski kurulum notları yalnızca belirtilen sürüm için geçerlidir.
 
+## 1.8.5 – 28 Kasım 2026
+
+### Başlangıç
+- **Next Tanıtımı:** Mrrml, yeni oyuncuların Next’i kullanmaya başlamasına yardım eder. Eklenti seçeneklerinden **Next > Genel > Tanıtım > Başlat** yolunu izle veya **/qt intro** yaz.
+
 ## 1.8.4 – 27 Kasım 2026
 
 ### SilverDragon

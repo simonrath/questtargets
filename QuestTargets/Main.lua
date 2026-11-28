@@ -130,6 +130,7 @@ end
 
 function app:Toggle()
     if not self.db then return end
+    if NS.Tutorial.SkipPractice() then return end
     if InCombatLockdown() or not UI.frame then
         local currentlyShown = self.pendingVisibility
         if currentlyShown == nil then currentlyShown = not self.db.hidden end
@@ -144,6 +145,7 @@ end
 
 function app:ToggleFilter()
     if InCombatLockdown() then message(NS.L("filterCombat")); return end
+    if self.tutorialQuest then return end
     self.db.watchedOnly = not self.db.watchedOnly
     self.scrollOffset = 0
     self:Refresh()
@@ -206,6 +208,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
             end
             return
         end
+        NS.Tutorial.Initialize(type(QuestTargetsDB) == "table" and next(QuestTargetsDB) ~= nil)
         if type(QuestTargetsDB) ~= "table" then QuestTargetsDB = {} end
         app.db = QuestTargetsDB
         -- Manual overrides from 0.1 remain untouched but are never used for detection.
@@ -280,7 +283,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
     elseif event == "PLAYER_LOGIN" then
         app.loggedIn = true
         UI.RegisterSettings(app)
-        showMissingDatabase()
+        NS.Tutorial.OnLogin(app, showMissingDatabase)
         NS.PatchNotes.OnLogin()
         app:Schedule()
     elseif event == "PLAYER_LOGOUT" then
@@ -295,6 +298,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         end
     elseif event == "PLAYER_REGEN_DISABLED" then
         UI.CancelBindingAssignment()
+        NS.Tutorial.OnCombat()
         UI.EndMasterMove(app, true)
         UI.StopResizing(app)
         UI.StopMoving(app.db)
@@ -306,6 +310,7 @@ events:SetScript("OnEvent", function(_, event, loadedName)
         UI.StopResizing(app)
         UI.StopMoving(app.db)
         app:Refresh(false)
+        NS.Tutorial.OnRegen(app)
     elseif event == "NAME_PLATE_UNIT_ADDED" or event == "NAME_PLATE_UNIT_REMOVED" then
         Scanner.Invalidate(loadedName)
         if app.db and Scanner.Available() and not InCombatLockdown() then app:Schedule(true) end
@@ -343,6 +348,9 @@ SlashCmdList.QUESTTARGETS = function(input)
         if click.name then message(NS.L("debugName"):format(click.name)) end
         NS.Diagnostics.Print(app)
     elseif command == "refresh" or command == "aktualisieren" then app:Refresh()
+    elseif command == "intro" then
+        if InCombatLockdown() then message(NS.L("commandCombat")); return end
+        NS.Tutorial.Open(app)
     elseif command == "settings" or command == "einstellungen" then
         if InCombatLockdown() then message(NS.L("settingsCombat")); return end
         UI.Settings(app)

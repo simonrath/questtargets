@@ -280,6 +280,16 @@ local function beginBindingCapture(button, app, focused, slot, refresh)
     end
 end
 
+function UI.BeginMasterBinding(button, app, refresh)
+    beginBindingCapture(button, app, false, 1, refresh)
+end
+
+function UI.MasterBindingText()
+    local first, second = GetBindingKey(MASTER_BINDING)
+    local binding = first or second
+    return binding and bindingText(binding) or L("tutorialAssign"), binding ~= nil
+end
+
 function UI.ToggleFocus(app, entry)
     if InCombatLockdown() or not entry or not entry.questID then return end
     if app.db.focusQuestID == entry.questID then
@@ -425,7 +435,7 @@ function UI.Create(app)
     UI.dragHint:SetColorTexture(0.9, 0.75, 0.3, 1)
     UI.dragHint:SetAlpha(0)
     drag:SetScript("OnDragStart", function()
-        if not InCombatLockdown() then frame:StartMoving(); UI.moving = true end
+        if not InCombatLockdown() and not app.tutorialQuest then frame:StartMoving(); UI.moving = true end
     end)
     drag:SetScript("OnDragStop", function()
         UI.StopMoving(app.db)
@@ -486,6 +496,7 @@ function UI.Create(app)
         row:SetAttribute("useOnKeyDown", false)
         row:SetAttribute("type1", "macro")
         row:SetScript("PreClick", function(self, mouseButton, down)
+            if self.entry and self.entry.tutorial then return end
             if InCombatLockdown() and mouseButton == "LeftButton" and not down then
                 NS.Core.PrepareDeadTargetSound(self:GetAttribute("macrotext1"), app.db)
             end
@@ -494,6 +505,10 @@ function UI.Create(app)
         end)
         row:SetScript("PostClick", function(self, mouseButton, down)
             if down then return end
+            if self.entry and self.entry.tutorial then
+                if mouseButton == "LeftButton" then NS.Tutorial.PracticeClicked() end
+                return
+            end
             if mouseButton == "RightButton" then
                 if self.icon:IsMouseOver() then
                     UI.ToggleFocus(app, self.entry)
@@ -734,6 +749,12 @@ local function place(control, parent, x, y)
     control:SetPoint("TOPLEFT", x, y)
 end
 
+local function openIntroFromSettings(app)
+    if InCombatLockdown() then return end
+    UI.CloseSettings()
+    NS.Tutorial.Open(app)
+end
+
 function UI.SelectSettingsTab(index)
     local panel = UI.settings
     if not panel or not panel.pages[index] then return end
@@ -752,7 +773,7 @@ function UI.LayoutSettings(app)
     panel.pages, panel.tabs, panel.groups = {}, {}, {}
     local keys = {"general", "targetMarkers", "buttons", "hotkeys"}
     local feedbackSpace = #feedbackButtons * 32
-    local heights = {500, 308 + feedbackSpace, 1130, 310}
+    local heights = {530, 308 + feedbackSpace, 1130, 310}
     panel.body = CreateFrame("Frame", nil, panel, "BackdropTemplate")
     panel.body:SetPoint("TOPLEFT", 8, -78)
     panel.body:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -793,6 +814,8 @@ function UI.LayoutSettings(app)
         panel.pages[index] = {scroll=scroll, content=content}
     end
     local general, markers, hotkeys = panel.pages[1].content, panel.pages[2].content, panel.pages[4].content
+    place(panel.patchNotesButton, general, 20, -460)
+    place(panel.introButton, general, 20, -489)
     local display = settingsBox(general, "display", -32, 125)
     local window = settingsBox(general, "window", -191, 125)
     local language = settingsBox(general, "language", -350, 102)
@@ -1182,6 +1205,7 @@ local function nativeSettings(app)
             UI.SetMinimapShown(app, value)
         end, "minimapTip")
     UI.nativePatchNotes = actionRow("patchNotes", "patchNotesOpen", NS.PatchNotes.Open, "patchNotesHelp")
+    UI.nativeIntro = actionRow("introSettings", "introStart", function() openIntroFromSettings(app) end, "introHelp")
     UI.nativeFeedback = actionRow("feedback", "feedbackOpen", UI.FeedbackLink, "feedbackTip")
 
     section("questWindowSection")
@@ -1260,7 +1284,11 @@ local function nativeSettings(app)
     end
     section("barModulesSection")
     local masterToggle = checkboxSetting("showMaster", true, function() return not app.db.masterHidden end,
-        function(value) app.db.masterHidden = not value; app:Schedule() end, "masterMoveTip")
+        function(value)
+            if value then app.db.hotkeysOnly = nil end
+            app.db.masterHidden = not value
+            app:Schedule()
+        end, "masterMoveTip")
     local masterModulesToggle = checkboxSetting("masterAllModules", true,
         function() return app.db.masterAllModules ~= false end,
         function(value) app.db.masterAllModules = value; app:Schedule() end, "masterAllModulesTip")
@@ -1408,7 +1436,7 @@ function UI.RegisterSettings(app)
         panel.titleText = label(panel, 20, -18, 540, "GameFontNormalLarge")
         panel.titleText:SetText(UI.OptionsTitle())
         panel.patchNotesButton = button(panel, L("patchNotes"), 142, NS.PatchNotes.Open)
-        panel.patchNotesButton:SetPoint("TOPRIGHT", -20, -14)
+        panel.introButton = button(panel, L("introStartSettings"), 170, function() openIntroFromSettings(app) end)
         panel.feedbackControls = {}
         for _, info in ipairs(feedbackButtons) do
             local key, labelKey = info[1], info[2]
@@ -1470,6 +1498,7 @@ function UI.RegisterSettings(app)
         panel.displayText:SetText(L("display"))
         panel.masterToggle = checkbox(panel, L("showMaster"), function()
             app.db.masterHidden = not app.db.masterHidden
+            if not app.db.masterHidden then app.db.hotkeysOnly = nil end
             app:Schedule(); UI.UpdateSettings(app)
         end)
         panel.masterToggle:SetScript("OnEnter", function(self)
@@ -1850,6 +1879,7 @@ function UI.ApplyLanguage(app)
     -- Forever may not preserve newly written SavedVariables across /reload.
     -- Refresh existing native controls immediately instead of reloading the UI.
     if InCombatLockdown() then return end
+    NS.Tutorial.RefreshLanguage()
     NS.PatchNotes.RefreshLanguage()
     if UI.frame then
         UI.frame.TitleContainer.TitleText:SetText(L("title"))
@@ -1860,6 +1890,7 @@ function UI.ApplyLanguage(app)
     if panel then
         panel.titleText:SetText(UI.OptionsTitle())
         panel.patchNotesButton:SetText(L("patchNotes"))
+        panel.introButton:SetText(L("introStartSettings"))
         if panel.tabs then
             for _, tab in ipairs(panel.tabs) do tab:SetText(L(tab.localeKey)) end
             for _, group in ipairs(panel.groups) do group.heading:SetText(L(group.localeKey)) end
@@ -1938,7 +1969,7 @@ function UI.StopMoving(db)
 end
 
 function UI.Tooltip(row)
-    if not row.entry or not NS.app.db.showTooltips then return end
+    if not row.entry or row.entry.tutorial or not NS.app.db.showTooltips then return end
     local entry = row.entry
     GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
     GameTooltip:ClearLines()
@@ -2023,7 +2054,12 @@ function UI.Render(app)
     local scale = math.min(1, UIParent:GetHeight() / 410) * app.db.menuScale
     if UI.frame:GetScale() ~= scale then UI.frame:SetScale(scale) end
     local entries = NS.Core.QuestEntriesFor(app, false)
-    app.questListRows = questListRows(app.quests, entries, app.db.collapsedQuestZones)
+    if app.tutorialQuest then
+        app.questListRows = {{number=1, entry={tutorial=true, title="Mrrml’s Quest", name="player",
+            nameList={}, refs={}, total=0}}}
+    else
+        app.questListRows = questListRows(app.quests, entries, app.db.collapsedQuestZones)
+    end
     local maxOffset = math.max(0, #app.questListRows - UI.PAGE_SIZE)
     app.scrollOffset = math.max(0, math.min(maxOffset, app.scrollOffset or 0))
     UI.filter:SetText(app.db.watchedOnly and L("tracked") or L("all"))
@@ -2031,7 +2067,7 @@ function UI.Render(app)
     UI.scrollbar:SetValue(app.scrollOffset)
     UI.scrollbar:SetShown(maxOffset > 0)
     UI.empty:SetText(app.error or (app.db.watchedOnly and L("emptyTracked") or L("emptyAll")))
-    UI.empty:SetShown(#entries == 0)
+    UI.empty:SetShown(not app.tutorialQuest and #entries == 0)
     UI.RenderRows(app)
     UI.UpdateStatus(app)
 end
@@ -2054,11 +2090,19 @@ function UI.RenderRows(app)
         if header.zoneKey ~= nil then header.caption:SetText(item.title) end
         header:SetShown(header.zoneKey ~= nil)
         row:SetAttribute("macrotext1", nil)
+        local tutorial = entry and entry.tutorial or false
+        if row.tutorial ~= tutorial then
+            row:SetAttribute("type1", tutorial and "target" or "macro")
+            row:SetAttribute("unit", tutorial and "player" or nil)
+            row.tutorial = tutorial
+        end
         row.entry = entry
         if row.fallbackQuestID ~= (entry and entry.questID) then row.fallbackIndex = nil end
         row.fallbackQuestID = entry and entry.questID
         if entry then
-            row:SetAttribute("macrotext1", (NS.Core.EntryMacro(entry, NS.Core.TargetFeedbackSettings(app.db, "questList"))))
+            if not tutorial then
+                row:SetAttribute("macrotext1", (NS.Core.EntryMacro(entry, NS.Core.TargetFeedbackSettings(app.db, "questList"))))
+            end
             row.nameText:SetText(entry.title)
             row.nameText:SetTextColor(entry.name and 1 or 0.7, entry.name and 0.82 or 0.7, entry.name and 0 or 0.7)
             local atlas = entry.name and "UI-QuestPoi-QuestNumber-SuperTracked" or "UI-QuestPoi-QuestNumber"
@@ -2072,9 +2116,10 @@ function UI.RenderRows(app)
             row.pushedIcon:SetSize(20, 20)
             row.pushedIcon:SetPoint("LEFT", 2, -1)
             row.number:SetText(item.number)
-            row.focusMark:SetShown(entry.questID == app.db.focusQuestID)
+            row.focusMark:SetShown(tutorial or entry.questID == app.db.focusQuestID)
             local progress = entry.total > 0 and (entry.done .. "/" .. entry.total) or L("open")
-            row.detail:SetText(string.format(L("detail"), progress, #entry.refs, #entry.nameList))
+            row.detail:SetText(tutorial and L("tutorialPracticeRow")
+                or string.format(L("detail"), progress, #entry.refs, #entry.nameList))
             row:Show()
         else
             row.focusMark:Hide()

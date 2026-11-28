@@ -505,9 +505,10 @@ local function prepareMarkMacro(target, entry, clicked, db)
     if target:GetAttribute("macrotext1") ~= macro then target:SetAttribute("macrotext1", macro) end
     target.markedNames = entry and entry.nameList or nil
     local active = entry ~= nil
+    local alpha = db.hotkeysOnly and 0 or (active and 1 or 0.5)
+    if target:GetAlpha() ~= alpha then target:SetAlpha(alpha) end
     if target.markActive ~= active then
         target.markActive = active
-        target:SetAlpha(active and 1 or 0.5)
         for _, texture in ipairs({target:GetNormalTexture(), target:GetPushedTexture()}) do
             if active then texture:SetVertexColor(0.77, 0.52, 1)
             else texture:SetVertexColor(0.65, 0.65, 0.65) end
@@ -565,6 +566,11 @@ function Integration.SyncMark(app)
     if not show then zoneCache, silverZoneCache = nil, nil end
     local entry = show and searchEntry(app) or nil
     prepareMarkMacro(target, entry, false, app.db)
+    local mouseEnabled = not app.db.hotkeysOnly
+    if target.mouseEnabled ~= mouseEnabled then
+        target:EnableMouse(mouseEnabled)
+        target.mouseEnabled = mouseEnabled
+    end
     local visibilityChanged = target:IsShown() ~= show
     if visibilityChanged then target:SetShown(show) end
     if created or visibilityChanged then NS.UI.LayoutTargetButtons(app) end

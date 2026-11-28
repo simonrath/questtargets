@@ -2,6 +2,11 @@
 local _, NS = ...
 NS.PatchNotesData = {
     deDE = {
+        { version = "1.8.5", date = "28.11.2026", sections = {
+                { title = "Einführung", items = {
+                    "**Next Intro:** Mrrml hilft neuen Spielern beim Einstieg in Next. Öffne das Intro unter **Next > Allgemein > Einführung > Starten** in den Addon-Optionen oder mit **/qt intro**.",
+                }},
+            }},
         { version = "1.8.4", date = "27.11.2026", sections = {
                 { title = "SilverDragon", items = {
                     "**Neu: SilverDragon-Unterstützung!** Der violette Rare-Button und sein Hotkey visieren den auf der Weltkarte fokussierten SilverDragon-Rare an. **Alle Rares im Gebiet suchen** ist standardmäßig an und durchsucht die bekannten Rares der aktuellen Zone. Wenn beide Addons verfügbar sind, hat RareScanner Vorrang. Der Button erscheint automatisch, sobald eines der beiden Addons verfügbar ist.",
@@ -323,6 +328,11 @@ NS.PatchNotesData = {
             }},
     },
     enUS = {
+        { version = "1.8.5", date = "Nov 28, 2026", sections = {
+                { title = "Getting started", items = {
+                    "**Next Intro:** Mrrml helps new players get started with Next. In the addon options, go to **Next > General > Introduction > Start**, or type **/qt intro**.",
+                }},
+            }},
         { version = "1.8.4", date = "Nov 27, 2026", sections = {
                 { title = "SilverDragon", items = {
                     "**New: SilverDragon support!** The purple rare button and its hotkey target the rare you focus on SilverDragon’s world map. **Scan all rares in zone** is on by default and searches known rares in your current zone. RareScanner takes priority when both addons are available. The button appears automatically when either addon is available.",
@@ -644,6 +654,11 @@ NS.PatchNotesData = {
             }},
     },
     esES = {
+        { version = "1.8.5", date = "28 de noviembre de 2026", sections = {
+                { title = "Primeros pasos", items = {
+                    "**Intro de Next:** Mrrml ayuda a los nuevos jugadores a empezar con Next. Abre **Next > General > Introducción > Iniciar** en las opciones de addons o escribe **/qt intro**.",
+                }},
+            }},
         { version = "1.8.4", date = "27 de noviembre de 2026", sections = {
                 { title = "SilverDragon", items = {
                     "**¡Nuevo: compatibilidad con SilverDragon!** El botón morado y su atajo seleccionan el raro que enfoques en el mapa de SilverDragon. **Buscar todos los raros de la zona** está activada por defecto y busca los raros conocidos de tu zona. RareScanner tiene prioridad si ambos addons están disponibles. El botón aparece automáticamente cuando hay un complemento compatible disponible.",
@@ -965,6 +980,11 @@ NS.PatchNotesData = {
             }},
     },
     frFR = {
+        { version = "1.8.5", date = "28 novembre 2026", sections = {
+                { title = "Prise en main", items = {
+                    "**Introduction à Next**. Mrrml aide les nouveaux joueurs à prendre Next en main. Dans les options d’addons, ouvre **Next > Général > Introduction > Démarrer** ou saisis **/qt intro**.",
+                }},
+            }},
         { version = "1.8.4", date = "27 novembre 2026", sections = {
                 { title = "SilverDragon", items = {
                     "**Nouveau : prise en charge de SilverDragon !** Le bouton violet et son raccourci ciblent le rare focalisé sur la carte de SilverDragon. L’option **Rechercher les rares de la zone** est activée par défaut et recherche les rares connus de la zone actuelle. RareScanner est prioritaire si les deux addons sont disponibles. Le bouton apparaît automatiquement dès qu’un de ces addons est disponible.",
@@ -1286,6 +1306,11 @@ NS.PatchNotesData = {
             }},
     },
     trTR = {
+        { version = "1.8.5", date = "28 Kasım 2026", sections = {
+                { title = "Başlangıç", items = {
+                    "**Next Tanıtımı:** Mrrml, yeni oyuncuların Next’i kullanmaya başlamasına yardım eder. Eklenti seçeneklerinden **Next > Genel > Tanıtım > Başlat** yolunu izle veya **/qt intro** yaz.",
+                }},
+            }},
         { version = "1.8.4", date = "27 Kasım 2026", sections = {
                 { title = "SilverDragon", items = {
                     "**Yeni: SilverDragon desteği!** Mor düğme ve kısayolu SilverDragon dünya haritasında odaklandığın nadiri hedefler. **Bölgedeki tüm nadirleri ara** varsayılan olarak açıktır ve bulunduğun bölgedeki bilinen nadirleri arar. İki eklenti de kullanılabiliyorsa RareScanner önceliklidir. Bu eklentilerden biri kullanılabilir olduğunda düğme otomatik görünür.",
@@ -1607,6 +1632,11 @@ NS.PatchNotesData = {
             }},
     },
     zhCN = {
+        { version = "1.8.5", date = "2026年11月28日", sections = {
+                { title = "入门", items = {
+                    "**Next 入门引导**。Mrrml 帮助新玩家上手 Next。在插件选项中选择 **Next > 通用 > 入门引导 > 开始**，或输入 **/qt intro**。",
+                }},
+            }},
         { version = "1.8.4", date = "2026年11月27日", sections = {
                 { title = "SilverDragon", items = {
                     "**新增 SilverDragon 支持！** 紫色按钮及其快捷键可选中你在 SilverDragon 世界地图上聚焦的稀有怪。**搜索区域内所有稀有怪**默认开启，会搜索当前区域的已知稀有怪。两个插件均可用时优先使用 RareScanner。 任一插件可用时，按钮会自动显示。",

@@ -10,7 +10,7 @@ class QuestTargetsTests(unittest.TestCase):
     def setUp(self):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute((ROOT / 'tests/quest_targets_mock.lua').read_text(encoding='utf-8'))
-        for name in ('Core.lua', 'Locale.lua', 'PatchNotesData.lua', 'PatchNotes.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Resize.lua', 'Master.lua', 'QuestieTracker.lua', 'EllesmereTracker.lua', 'FlareUITracker.lua', 'RestedXP.lua', 'ItemTree.lua', 'RareScanner.lua', 'Diagnostics.lua', 'Main.lua'):
+        for name in ('Core.lua', 'Locale.lua', 'PatchNotesData.lua', 'PatchNotes.lua', 'Database.lua', 'Proximity.lua', 'Resolvers.lua', 'Scanner.lua', 'UI.lua', 'Resize.lua', 'Master.lua', 'QuestieTracker.lua', 'EllesmereTracker.lua', 'FlareUITracker.lua', 'RestedXP.lua', 'ItemTree.lua', 'RareScanner.lua', 'Diagnostics.lua', 'Tutorial.lua', 'Main.lua'):
             self.lua.execute('assert(loadstring(...))("QuestTargets", NS)',
                              (ROOT / 'QuestTargets' / name).read_text(encoding='utf-8'))
 
@@ -692,6 +692,12 @@ class QuestTargetsTests(unittest.TestCase):
             assert(QuestTargetsPatchNotes.scripts.OnUpdate==nil)
             QuestTargetsPatchNotes.close.scripts.OnClick()
             assert(not QuestTargetsPatchNotes:IsShown())
+            if QuestTargetsTutorial and QuestTargetsTutorial:IsShown() then
+                QuestTargetsTutorial.close.scripts.OnClick()
+            end
+            NS.UI.nativeIntro.data.buttonClick()
+            assert(QuestTargetsTutorial:IsShown())
+            QuestTargetsTutorial.close.scripts.OnClick()
             event('PLAYER_LOGIN'); event('ADDON_LOADED','Blizzard_Settings')
             assert(nativeRegistrations==1, 'Duplicate category registration')
             NS.UI.Settings(NS.app)
@@ -733,7 +739,7 @@ class QuestTargetsTests(unittest.TestCase):
                     end
                 end
             end
-            verifyPage(layout, {'general','language','showMinimap','patchNotes','feedback',
+            verifyPage(layout, {'general','language','showMinimap','patchNotes','introSettings','feedback',
                 'questWindowSection','showMenu','transparencyMode','windowSize','targetMarkers',
                 'feedbackMaster','feedbackRestedXP','feedbackItemTree','feedbackRareScanner','feedbackFocus',
                 'window','feedbackQuestie','feedbackEllesmere','preferredRaidIcon','muteDeadTargetSound',
@@ -743,7 +749,8 @@ class QuestTargetsTests(unittest.TestCase):
                 'masterOrientation','buttonSize','masterSpacing','masterBackground','masterBorder','masterDividers',
                 'masterLocked','masterMove','integrationSection','showTooltips',
                 'questieTrackerButtons','questieTrackerOffset','ellesmereTrackerButtons','ellesmereTrackerOffset','flareUITrackerButtons'})
-            local feedbackDescription=layout.initializers[11].data.description
+            local feedbackMasterRow=layout.initializers[12]
+            local feedbackDescription=feedbackMasterRow.data.description
             assert(feedbackDescription:find('255',1,true))
             assert((feedbackDescription:find('Show Pings in Chat',1,true)~=nil)==supportsPing)
             local controls={}
@@ -1051,7 +1058,7 @@ class QuestTargetsTests(unittest.TestCase):
             assert(layout.initializers[1].data.name==NS.L('general'))
             assert(NS.UI.nativeButtonsCategory.name==NS.L('buttonsBar'))
             assert(NS.UI.nativeFeedback.data.name==NS.L('feedback'))
-            assert(layout.initializers[11].data.tooltip:find(NS.L('targetFeedbackLimitTip'),1,true))
+            assert(feedbackMasterRow.data.tooltip:find(NS.L('targetFeedbackLimitTip'),1,true))
             for _,item in ipairs(allOptions) do
                 if item.data.setting then
                     local key=item.data.setting.variable:gsub('^QUESTTARGETS_', '')

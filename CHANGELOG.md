@@ -4,6 +4,11 @@ Spielerchronik ab der ersten belegten Veröffentlichung. Die neueste Version ste
 
 [English](docs/changelog/enUS.md) · [Español](docs/changelog/esES.md) · [Français](docs/changelog/frFR.md) · [Türkçe](docs/changelog/trTR.md) · [简体中文](docs/changelog/zhCN.md)
 
+## 1.8.5 – 28.11.2026
+
+### Einführung
+- **Next Intro:** Mrrml hilft neuen Spielern beim Einstieg in Next. Öffne das Intro unter **Next > Allgemein > Einführung > Starten** in den Addon-Optionen oder mit **/qt intro**.
+
 ## 1.8.4 – 27.11.2026
 
 ### SilverDragon

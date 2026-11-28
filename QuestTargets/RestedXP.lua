@@ -351,8 +351,9 @@ function Integration.Sync(app, rareEntry)
     if button then
         button.entry = rxpTargets and rankedEntry(app, nil, rxpTargets, nil, button.entry) or nil
         prepareCombatMacro(app, button, "restedXP")
-        if button:IsShown() ~= Integration.active then
-            button:SetShown(Integration.active)
+        local show = Integration.active and not app.db.hotkeysOnly
+        if button:IsShown() ~= show then
+            button:SetShown(show)
             UI.LayoutTargetButtons(app)
         end
     end

@@ -18,7 +18,7 @@ local function clear(button)
 end
 
 local function valid(button, app)
-    return app.db.ellesmereTrackerButtons ~= false and Integration.Available()
+    return not app.db.hotkeysOnly and app.db.ellesmereTrackerButtons ~= false and Integration.Available()
         and button.slot:IsVisible() and button.questID == Integration.slots[button.slot]
 end
 
@@ -85,7 +85,8 @@ function Integration.Sync(app, periodic)
         end, 26) == true
     end
     local byID = {}
-    if Integration.registered and Integration.Available() and app.db.ellesmereTrackerButtons ~= false then
+    if Integration.registered and Integration.Available() and not app.db.hotkeysOnly
+        and app.db.ellesmereTrackerButtons ~= false then
         for _, entry in ipairs(Core.QuestEntriesFor(app, true)) do byID[entry.questID] = entry end
     end
     local settings = Core.TargetFeedbackSettings(app.db, "ellesmere")

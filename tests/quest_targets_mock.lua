@@ -142,6 +142,8 @@ function methods:SetTexture(texture)
         or texture == 'Interface\\AddOns\\QuestTargets\\Textures\\RarePulse'
         or texture == 'Interface\\AddOns\\QuestTargets\\Textures\\TargetBarDivider'
         or texture == 'Interface\\AddOns\\QuestTargets\\Textures\\PatchNotesGreetings'
+        or texture == 'Interface\\AddOns\\QuestTargets\\Textures\\TutorialMrrml'
+        or texture == 'Interface\\Cursor\\Point'
         or texture == 'Interface\\Minimap\\MiniMap-TrackingBorder'
         or texture == 'Interface\\WorldMap\\UI-QuestPoi-NumberIcons'
         or texture == 'Interface\\AddOns\\QuestTargets\\Textures\\FeedbackQR'))

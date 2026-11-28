@@ -2,6 +2,11 @@
 
 Changements pour les joueurs, de la version la plus récente à la plus ancienne. Les indications d’installation historiques s’appliquent à la version indiquée.
 
+## 1.8.5 – 28 novembre 2026
+
+### Prise en main
+- **Introduction à Next**. Mrrml aide les nouveaux joueurs à prendre Next en main. Dans les options d’addons, ouvre **Next > Général > Introduction > Démarrer** ou saisis **/qt intro**.
+
 ## 1.8.4 – 27 novembre 2026
 
 ### SilverDragon

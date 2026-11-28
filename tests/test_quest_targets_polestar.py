@@ -65,6 +65,7 @@ class PolestarTests(unittest.TestCase):
                 if key==missingDialog then warnings=warnings+1 end
             end
             boot()
+            QuestTargetsTutorial.secondary.scripts.OnClick()
             assert(warnings==0, 'Polestar-only login showed the QuestieDB warning')
             installed.RXPGuides=true
             event('PLAYER_LOGIN')

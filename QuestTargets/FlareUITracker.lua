@@ -103,7 +103,8 @@ end
 
 function Tracker.Sync(app, idle)
     if not app.db or InCombatLockdown() then return end
-    local api = app.db.flareUITrackerButtons ~= false and Tracker.Available() and _G.FlareUI_QuestTrackerAPI or nil
+    local api = not app.db.hotkeysOnly and app.db.flareUITrackerButtons ~= false
+        and Tracker.Available() and _G.FlareUI_QuestTrackerAPI or nil
     if Tracker.api and Tracker.api ~= api then
         Tracker.api:UnregisterCallback(Tracker)
         Tracker.api = nil

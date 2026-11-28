@@ -2,6 +2,11 @@
 
 Player-facing changes, newest version first. Historical installation notes apply to the version listed.
 
+## 1.8.5 – Nov 28, 2026
+
+### Getting started
+- **Next Intro:** Mrrml helps new players get started with Next. In the addon options, go to **Next > General > Introduction > Start**, or type **/qt intro**.
+
 ## 1.8.4 – Nov 27, 2026
 
 ### SilverDragon

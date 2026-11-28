@@ -197,7 +197,8 @@ function UI.LayoutTargetButtons(app)
     local width, height = master:GetWidth(), master:GetHeight()
     local vertical = app.db.masterOrientation == "vertical"
     local spacing = app.db.masterSpacing
-    local masterShown = master:IsShown()
+    local visible = not app.db.hotkeysOnly
+    local masterShown = visible and master:IsShown()
     local previous = masterShown and master or nil
     local first = previous
     local count = masterShown and 1 or 0
@@ -233,11 +234,11 @@ function UI.LayoutTargetButtons(app)
         previous = button
     end
     local rested = NS.RestedXP.button
-    place(rested and rested:IsShown() and rested)
+    place(visible and rested and rested:IsShown() and rested)
     local item = NS.ItemTree.target
-    place(item and item.inBar and item)
+    place(visible and item and item.inBar and item)
     local rare = NS.RareScanner.markButton
-    place(rare and rare:IsShown() and rare)
+    place(visible and rare and rare:IsShown() and rare)
     local offsetX = vertical and 0 or math.max(0, barWidth - width) / 2
     local offsetY = vertical and -math.max(0, barHeight - height) / 2 or 0
     local changed = master.barWidth ~= barWidth or master.barHeight ~= barHeight
@@ -349,7 +350,10 @@ function UI.RenderMaster(app)
     UI.master.defaultEntry = entry
     UI.master.entry = entry
     UI.master:SetAttribute("macrotext1", (Core.EntryMacro(entry, Core.TargetFeedbackSettings(app.db, "master"))))
-    UI.master:SetShown(not app.db.masterHidden)
+    local hotkeysOnly = app.db.hotkeysOnly == true
+    UI.master:SetShown(hotkeysOnly or not app.db.masterHidden)
+    UI.master:SetAlpha(hotkeysOnly and 0 or 1)
+    UI.master:EnableMouse(not hotkeysOnly)
     UI.LayoutTargetButtons(app)
     UI.RenderFocus(app)
 end
@@ -583,7 +587,7 @@ local function createMasterMove(app)
     if UISpecialFrames then UISpecialFrames[#UISpecialFrames + 1] = "QuestTargetsMasterMove" end
 end
 
-local function closeMasterMoveSettings()
+function UI.CloseSettings()
     if SettingsPanel then
         if HideUIPanel then HideUIPanel(SettingsPanel)
         elseif SettingsPanel.Hide then SettingsPanel:Hide() end
@@ -597,7 +601,7 @@ function UI.BeginMasterMove(app)
     if not app.db or not UI.master or UI.master.barWidth == 0 then
         print(L("masterMoveHidden")); return false
     end
-    if UI.masterMoveActive then closeMasterMoveSettings(); return true end
+    if UI.masterMoveActive then UI.CloseSettings(); return true end
     if UI.master.moving then UI.master.pendingStop = true; UI.StopMaster(app) end
     if not UI.masterMove then createMasterMove(app) end
     local edit = UI.masterMove
@@ -609,6 +613,6 @@ function UI.BeginMasterMove(app)
     UI.masterMoveActive = true
     UI.UpdateMasterMove(app)
     edit:Show()
-    closeMasterMoveSettings()
+    UI.CloseSettings()
     return true
 end

@@ -279,15 +279,16 @@ function Integration.Sync(app)
     Integration.SyncMacro(app)
     syncTarget(app)
     local ui = ItemTree and ItemTree.UI
-    local inBar = ui ~= nil and app.db.itemTreeButton ~= false
-    local target = Integration.target or (inBar and createTarget(app))
+    local enabled = ui ~= nil and app.db.itemTreeButton ~= false
+    local inBar = enabled and not app.db.hotkeysOnly
+    local target = Integration.target or (enabled and createTarget(app))
     if target and target.inBar ~= inBar then
         target.inBar = inBar
         target:SetAlpha(inBar and 1 or 0)
         target:EnableMouse(inBar)
         NS.UI.LayoutTargetButtons(app)
     end
-    if inBar and not target:IsShown() then target:Show() end
+    if enabled and not target:IsShown() then target:Show() end
     local frame = ui and ui.Frame and ui.Frame.frame
     if not frame then return end
     if not Integration.button then

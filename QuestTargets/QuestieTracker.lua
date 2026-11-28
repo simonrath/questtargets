@@ -83,7 +83,7 @@ function Integration.Sync(app, periodic)
     local now = GetTime and GetTime()
     if periodic and now and Integration.nextSync and now < Integration.nextSync then return end
     Integration.nextSync = now and now + 2
-    if app.db.questieTrackerButtons == false then hideFrom(1); return end
+    if app.db.hotkeysOnly or app.db.questieTrackerButtons == false then hideFrom(1); return end
     local pool = trackerPool()
     if not pool then hideFrom(1); return end
     local byID = {}

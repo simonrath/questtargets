@@ -93,6 +93,8 @@ class CommandsPopupTests(unittest.TestCase):
                 popupEdit=box
             end
             boot()
+            assert(#popupCalls==0)
+            QuestTargetsTutorial.secondary.scripts.OnClick()
             assert(#popupCalls==1)
             local key=popupCalls[1]
             assert(StaticPopupDialogs[key].hasEditBox)
@@ -119,6 +121,7 @@ class CommandsPopupTests(unittest.TestCase):
             StaticPopupDialogs={}
             StaticPopup_Show=function(key) popup=StaticPopupDialogs[key] end
             boot()
+            QuestTargetsTutorial.secondary.scripts.OnClick()
             assert(popup.text:find('QuestieDB Forever',1,true))
             assert(popup.text:find('QuestieDB-Forever.zip',1,true))
             assert(popup.button1=='Select URL' and popup.button2=='OK')

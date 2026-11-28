@@ -2,6 +2,11 @@
 
 Cambios para jugadores, empezando por la versión más reciente. Las indicaciones de instalación históricas se aplican a la versión indicada.
 
+## 1.8.5 – 28 de noviembre de 2026
+
+### Primeros pasos
+- **Intro de Next:** Mrrml ayuda a los nuevos jugadores a empezar con Next. Abre **Next > General > Introducción > Iniciar** en las opciones de addons o escribe **/qt intro**.
+
 ## 1.8.4 – 27 de noviembre de 2026
 
 ### SilverDragon
